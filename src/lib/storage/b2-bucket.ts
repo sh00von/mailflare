@@ -81,11 +81,13 @@ export class B2Bucket {
 
 	constructor(private readonly config: B2Config) {
 		this.credentials = { accessKeyId: config.keyId, secretAccessKey: config.applicationKey, region: config.region };
-		this.host = `${config.bucket}.${config.endpoint}`;
+		this.host = config.forcePathStyle ? config.endpoint : `${config.bucket}.${config.endpoint}`;
 	}
 
 	private request(key: string | null, init: { method?: string; query?: Record<string, string>; body?: string | ArrayBuffer; headers?: Record<string, string> } = {}) {
-		return awsRequest({ config: this.credentials, service: "s3", host: this.host, path: key === null ? "/" : encodePath(key), ...init });
+		const objectPath = key === null ? "/" : encodePath(key);
+		const path = this.config.forcePathStyle ? (key === null ? `/${this.config.bucket}` : `/${this.config.bucket}${objectPath}`) : objectPath;
+		return awsRequest({ config: this.credentials, service: "s3", host: this.host, path, ...init });
 	}
 
 	private metadataHeaders(options?: PutOptions): Record<string, string> {

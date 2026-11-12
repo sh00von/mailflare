@@ -1,7 +1,7 @@
 import type { B2Config, StorageStatus } from "@/lib/storage/b2-types";
 
 type B2Env = Partial<Pick<CloudflareEnv, "B2_KEY_ID" | "B2_APPLICATION_KEY" | "B2_BUCKET" | "B2_ENDPOINT" | "S3_BUCKET" | "S3_REGION" | "S3_ACCESS_KEY_ID" | "S3_SECRET_ACCESS_KEY" | "REPLYOT_RUNTIME">> &
-	Partial<Record<"AWS_ACCESS_KEY_ID" | "AWS_SECRET_ACCESS_KEY" | "AWS_REGION" | "AWS_DEFAULT_REGION", string>>;
+	Partial<Record<"AWS_ACCESS_KEY_ID" | "AWS_SECRET_ACCESS_KEY" | "AWS_REGION" | "AWS_DEFAULT_REGION" | "S3_ENDPOINT" | "S3_BUCKET_NAME" | "S3_FORCE_PATH_STYLE", string>>;
 
 const ENDPOINT_PATTERN = /^s3\.([a-z0-9-]+)\.backblazeb2\.com$/;
 
@@ -36,12 +36,21 @@ const S3_REGION_PATTERN = /^[a-z]{2}(-gov|-iso[a-z]?)?-[a-z]+-\d$/;
  * AWS_* variables the SES integration already uses. Backblaze wins when both are configured.
  */
 export function getS3Config(env: B2Env): B2Config | null {
-	const bucket = env.S3_BUCKET?.trim();
-	const region = (env.S3_REGION ?? env.AWS_REGION ?? env.AWS_DEFAULT_REGION)?.trim();
+	const bucket = (env.S3_BUCKET ?? env.S3_BUCKET_NAME)?.trim();
+	const customEndpoint = env.S3_ENDPOINT ? normalizeB2Endpoint(env.S3_ENDPOINT) : "";
+	const region = (env.S3_REGION ?? env.AWS_REGION ?? env.AWS_DEFAULT_REGION)?.trim() || (customEndpoint ? "garage" : "");
 	const keyId = (env.S3_ACCESS_KEY_ID ?? env.AWS_ACCESS_KEY_ID)?.trim();
 	const applicationKey = (env.S3_SECRET_ACCESS_KEY ?? env.AWS_SECRET_ACCESS_KEY)?.trim();
-	if (!bucket || !region || !keyId || !applicationKey || !S3_REGION_PATTERN.test(region)) return null;
-	return { keyId, applicationKey, bucket, region, endpoint: `s3.${region}.amazonaws.com` };
+	if (!bucket || !region || !keyId || !applicationKey) return null;
+	if (!customEndpoint && !S3_REGION_PATTERN.test(region)) return null;
+	return {
+		keyId,
+		applicationKey,
+		bucket,
+		region,
+		endpoint: customEndpoint || `s3.${region}.amazonaws.com`,
+		forcePathStyle: env.S3_FORCE_PATH_STYLE === "true",
+	};
 }
 
 /** The S3-compatible bucket in use, if any. */
