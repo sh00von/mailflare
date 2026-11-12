@@ -35,7 +35,10 @@ export function AccountSettings() {
 	if (!user) {
 		return (
 			<div className="space-y-6 py-4">
-				<Skeleton className="h-9 w-40" />
+				<div>
+					<h1 className="text-2xl font-medium text-neutral-900 md:text-3xl">Account</h1>
+					<p className="mt-1 text-sm text-neutral-500">Manage your account details, signature, and time zone.</p>
+				</div>
 				<Skeleton className="h-72 w-full rounded-3xl" />
 			</div>
 		);
@@ -43,11 +46,10 @@ export function AccountSettings() {
 
 	return (
 		<div className="space-y-8 py-4">
-			<h1 className="sr-only">Account</h1>
-			{/* <div>
-				<h1 className="text-2xl md:text-3xl font-medium text-neutral-900">Account</h1>
-				<p className="mt-1 text-sm text-neutral-500">Manage your account details and sign-in password.</p>
-			</div> */}
+			<div>
+				<h1 className="text-2xl font-medium text-neutral-900 md:text-3xl">Account</h1>
+				<p className="mt-1 text-sm text-neutral-500">Manage your account details, signature, and time zone.</p>
+			</div>
 
 			<section className="space-y-4">
 				<div>

@@ -373,6 +373,15 @@
         "CREATE INDEX \"domains_workspace_idx\" ON \"domains\" USING btree (\"workspace_id\");",
         "CREATE INDEX \"users_workspace_idx\" ON \"users\" USING btree (\"workspace_id\");"
       ]
+    },
+    {
+      "name": "0011_natural_blonde_phantom.sql",
+      "statements": [
+        "ALTER TABLE \"workspaces\" ADD COLUMN \"stripe_customer_id\" text;",
+        "ALTER TABLE \"workspaces\" ADD COLUMN \"stripe_subscription_id\" text;",
+        "ALTER TABLE \"workspaces\" ADD COLUMN \"stripe_price_id\" text;",
+        "ALTER TABLE \"workspaces\" ADD COLUMN \"current_period_end\" bigint;"
+      ]
     }
   ]
 }

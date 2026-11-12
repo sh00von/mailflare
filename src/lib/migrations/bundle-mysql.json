@@ -339,6 +339,15 @@
         "CREATE INDEX `domains_workspace_idx` ON `domains` (`workspace_id`);",
         "CREATE INDEX `users_workspace_idx` ON `users` (`workspace_id`);"
       ]
+    },
+    {
+      "name": "0011_purple_beyonder.sql",
+      "statements": [
+        "ALTER TABLE `workspaces` ADD `stripe_customer_id` longtext;",
+        "ALTER TABLE `workspaces` ADD `stripe_subscription_id` longtext;",
+        "ALTER TABLE `workspaces` ADD `stripe_price_id` longtext;",
+        "ALTER TABLE `workspaces` ADD `current_period_end` bigint;"
+      ]
     }
   ]
 }

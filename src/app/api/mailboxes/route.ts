@@ -9,6 +9,7 @@ import { getLicenseEntitlements } from "@/lib/licenses/service";
 import { tracksAccountIdentity } from "@/lib/profile/identity-utils";
 import { mailboxSchema } from "@/lib/validators";
 import { ensureMailboxDomainRouting, getMailboxDomainAddresses } from "@/lib/mailboxes/domain-addresses";
+import { checkCanAddMailbox } from "@/lib/plans/usage";
 import { ensurePersonalMailbox } from "./utils";
 
 export async function GET(request: Request) {
@@ -38,11 +39,15 @@ export async function POST(request: Request) {
 	}
 
 	const db = getDb(env);
+	const quota = await checkCanAddMailbox(env, user);
+	if (!quota.ok) {
+		return NextResponse.json({ error: quota.error }, { status: 403 });
+	}
 	const mailboxType = parsed.data.type ?? "personal";
 	if (mailboxType === "shared") {
 		const entitlements = await getLicenseEntitlements(env);
 		if (user.role !== "admin" || !entitlements.canShareMailboxes) {
-			return NextResponse.json({ error: "A Team license is required to create shared inboxes" }, { status: 403 });
+			return NextResponse.json({ error: "Admin access is required to create shared inboxes" }, { status: 403 });
 		}
 	}
 	const ownerUserId = mailboxType === "shared" ? user.id : parsed.data.ownerUserId ?? user.id;

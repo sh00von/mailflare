@@ -10,6 +10,7 @@ import { bumpSecurityVersion, createEnrollmentGrant } from "@/lib/auth/webauthn/
 import { getPublicOrigin } from "@/lib/auth/webauthn/config";
 import { createAuditLog } from "@/lib/mailboxes/audit";
 import { authError } from "@/lib/http/auth-error";
+import { isSameWorkspace } from "@/lib/plans/usage";
 import type { AccountRouteParams } from "../types";
 
 /**
@@ -24,6 +25,7 @@ export async function POST(request: Request, { params }: AccountRouteParams) {
 	const account = await selectAccountById(getDb(access.env), id);
 	if (!account) return authError("invalid_request", 404);
 	const actor = access.user!;
+	if (!isSameWorkspace(actor, account)) return authError("invalid_request", 404);
 	if (!isPrimaryAdmin(actor) && !canManageUserAccount(actor, account)) {
 		return authError("verification_failed", 403);
 	}

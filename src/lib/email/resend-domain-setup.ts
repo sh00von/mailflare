@@ -18,6 +18,7 @@ export type ResendChecklistRecord = {
 export async function ensureResendSendingDomain(
 	env: CloudflareEnv,
 	hostname: string,
+	options?: { createIfMissing?: boolean },
 ): Promise<{ domain: ResendDomain; records: ResendChecklistRecord[] } | null> {
 	const keyStatus = await getResendKeyStatus(env);
 	if (!keyStatus.configured || !keyStatus.apiKey) return null;
@@ -25,6 +26,7 @@ export async function ensureResendSendingDomain(
 	const apiKey = keyStatus.apiKey;
 	let resendDomain = await findResendDomain(apiKey, hostname);
 	if (!resendDomain) {
+		if (options?.createIfMissing === false) return null;
 		resendDomain = await createResendDomain(apiKey, hostname, { sending: true, receiving: false });
 	}
 	if (resendDomain.status !== "verified") {
@@ -46,6 +48,7 @@ export async function ensureResendSendingDomain(
 export async function ensureOutboundSendingDomain(
 	env: CloudflareEnv,
 	hostname: string,
+	options?: { createIfMissing?: boolean },
 ): Promise<{ provider: "resend" | "ses"; verified: boolean; records: ResendChecklistRecord[] } | null> {
 	const mode = (
 		(env as { OUTBOUND_PROVIDER?: string }).OUTBOUND_PROVIDER ??
@@ -55,12 +58,12 @@ export async function ensureOutboundSendingDomain(
 
 	if (mode === "ses") {
 		const { ensureSesSendingDomain } = await import("@/lib/email/ses-domain-setup");
-		const ses = await ensureSesSendingDomain(env, hostname);
+		const ses = await ensureSesSendingDomain(env, hostname, options);
 		return ses ? { provider: "ses", ...ses } : null;
 	}
 
 	try {
-		const resend = await ensureResendSendingDomain(env, hostname);
+		const resend = await ensureResendSendingDomain(env, hostname, options);
 		if (resend) {
 			return {
 				provider: "resend",
@@ -75,7 +78,7 @@ export async function ensureOutboundSendingDomain(
 
 	if (mode === "auto") {
 		const { ensureSesSendingDomain } = await import("@/lib/email/ses-domain-setup");
-		const ses = await ensureSesSendingDomain(env, hostname);
+		const ses = await ensureSesSendingDomain(env, hostname, options);
 		if (ses) return { provider: "ses", ...ses };
 	}
 

@@ -14,7 +14,7 @@ import { hasPasswordHash } from "@/lib/auth/password";
 import { consumeStepUpGrant } from "@/lib/auth/webauthn/grants";
 import { createAuditLog } from "@/lib/mailboxes/audit";
 import { authError } from "@/lib/http/auth-error";
-import { isSameWorkspace } from "@/lib/plans/usage";
+import { checkCanAddMailbox, isSameWorkspace } from "@/lib/plans/usage";
 
 export async function GET(request: Request, { params }: AccountRouteParams) {
 	const access = await requireTeamAdmin(request);
@@ -82,6 +82,8 @@ export async function PATCH(request: Request, { params }: AccountRouteParams) {
 	if (account.disabled && !parsed.data.disabled) {
 		const seatError = await getAccountSeatError(access.env);
 		if (seatError) return NextResponse.json({ error: seatError }, { status: 403 });
+		const quota = await checkCanAddMailbox(access.env, access.user!);
+		if (!quota.ok) return NextResponse.json({ error: quota.error }, { status: 403 });
 	}
 	// A passkey-only account must be recovered through a passkey enrolment link,
 	// not by silently giving it a password that bypasses its recovery policy.

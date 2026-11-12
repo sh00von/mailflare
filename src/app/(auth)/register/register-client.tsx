@@ -94,6 +94,7 @@ export function RegisterClient() {
 			const { ok, data } = await submitRegistration(formData, {
 				firstRun: true,
 				domain: domainName,
+				orgName: orgName.trim() || undefined,
 				plan,
 				enableSending: true,
 				skipDns: false,

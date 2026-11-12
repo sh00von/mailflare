@@ -38,7 +38,10 @@ export async function intakeIncomingMail(env: CloudflareEnv, input: IntakeInput,
 	}
 
 	if (decision?.mailbox?.userId) {
-		const storageCheck = await checkCanReceiveStorage(env, decision.mailbox.userId, input.raw.byteLength).catch(() => ({ ok: true as const }));
+		const storageCheck = await checkCanReceiveStorage(env, decision.mailbox.userId, input.raw.byteLength).catch((err) => {
+			console.error("[intake] Storage quota check failed:", err);
+			return { ok: false as const, error: "451 4.3.0 Temporary storage check failure, please try again later" };
+		});
 		if (!storageCheck.ok) {
 			await actions.reject?.(storageCheck.error);
 			return { action: "reject", reason: storageCheck.error };

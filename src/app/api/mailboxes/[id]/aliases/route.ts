@@ -7,6 +7,7 @@ import { getEnv } from "@/lib/cloudflare";
 import { deleteEmailRoutingRuleForAddress, ensureEmailRoutingRuleToWorker } from "@/lib/cloudflare-api";
 import { newId } from "@/lib/ids";
 import { getMailboxSettingsAccess } from "@/lib/mailboxes/settings-access";
+import { checkWorkspaceActive, getWorkspaceWithUsage } from "@/lib/plans/usage";
 import { createMailboxAliasSchema } from "@/lib/validators";
 import type { MailboxRouteParams } from "../types";
 
@@ -54,6 +55,9 @@ export async function GET(request: Request, { params }: MailboxRouteParams) {
 	const env = getEnv();
 	const user = await requireUser(env, request);
 	const db = getDb(env);
+	const { workspace } = await getWorkspaceWithUsage(env, user);
+	const inactive = checkWorkspaceActive(workspace);
+	if (inactive) return NextResponse.json({ error: inactive }, { status: 403 });
 	const mailbox = await getManagedMailbox(env, user, id);
 	if (!mailbox) return NextResponse.json({ error: "Mailbox not found" }, { status: 404 });
 
@@ -81,6 +85,9 @@ export async function POST(request: Request, { params }: MailboxRouteParams) {
 	}
 
 	const db = getDb(env);
+	const { workspace } = await getWorkspaceWithUsage(env, user);
+	const inactive = checkWorkspaceActive(workspace);
+	if (inactive) return NextResponse.json({ error: inactive }, { status: 403 });
 	const mailbox = await getManagedMailbox(env, user, id);
 	if (!mailbox) return NextResponse.json({ error: "Mailbox not found" }, { status: 404 });
 
@@ -154,6 +161,9 @@ export async function DELETE(request: Request, { params }: MailboxRouteParams) {
 	if (!aliasId) return NextResponse.json({ error: "Alias is required" }, { status: 400 });
 
 	const db = getDb(env);
+	const { workspace } = await getWorkspaceWithUsage(env, user);
+	const inactive = checkWorkspaceActive(workspace);
+	if (inactive) return NextResponse.json({ error: inactive }, { status: 403 });
 	const mailbox = await getManagedMailbox(env, user, id);
 	if (!mailbox) return NextResponse.json({ error: "Mailbox not found" }, { status: 404 });
 

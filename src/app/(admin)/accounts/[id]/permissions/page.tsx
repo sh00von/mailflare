@@ -167,44 +167,6 @@ export default function AccountPermissionsPage() {
 					</tbody>
 				</table>
 			</div>
-			<section className="overflow-hidden rounded-3xl bg-white">
-				<div className="border-b border-neutral-100 bg-neutral-50 px-5 py-3">
-					<h2 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Feature access</h2>
-					<p className="mt-1 text-xs text-neutral-500">Apps turned off are hidden and blocked for this account.</p>
-				</div>
-				<table className="w-full text-left">
-					<tbody className="divide-y divide-neutral-100">
-						<tr>
-							<td className="px-5 py-4">
-								<p className="text-sm font-semibold text-neutral-900">Calendar</p>
-								<p className="mt-1 text-xs text-neutral-500">Events, reminders, and booking pages.</p>
-							</td>
-							<td className="w-28 px-5 py-4 text-center">
-								<Checkbox
-									aria-label={"Allow Calendar"}
-									checked={account?.calendarEnabled ?? true}
-									disabled={!account || !editable}
-									onChange={(event) => account && setAccount({ ...account, calendarEnabled: event.target.checked })}
-								/>
-							</td>
-						</tr>
-						<tr>
-							<td className="px-5 py-4">
-								<p className="text-sm font-semibold text-neutral-900">Drive</p>
-								<p className="mt-1 text-xs text-neutral-500">Files, saved attachments, and shared links.</p>
-							</td>
-							<td className="w-28 px-5 py-4 text-center">
-								<Checkbox
-									aria-label={"Allow Drive"}
-									checked={account?.driveEnabled ?? true}
-									disabled={!account || !editable}
-									onChange={(event) => account && setAccount({ ...account, driveEnabled: event.target.checked })}
-								/>
-							</td>
-						</tr>
-					</tbody>
-				</table>
-			</section>
 			{editable && (
 				<Button onClick={() => void savePermissions()} disabled={saving}>
 					{saving ? "Saving..." : "Save permissions"}

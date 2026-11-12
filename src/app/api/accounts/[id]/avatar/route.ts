@@ -4,6 +4,8 @@ import { getDb } from "@/db";
 import { users } from "@/db/schema";
 import { getAvatarImageResponse, getOptimizedAvatarFiles, storeAvatarImages } from "@/lib/avatar-images";
 import { avatarKeyFor } from "@/app/api/profile/avatar/utils";
+import { canManageUserAccount } from "@/lib/auth/admin";
+import { isSameWorkspace } from "@/lib/plans/usage";
 import type { AccountRouteParams } from "../types";
 import { getManagedAccount } from "./utils";
 import { requireTeamAdmin } from "../../utils";
@@ -14,7 +16,9 @@ export async function GET(request: Request, { params }: AccountRouteParams) {
 	const access = await requireTeamAdmin(request);
 	if (access.error) return access.error;
 	const account = await selectAccountById(getDb(access.env), id);
-	if (!account?.avatarKey) return new Response("Not found", { status: 404 });
+	if (!account?.avatarKey || !isSameWorkspace(access.user!, account) || (account.id !== access.user!.id && !canManageUserAccount(access.user!, account))) {
+		return new Response("Not found", { status: 404 });
+	}
 	return getAvatarImageResponse(request, access.env.BUCKET, account.avatarKey);
 }
 

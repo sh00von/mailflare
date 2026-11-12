@@ -78,6 +78,13 @@
       "when": 1794480317795,
       "tag": "0010_reflective_chameleon",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794492905329,
+      "tag": "0011_natural_blonde_phantom",
+      "breakpoints": true
     }
   ]
 }

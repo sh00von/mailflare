@@ -64,15 +64,5 @@ export default function GeneralSettingsPage() {
 				<Button type="submit" disabled={!loaded || saving || !Number.isInteger(maxMb) || maxMb < 1 || maxMb > 25}>{saving ? "Saving..." : "Save settings"}</Button>
 			</form></CardContent>
 		</Card>
-		<Card className="rounded-3xl border-0 bg-white p-6">
-			<CardHeader className="py-0"><CardTitle>Drive storage</CardTitle></CardHeader>
-			<CardContent className="pt-6"><form onSubmit={saveDrive} className="space-y-4">
-				<div className="flex items-center gap-3"><Switch id="drive-unlimited" checked={unlimited} onCheckedChange={setUnlimited} disabled={!loaded || driveSaving} /><Label htmlFor="drive-unlimited">Unlimited storage</Label></div>
-				{!unlimited && <div className="space-y-2"><Label htmlFor="drive-limit">Storage limit per user (GB)</Label><Input id="drive-limit" type="number" min="0.01" max="1000000" step="any" value={limitGb} onChange={(event) => setLimitGb(Number(event.target.value))} disabled={!loaded || driveSaving} className="max-w-40" required /></div>}
-				<p className="text-sm text-neutral-500">{"Each user's files in Drive count toward their own limit. Uploads that would go over it are refused; existing files are never removed."}</p>
-				{driveStatus && <p role="status" className="text-sm text-neutral-700">{driveStatus}</p>}
-				<Button type="submit" disabled={!loaded || driveSaving || (!unlimited && !(limitGb > 0))}>{driveSaving ? "Saving..." : "Save settings"}</Button>
-			</form></CardContent>
-		</Card>
 	</div>;
 }

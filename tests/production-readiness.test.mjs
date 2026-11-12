@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { createHmac } from "node:crypto";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -9,17 +10,31 @@ import { build } from "esbuild";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const outDir = mkdtempSync(join(tmpdir(), "replyot-prod-"));
 const outfile = join(outDir, "usage.mjs");
+const stripeOutfile = join(outDir, "stripe.mjs");
 
-await build({
-	entryPoints: [join(root, "src/lib/plans/usage.ts")],
-	outfile,
-	bundle: true,
-	format: "esm",
-	platform: "node",
-	alias: { "@": join(root, "src") },
-});
+await Promise.all([
+	build({
+		entryPoints: [join(root, "src/lib/plans/usage.ts")],
+		outfile,
+		bundle: true,
+		format: "esm",
+		platform: "node",
+		alias: { "@": join(root, "src") },
+	}),
+	build({
+		entryPoints: [join(root, "src/lib/billing/stripe.ts")],
+		outfile: stripeOutfile,
+		bundle: true,
+		format: "esm",
+		platform: "node",
+		alias: { "@": join(root, "src") },
+	}),
+]);
 
 const { isSameWorkspace } = await import(pathToFileURL(outfile).href);
+const { verifyStripeWebhookSignature, mapStripeSubscriptionStatus } = await import(
+	pathToFileURL(stripeOutfile).href
+);
 test.after(() => rmSync(outDir, { recursive: true, force: true }));
 
 test("isSameWorkspace enforces tenant isolation for non-primary workspace admins", () => {
@@ -56,4 +71,29 @@ test("healthcheck and SES auto-provisioning modules exist", () => {
 	assert.match(health, /SELECT 1/);
 	const ses = readFileSync(join(root, "src/lib/email/ses-domain-setup.ts"), "utf8");
 	assert.match(ses, /ensureSesSendingDomain/);
+});
+
+test("verifyStripeWebhookSignature validates HMAC-SHA256 signatures and timestamps", async () => {
+	const secret = "whsec_test_secret_123";
+	const payload = JSON.stringify({ id: "evt_1", type: "checkout.session.completed" });
+	const now = Math.floor(Date.now() / 1000);
+	const sign = (ts, body) =>
+		createHmac("sha256", secret).update(`${ts}.${body}`).digest("hex");
+
+	const validHeader = `t=${now},v1=${sign(now, payload)}`;
+	assert.equal(await verifyStripeWebhookSignature(payload, validHeader, secret), true);
+	assert.equal(await verifyStripeWebhookSignature(payload, `t=${now},v1=${"0".repeat(64)}`, secret), false);
+	assert.equal(await verifyStripeWebhookSignature(payload, null, secret), false);
+
+	const expiredTs = now - 600;
+	const expiredHeader = `t=${expiredTs},v1=${sign(expiredTs, payload)}`;
+	assert.equal(await verifyStripeWebhookSignature(payload, expiredHeader, secret, 300), false);
+});
+
+test("mapStripeSubscriptionStatus maps Stripe statuses to workspace statuses", () => {
+	assert.equal(mapStripeSubscriptionStatus("active"), "active");
+	assert.equal(mapStripeSubscriptionStatus("trialing"), "trialing");
+	assert.equal(mapStripeSubscriptionStatus("past_due"), "suspended");
+	assert.equal(mapStripeSubscriptionStatus("unpaid"), "suspended");
+	assert.equal(mapStripeSubscriptionStatus("canceled"), "suspended");
 });

@@ -1,8 +1,9 @@
+import { resolveMx, resolveTxt } from "node:dns/promises";
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { getEnv } from "@/lib/cloudflare";
 import { getDb } from "@/db";
-import { domains, mailboxes, users } from "@/db/schema";
+import { domains, mailboxes, users, workspaces } from "@/db/schema";
 import { hashPassword, PASSWORDLESS_PASSWORD_HASH } from "@/lib/auth/password";
 import { hasAdminAccount } from "@/lib/auth/setup";
 import { createSession, SESSION_COOKIE } from "@/lib/auth/session";
@@ -63,14 +64,22 @@ export async function POST(request: Request) {
 		return NextResponse.json({ error: "This domain is already registered. Only the workspace owner can create team accounts for it." }, { status: 409 });
 	}
 
-	const dnsAudit = await auditDomainDns(domainName, { routing: { records: [], missing: [] }, sending: [] });
-	if (dnsAudit.mx.status !== "ok" || dnsAudit.spf.status !== "ok" || dnsAudit.dmarc.status !== "ok") {
+	const expectedMx = (process.env.MAIL_HOSTNAME?.trim() || `mail.${domainName}`).toLowerCase().replace(/\.$/, "");
+	const [currentMx, rootTxt, dmarcTxt] = await Promise.all([
+		resolveMx(domainName).then((recs) => recs.map((r) => r.exchange.trim().toLowerCase().replace(/\.$/, ""))).catch(() => []),
+		resolveTxt(domainName).then((recs) => recs.map((chunks) => chunks.join("").trim())).catch(() => []),
+		resolveTxt(`_dmarc.${domainName}`).then((recs) => recs.map((chunks) => chunks.join("").trim())).catch(() => []),
+	]);
+	const mxOk = currentMx.some((mx) => mx === expectedMx);
+	const spfOk = rootTxt.some((txt) => txt.toLowerCase().startsWith("v=spf1") && txt.toLowerCase().includes(expectedMx));
+	const dmarcOk = dmarcTxt.some((txt) => txt.toLowerCase().startsWith("v=dmarc1"));
+	if (!mxOk || !spfOk || !dmarcOk) {
 		return NextResponse.json(
 			{ error: "Domain DNS is not verified yet. Add your MX, SPF, and DMARC records and check DNS again before creating your account." },
 			{ status: 400 },
 		);
 	}
-	const outboundSetup = await ensureOutboundSendingDomain(env, domainName).catch(() => null);
+	const outboundSetup = await ensureOutboundSendingDomain(env, domainName, { createIfMissing: true }).catch(() => null);
 	if (outboundSetup && !outboundSetup.verified) {
 		return NextResponse.json(
 			{ error: "Outbound sending DNS records are not verified yet. Add all required records and click Check DNS again." },
@@ -79,10 +88,13 @@ export async function POST(request: Request) {
 	}
 
 	const selectedPlan = resolvePlanId((body as Record<string, unknown>)?.plan);
+	const rawOrgName = typeof (body as Record<string, unknown>)?.orgName === "string"
+		? ((body as Record<string, unknown>).orgName as string).trim()
+		: "";
 	const userId = newId("usr");
 	const workspaceId = await createWorkspaceForOwner(env, {
 		ownerUserId: userId,
-		name: `${name}'s Workspace`,
+		name: rawOrgName || `${name}'s Workspace`,
 		plan: selectedPlan,
 		status: isFirstUser ? "active" : "trialing",
 	});
@@ -150,6 +162,7 @@ export async function POST(request: Request) {
 		try {
 			// The domain row cascades with the user.
 			await db.delete(users).where(eq(users.id, userId));
+			await db.delete(workspaces).where(eq(workspaces.id, workspaceId));
 		} catch (cleanupError) {
 			console.warn("Failed to remove the partial user after registration failure", cleanupError);
 		}

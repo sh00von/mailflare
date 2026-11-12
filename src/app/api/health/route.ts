@@ -11,8 +11,7 @@ export async function GET() {
 		await db.execute(sql`SELECT 1`);
 		return NextResponse.json({ ok: true });
 	} catch (error) {
-		const message = error instanceof Error ? error.message : "Database unavailable";
-		return NextResponse.json({ ok: false, error: message }, { status: 503 });
+		console.error("[health] Database check failed:", error);
+		return NextResponse.json({ ok: false, error: "Service unavailable" }, { status: 503 });
 	}
 }
-

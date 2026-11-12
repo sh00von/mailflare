@@ -5,6 +5,7 @@ import { canManageUsers, isPrimaryAdmin } from "@/lib/auth/admin";
 import type { SessionUser } from "@/lib/auth/types";
 import { newId } from "@/lib/ids";
 import { getAccountSeatError } from "@/lib/licenses/seats";
+import { checkCanAddMailbox, isSameWorkspace } from "@/lib/plans/usage";
 import { removeMailboxDomainRouting } from "@/lib/mailboxes/domain-addresses";
 import { avatarKeyFor } from "@/app/api/profile/avatar/utils";
 import { getAccountPurgeCutoff } from "./deletion-utils";
@@ -39,6 +40,7 @@ export async function deleteAccounts(env: CloudflareEnv, actor: SessionUser, inp
 	for (const group of chunks(ids)) targets.push(...(await db.select().from(users).where(inArray(users.id, group))));
 	if (targets.length !== ids.length) return { ok: false, status: 404, error: "Account not found" };
 	for (const target of targets) {
+		if (!isSameWorkspace(actor, target)) return { ok: false, status: 404, error: "Account not found" };
 		if (target.id === actor.id) return { ok: false, status: 400, error: "You cannot delete your own account" };
 		if (target.isPrimaryAdmin) return { ok: false, status: 403, error: "The primary admin cannot be deleted" };
 		if (!isPrimaryAdmin(actor) && target.role === "admin") return { ok: false, status: 403, error: "Only the primary admin can manage admin accounts" };
@@ -47,7 +49,7 @@ export async function deleteAccounts(env: CloudflareEnv, actor: SessionUser, inp
 	const transferToId = input.transferToId || null;
 	if (transferToId) {
 		const [recipient] = await db.select().from(users).where(eq(users.id, transferToId)).limit(1);
-		if (!recipient || recipient.disabled || recipient.deletedAt || ids.includes(recipient.id)) {
+		if (!recipient || !isSameWorkspace(actor, recipient) || recipient.disabled || recipient.deletedAt || ids.includes(recipient.id)) {
 			return { ok: false, status: 400, error: "Choose an active account to transfer data to" };
 		}
 		if (!isPrimaryAdmin(actor) && recipient.role === "admin" && recipient.id !== actor.id) {
@@ -67,11 +69,13 @@ export async function restoreAccount(env: CloudflareEnv, actor: SessionUser, id:
 	if (!canManageUsers(actor)) return { ok: false, status: 403, error: "You do not have permission to manage users" };
 	const db = getDb(env);
 	const [target] = await db.select().from(users).where(eq(users.id, id)).limit(1);
-	if (!target) return { ok: false, status: 404, error: "Account not found" };
+	if (!target || !isSameWorkspace(actor, target)) return { ok: false, status: 404, error: "Account not found" };
 	if (!target.deletedAt) return { ok: false, status: 409, error: "Account is not deleted" };
 	if (!isPrimaryAdmin(actor) && target.role === "admin") return { ok: false, status: 403, error: "Only the primary admin can manage admin accounts" };
 	const seatError = await getAccountSeatError(env);
 	if (seatError) return { ok: false, status: 403, error: seatError };
+	const quota = await checkCanAddMailbox(env, actor);
+	if (!quota.ok) return { ok: false, status: 403, error: quota.error };
 	await db.update(users).set({ deletedAt: null, disabled: false }).where(eq(users.id, id));
 	return { ok: true, deleted: 0 };
 }

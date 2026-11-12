@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/auth/cookies";
 import { hasValidSessionMutationOrigin } from "@/lib/auth/origin";
 import { MAX_ATTACHMENT_COUNT, listMessageAttachments, storeMessageAttachments } from "@/lib/email/attachments";
 import { getOutboundAttachmentMaxMb } from "@/lib/email/attachment-policy";
+import { checkCanAddAttachment } from "@/lib/plans/usage";
 import { readFormDataBody } from "@/lib/http/request";
 import { RequestBodyTooLargeError } from "@/lib/http/errors";
 import { userOwnsDraft } from "../../utils";
@@ -26,8 +27,12 @@ export async function POST(request: Request, { params }: DraftAttachmentUploadPa
 	const files = form.getAll("attachments").filter((value): value is File => value instanceof File && value.size > 0);
 	if (!files.length) return Response.json({ error: "No attachments provided" }, { status: 400 });
 	const existing = await listMessageAttachments(env, id);
+	const existingBytes = existing.reduce((total, file) => total + file.size, 0);
+	const newBytes = files.reduce((total, file) => total + file.size, 0);
+	const quota = await checkCanAddAttachment(env, user, newBytes, existingBytes + newBytes);
+	if (!quota.ok) return Response.json({ error: quota.error }, { status: 403 });
 	const maxBytes = (await getOutboundAttachmentMaxMb(env)) * 1_000_000;
-	if (existing.length + files.length > MAX_ATTACHMENT_COUNT || files.some((file) => file.size > maxBytes) || existing.reduce((total, file) => total + file.size, 0) + files.reduce((total, file) => total + file.size, 0) > maxBytes) return Response.json({ error: "Draft attachments exceed the allowed count or outgoing size limit" }, { status: 400 });
+	if (existing.length + files.length > MAX_ATTACHMENT_COUNT || files.some((file) => file.size > maxBytes) || existingBytes + newBytes > maxBytes) return Response.json({ error: "Draft attachments exceed the allowed count or outgoing size limit" }, { status: 400 });
 	try {
 		const attachments = await storeMessageAttachments(env, id, await Promise.all(files.map(async (file) => ({ filename: file.name, type: file.type || "application/octet-stream", content: await file.arrayBuffer(), disposition: "attachment" as const }))));
 		return Response.json({ attachments });

@@ -5,12 +5,14 @@ import type { ResendChecklistRecord } from "@/lib/email/resend-domain-setup";
 export async function ensureSesSendingDomain(
 	env: CloudflareEnv,
 	hostname: string,
+	options?: { createIfMissing?: boolean },
 ): Promise<{ verified: boolean; records: ResendChecklistRecord[] } | null> {
 	const config = await getAwsConfig(env);
 	if (!config) return null;
 
 	let identity = await getSesIdentity(config, hostname);
 	if (!identity.registered) {
+		if (options?.createIfMissing === false) return null;
 		identity = await createSesIdentity(config, hostname);
 	}
 

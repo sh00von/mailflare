@@ -1,5 +1,8 @@
 import { resolveMx, resolveTxt } from "node:dns/promises";
+import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { getDb } from "@/db";
+import { domains } from "@/db/schema";
 import { getEnv } from "@/lib/cloudflare";
 import { allowLoginAttempt } from "@/lib/auth/rate-limit";
 import { preflightDomain } from "@/lib/domains/preflight";
@@ -44,6 +47,11 @@ export async function POST(request: Request) {
 	if (!parsed.success) {
 		return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 	}
+	const normalized = parsed.data.hostname.toLowerCase().trim();
+	const [existing] = await getDb(env).select({ id: domains.id }).from(domains).where(eq(domains.hostname, normalized)).limit(1);
+	if (existing) {
+		return NextResponse.json({ error: "This domain is already registered. Only the workspace owner can create team accounts for it." }, { status: 409 });
+	}
 
 	try {
 		const domain = await preflightDomain(env, parsed.data.hostname);
@@ -58,7 +66,11 @@ export async function POST(request: Request) {
 		const spfAdded = rootTxt.some((txt) => txt.toLowerCase().startsWith("v=spf1") && txt.toLowerCase().includes(expectedMx));
 		const dmarcAdded = dmarcTxt.some((txt) => txt.toLowerCase().startsWith("v=dmarc1"));
 
-		const outboundSetup = await ensureOutboundSendingDomain(env, domain.hostname).catch((err) => {
+		// Only create the domain in Resend/SES after the caller proves ownership via MX, SPF, and DMARC.
+		const ownershipVerified = mxAdded && spfAdded && dmarcAdded;
+		const outboundSetup = await ensureOutboundSendingDomain(env, domain.hostname, {
+			createIfMissing: ownershipVerified,
+		}).catch((err) => {
 			console.error("[setup/domain/mx] Outbound domain setup failed:", err);
 			return null;
 		});

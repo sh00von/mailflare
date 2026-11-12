@@ -13,6 +13,10 @@ export const workspaces = sqliteTable("workspaces", {
 	plan: text("plan", { enum: ["starter", "pro", "business"] }).notNull().default("starter"),
 	status: text("status", { enum: ["trialing", "active", "suspended"] }).notNull().default("trialing"),
 	trialEndsAt: timestamp("trial_ends_at"),
+	stripeCustomerId: text("stripe_customer_id"),
+	stripeSubscriptionId: text("stripe_subscription_id"),
+	stripePriceId: text("stripe_price_id"),
+	currentPeriodEnd: timestamp("current_period_end"),
 	createdAt: timestamp("created_at")
 		.notNull()
 		.$defaultFn(() => new Date()),

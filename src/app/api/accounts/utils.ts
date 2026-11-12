@@ -23,6 +23,7 @@ export function listAccountsForAdmin(db: Db) {
 			canManageMailboxes: users.canManageMailboxes,
 			canManageDomains: users.canManageDomains,
 			canManageUsers: users.canManageUsers,
+			workspaceId: users.workspaceId,
 			calendarEnabled: users.calendarEnabled,
 			driveEnabled: users.driveEnabled,
 			createdAt: users.createdAt,

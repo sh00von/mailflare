@@ -65,7 +65,7 @@ function ShadcnSelect<T extends string>({
 				<div
 					role="listbox"
 					aria-label={ariaLabel}
-					className="absolute right-0 z-50 mt-1.5 min-w-44 overflow-hidden rounded-2xl border border-neutral-200 bg-white p-1 shadow-lg"
+					className="absolute left-0 z-50 mt-1.5 min-w-44 overflow-hidden rounded-2xl border border-neutral-200 bg-white p-1 shadow-lg sm:left-auto sm:right-0"
 				>
 					{options.map((opt) => {
 						const active = opt.value === value;

@@ -93,8 +93,8 @@ const sections: AdminSection[] = [
 		permission: "primary",
 	},
 	{
-		href: "/audit-logs",
-		title: "Audit logs",
+		href: "/activity",
+		title: "Activity & Audit",
 		description: "Inspect sign-ins, domain changes, and administrative actions.",
 		icon: ListChecks,
 		permission: "primary",
@@ -163,7 +163,7 @@ export default function AdminSettingsPage() {
 								</span>
 							</div>
 							<p className="mt-1 text-xs text-neutral-500">
-								Up to {planDef.maxAttachmentMb} MB per attachment · {planDef.storageLabel} S3 storage
+								Up to {planDef.maxAttachmentMb} MB per attachment · {planDef.storageLabel} cloud storage
 							</p>
 						</div>
 						<Button asChild variant="outline" size="sm" className="rounded-full">
@@ -187,7 +187,7 @@ export default function AdminSettingsPage() {
 							</p>
 						</div>
 						<div className="rounded-2xl bg-neutral-50 px-4 py-3">
-							<p className="text-xs text-neutral-500">S3 Storage</p>
+							<p className="text-xs text-neutral-500">Cloud Storage</p>
 							<p className="mt-1 text-base font-semibold text-neutral-900">
 								{formatBytes(overview.usage.storageUsedBytes)} / {planDef.storageLabel}
 							</p>

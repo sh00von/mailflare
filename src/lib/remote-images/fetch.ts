@@ -172,14 +172,62 @@ async function readLimitedBody(response: Response, maxBytes: number): Promise<Ui
 	return body;
 }
 
+function expandIpv6(address: string): number[] | null {
+	const cleaned = address.split("%")[0];
+	const parts = cleaned.split("::");
+	if (parts.length > 2) return null;
+	const parseSide = (side: string): number[] | null => {
+		if (!side) return [];
+		const out: number[] = [];
+		const tokens = side.split(":");
+		for (let i = 0; i < tokens.length; i++) {
+			const token = tokens[i];
+			if (token.includes(".")) {
+				if (i !== tokens.length - 1) return null;
+				const octets = token.split(".").map(Number);
+				if (octets.length !== 4 || octets.some((n) => !Number.isInteger(n) || n < 0 || n > 255)) return null;
+				out.push((octets[0] << 8) | octets[1], (octets[2] << 8) | octets[3]);
+			} else if (/^[0-9a-f]{1,4}$/i.test(token)) {
+				out.push(parseInt(token, 16));
+			} else {
+				return null;
+			}
+		}
+		return out;
+	};
+	const left = parseSide(parts[0]);
+	const right = parts.length === 2 ? parseSide(parts[1]) : [];
+	if (!left || !right) return null;
+	if (parts.length === 1) return left.length === 8 ? left : null;
+	const missing = 8 - (left.length + right.length);
+	if (missing < 1) return null;
+	return [...left, ...Array<number>(missing).fill(0), ...right];
+}
+
 export function isPublicAddress(address: string): boolean {
 	const value = address.trim().toLowerCase();
 	if (!value.includes(":")) return isPublicIpv4(value);
-	const mapped = /^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/.exec(value);
-	if (mapped) return isPublicIpv4(mapped[1]);
-	if (value === "::" || value === "::1") return false;
-	// Unique local (fc00::/7), link-local (fe80::/10) and multicast (ff00::/8).
-	return !/^(f[cd]|fe[89ab]|ff)/.test(value);
+	const groups = expandIpv6(value);
+	if (!groups) return false;
+	const isZeroPrefix = groups.slice(0, 5).every((g) => g === 0);
+	// Unspecified (::) and loopback (::1), including uncompressed forms.
+	if (isZeroPrefix && groups[5] === 0 && groups[6] === 0 && (groups[7] === 0 || groups[7] === 1)) return false;
+	// IPv4-mapped (::ffff:0:0/96) and IPv4-compatible (::/96).
+	if (isZeroPrefix && (groups[5] === 0xffff || groups[5] === 0)) {
+		const ipv4 = `${groups[6] >> 8}.${groups[6] & 0xff}.${groups[7] >> 8}.${groups[7] & 0xff}`;
+		return isPublicIpv4(ipv4);
+	}
+	// NAT64 (64:ff9b::/96 and 64:ff9b:1::/48)
+	if (groups[0] === 0x0064 && groups[1] === 0xff9b && (groups[2] === 0 || groups[2] === 1)) return false;
+	// Discard-only (100::/64)
+	if (groups[0] === 0x0100 && groups[1] === 0 && groups[2] === 0 && groups[3] === 0) return false;
+	// Documentation (2001:db8::/32)
+	if (groups[0] === 0x2001 && groups[1] === 0x0db8) return false;
+	// Unique local (fc00::/7), link-local (fe80::/10), multicast (ff00::/8)
+	if ((groups[0] & 0xfe00) === 0xfc00) return false;
+	if ((groups[0] & 0xffc0) === 0xfe80) return false;
+	if ((groups[0] & 0xff00) === 0xff00) return false;
+	return true;
 }
 
 async function defaultResolveHost(hostname: string): Promise<string[]> {

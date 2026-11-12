@@ -1,4 +1,4 @@
-import { and, count, eq, gte, inArray, isNull, sql } from "drizzle-orm";
+import { and, count, eq, gte, inArray, isNull, ne, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import { domains, mailboxes, messageAttachments, messages, users, workspaces } from "@/db/schema";
 import { newId } from "@/lib/ids";
@@ -147,6 +147,8 @@ export async function getWorkspaceUsage(env: CloudflareEnv, workspaceId: string)
 				and(
 					inArray(messages.mailboxId, mailboxIds),
 					eq(messages.direction, "outbound"),
+					ne(messages.status, "draft"),
+					ne(messages.status, "failed"),
 					gte(messages.createdAt, startOfUtcDay),
 				),
 			),
@@ -225,7 +227,7 @@ export async function checkCanSendEmail(
 			error: `Daily sending limit reached (${workspace.planDetails.dailySendLimit} emails/day on ${workspace.planDetails.name}). Upgrade your plan for higher daily limits.`,
 		};
 	}
-	if (usage.storageUsedBytes >= workspace.planDetails.storageLimitBytes) {
+	if (usage.storageUsedBytes + attachmentBytes > workspace.planDetails.storageLimitBytes) {
 		return {
 			ok: false,
 			error: `Workspace storage limit reached (${workspace.planDetails.storageLabel} on ${workspace.planDetails.name}). Delete old emails or upgrade your plan to send.`,
@@ -236,6 +238,31 @@ export async function checkCanSendEmail(
 		return {
 			ok: false,
 			error: `${workspace.planDetails.name} plan allows attachments up to ${workspace.planDetails.maxAttachmentMb} MB per email.`,
+		};
+	}
+	return { ok: true, workspace };
+}
+
+export async function checkCanAddAttachment(
+	env: CloudflareEnv,
+	user: { id: string; name: string; workspaceId?: string | null; isPrimaryAdmin?: boolean; createdByUserId?: string | null },
+	newBytes: number,
+	totalDraftBytes = newBytes,
+): Promise<{ ok: true; workspace: WorkspaceSummary } | { ok: false; error: string }> {
+	const { workspace, usage } = await getWorkspaceWithUsage(env, user);
+	const inactive = checkWorkspaceActive(workspace);
+	if (inactive) return { ok: false, error: inactive };
+	const maxAttachmentBytes = workspace.planDetails.maxAttachmentMb * 1024 * 1024;
+	if (totalDraftBytes > maxAttachmentBytes) {
+		return {
+			ok: false,
+			error: `${workspace.planDetails.name} plan allows attachments up to ${workspace.planDetails.maxAttachmentMb} MB per email.`,
+		};
+	}
+	if (usage.storageUsedBytes + newBytes > workspace.planDetails.storageLimitBytes) {
+		return {
+			ok: false,
+			error: `Workspace storage limit reached (${workspace.planDetails.storageLabel} on ${workspace.planDetails.name}). Delete old emails or upgrade your plan.`,
 		};
 	}
 	return { ok: true, workspace };

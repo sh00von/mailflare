@@ -18,6 +18,7 @@ import { ensureTrackingToken, getTrackingHostForSender } from "@/lib/tracking/op
 import { setFollowUp } from "@/lib/follow-ups/service";
 import { buildTrackingPixelUrl, injectTrackingPixel, resolveTrackingOrigin } from "@/lib/tracking/open-tracking-utils";
 import { getComposePreferences } from "@/lib/compose/preferences";
+import { checkCanSendEmail } from "@/lib/plans/usage";
 
 export type SendEmailInput = {
 	userId: string;
@@ -87,10 +88,15 @@ export async function sendEmail(
 	const sender = await getAuthorizedSenderAddress(env, input);
 	const attachments = input.attachments ?? [];
 	validateAttachments(attachments);
+	const totalAttachmentBytes = attachments.reduce((total, attachment) => total + attachment.content.byteLength, 0);
+	const quota = await checkCanSendEmail(env, { id: input.userId, name: "" }, totalAttachmentBytes);
+	if (!quota.ok) {
+		throw new Error(quota.error);
+	}
 	const maxAttachmentMb = await getOutboundAttachmentMaxMb(env);
 	const maxAttachmentBytes = maxAttachmentMb * 1_000_000;
 	if (attachments.some((attachment) => attachment.content.byteLength > maxAttachmentBytes) ||
-		attachments.reduce((total, attachment) => total + attachment.content.byteLength, 0) > maxAttachmentBytes) {
+		totalAttachmentBytes > maxAttachmentBytes) {
 		throw new Error(`Attachments exceed the administrator's ${maxAttachmentMb} MB outgoing limit`);
 	}
 	if (input.subject.length > 998) throw new Error("Subject exceeds Cloudflare's 998-character limit");

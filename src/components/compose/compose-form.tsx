@@ -758,9 +758,9 @@ export function ComposeForm({
 					</div>
 				)}
 				<div {...sheetDrag} className="flex h-9 shrink-0 items-center justify-between max-md:h-12 max-md:touch-none bg-neutral-800 text-white dark:bg-neutral-100 px-4 text-sm font-medium">
-					<span className="flex min-w-0 items-center gap-2 truncate  dark:text-neutral-900">
-						{threading?.inReplyTo && <Reply className="h-3.5 w-3.5 text-neutral-300" />}
-						{!threading?.inReplyTo && /^fwd?:/i.test(subject) && <Forward className="h-3.5 w-3.5 text-neutral-300" />}
+					<span className="flex min-w-0 items-center gap-2 truncate dark:text-neutral-900">
+						{threading?.inReplyTo && <Reply className="h-3.5 w-3.5 text-neutral-300 dark:text-neutral-700" />}
+						{!threading?.inReplyTo && /^fwd?:/i.test(subject) && <Forward className="h-3.5 w-3.5 text-neutral-300 dark:text-neutral-700" />}
 						{loadingDraft
 							? "Loading draft"
 							: threading?.inReplyTo
@@ -772,7 +772,7 @@ export function ComposeForm({
 										: "New Message"}
 					</span>
 					{mode === "popup" && (
-						<div className="flex shrink-0 items-center gap-3 text-neutral-300">
+						<div className="flex shrink-0 items-center gap-3 text-neutral-300 dark:text-neutral-700">
 							<button type="button" onClick={() => { setMinimized((current) => !current); setDraggingFiles(false); }} aria-label={minimized ? "Restore composer" : "Minimize composer"} title={minimized ? "Restore composer" : "Minimize composer"} className="max-md:hidden rounded p-1 hover:bg-neutral-700 dark:hover:bg-neutral-200 hover:text-white">
 								{minimized ? <ChevronUp className="h-4 w-4" /> : <Minus className="h-4 w-4" />}
 							</button>

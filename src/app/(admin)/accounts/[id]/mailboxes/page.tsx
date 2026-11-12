@@ -102,11 +102,6 @@ export default function AccountMailboxesPage() {
                 </span>
               </span>
               <span className="flex shrink-0 items-center gap-1">
-              <Button asChild variant="ghost" size="sm">
-                <Link href={`/mailboxes/${mailbox.id}`} aria-label={`${"Settings"}: ${mailbox.localPart}@${mailbox.hostname}`}>
-                  Settings
-                </Link>
-              </Button>
               <Button
                 type="button"
                 variant="ghost"

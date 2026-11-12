@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check } from "@/components/icons";
+import { ArrowRight, Check } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { authFetch } from "@/lib/auth/client";
-import { PLAN_LIST, type PlanDefinition } from "@/lib/plans/catalog";
+import { PLAN_LIST, type PlanDefinition, type PlanId } from "@/lib/plans/catalog";
 import type { WorkspaceSummary, WorkspaceUsage } from "@/lib/plans/usage";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -13,6 +14,11 @@ type PlanResponse = {
 	workspace: WorkspaceSummary;
 	usage: WorkspaceUsage;
 	plans: PlanDefinition[];
+	billing?: {
+		stripeConfigured: boolean;
+		hasCustomer: boolean;
+		currentPeriodEnd: string | null;
+	};
 	error?: string;
 };
 
@@ -52,8 +58,15 @@ function UsageBar({ label, usedLabel, maxLabel, pct, loading = false }: { label:
 export default function PlanAndUsagePage() {
 	const [data, setData] = useState<PlanResponse | null>(null);
 	const [error, setError] = useState<string | null>(null);
+	const [busyPlan, setBusyPlan] = useState<PlanId | "portal" | null>(null);
+	const [billingNotice, setBillingNotice] = useState<string | null>(null);
 
 	useEffect(() => {
+		if (typeof window !== "undefined") {
+			const status = new URLSearchParams(window.location.search).get("billing");
+			if (status === "success") setBillingNotice("Payment confirmed! Your subscription is now active.");
+			else if (status === "canceled") setBillingNotice("Checkout was canceled. No changes were made.");
+		}
 		let cancelled = false;
 		authFetch("/api/workspace/plan", { cache: "no-store" })
 			.then(async (res) => ({ res, json: (await res.json()) as PlanResponse }))
@@ -74,7 +87,49 @@ export default function PlanAndUsagePage() {
 	const usage = data?.usage;
 	const limits = workspace?.planDetails;
 	const plans = data?.plans ?? PLAN_LIST;
+	const billing = data?.billing;
+	const stripeReady = billing?.stripeConfigured ?? false;
 	const loading = !data && !error;
+
+	async function startCheckout(planId: PlanId) {
+		setBusyPlan(planId);
+		setError("");
+		try {
+			const res = await authFetch("/api/billing/checkout", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ plan: planId }),
+			});
+			const payload = (await res.json()) as { url?: string; error?: string };
+			if (!res.ok || !payload.url) {
+				setError(payload.error || "Failed to start Stripe checkout");
+				return;
+			}
+			window.location.assign(payload.url);
+		} catch (err) {
+			setError(err instanceof Error ? err.message : "Failed to start Stripe checkout");
+		} finally {
+			setBusyPlan(null);
+		}
+	}
+
+	async function openBillingPortal() {
+		setBusyPlan("portal");
+		setError("");
+		try {
+			const res = await authFetch("/api/billing/portal", { method: "POST" });
+			const payload = (await res.json()) as { url?: string; error?: string };
+			if (!res.ok || !payload.url) {
+				setError(payload.error || "Failed to open billing portal");
+				return;
+			}
+			window.location.assign(payload.url);
+		} catch (err) {
+			setError(err instanceof Error ? err.message : "Failed to open billing portal");
+		} finally {
+			setBusyPlan(null);
+		}
+	}
 
 	return (
 		<div className="space-y-8">
@@ -84,6 +139,15 @@ export default function PlanAndUsagePage() {
 					Track your workspace limits across domains, mailboxes, storage, and daily outbound email.
 				</p>
 			</div>
+
+			{billingNotice && (
+				<p
+					role="status"
+					className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900"
+				>
+					{billingNotice}
+				</p>
+			)}
 
 			<Card className="rounded-3xl border border-neutral-200/80 bg-white p-6">
 				<CardHeader className="flex-col items-start justify-between gap-4 border-b border-neutral-100 p-0 pb-5 sm:flex-row sm:items-center">
@@ -107,6 +171,9 @@ export default function PlanAndUsagePage() {
 								</div>
 								<p className="mt-1 text-sm text-neutral-500">
 									${limits.priceMonthlyUsd}/month · {limits.tagline}
+									{billing?.currentPeriodEnd
+										? ` · Renews ${new Date(billing.currentPeriodEnd).toLocaleDateString()}`
+										: ""}
 								</p>
 							</>
 						) : error ? (
@@ -118,9 +185,21 @@ export default function PlanAndUsagePage() {
 							</div>
 						)}
 					</div>
-					<p className="shrink-0 rounded-full bg-neutral-100 px-3.5 py-1.5 text-xs font-medium text-neutral-600">
-						Online billing &amp; self-serve upgrades coming soon
-					</p>
+					{stripeReady && billing?.hasCustomer ? (
+						<Button
+							type="button"
+							variant="outline"
+							className="shrink-0 rounded-full"
+							disabled={busyPlan !== null}
+							onClick={() => void openBillingPortal()}
+						>
+							{busyPlan === "portal" ? "Opening portal..." : "Manage Billing & Invoices"}
+						</Button>
+					) : !loading && !stripeReady ? (
+						<p className="shrink-0 rounded-full bg-neutral-100 px-3.5 py-1.5 text-xs font-medium text-neutral-600">
+							Set STRIPE_SECRET_KEY to enable online billing
+						</p>
+					) : null}
 				</CardHeader>
 				<CardContent className="grid gap-5 p-0 pt-6 sm:grid-cols-2">
 					<UsageBar
@@ -181,12 +260,32 @@ export default function PlanAndUsagePage() {
 								</p>
 								<p className="text-xs text-neutral-500">{plan.tagline}</p>
 							</CardHeader>
-							<CardContent className="space-y-2.5 border-t border-neutral-100 p-0 pt-4 text-sm text-neutral-700">
-								<p className="flex items-center gap-2"><Check className="h-4 w-4 shrink-0 text-blue-600" /> {plan.maxDomains} {plan.maxDomains === 1 ? "domain" : "domains"}</p>
-								<p className="flex items-center gap-2"><Check className="h-4 w-4 shrink-0 text-blue-600" /> {plan.maxMailboxes} mailboxes</p>
-								<p className="flex items-center gap-2"><Check className="h-4 w-4 shrink-0 text-blue-600" /> {plan.storageLabel} storage</p>
-								<p className="flex items-center gap-2"><Check className="h-4 w-4 shrink-0 text-blue-600" /> {plan.dailySendLimit.toLocaleString()} emails/day</p>
-								<p className="flex items-center gap-2"><Check className="h-4 w-4 shrink-0 text-blue-600" /> {plan.maxAttachmentMb} MB max attachment</p>
+							<CardContent className="flex flex-1 flex-col justify-between space-y-5 border-t border-neutral-100 p-0 pt-4 text-sm text-neutral-700">
+								<div className="space-y-2.5">
+									<p className="flex items-center gap-2"><Check className="h-4 w-4 shrink-0 text-blue-600" /> {plan.maxDomains} {plan.maxDomains === 1 ? "domain" : "domains"}</p>
+									<p className="flex items-center gap-2"><Check className="h-4 w-4 shrink-0 text-blue-600" /> {plan.maxMailboxes} mailboxes</p>
+									<p className="flex items-center gap-2"><Check className="h-4 w-4 shrink-0 text-blue-600" /> {plan.storageLabel} storage</p>
+									<p className="flex items-center gap-2"><Check className="h-4 w-4 shrink-0 text-blue-600" /> {plan.dailySendLimit.toLocaleString()} emails/day</p>
+									<p className="flex items-center gap-2"><Check className="h-4 w-4 shrink-0 text-blue-600" /> {plan.maxAttachmentMb} MB max attachment</p>
+								</div>
+								{stripeReady && (
+									<Button
+										type="button"
+										variant={current && workspace.status === "active" ? "outline" : "default"}
+										className="w-full rounded-full"
+										disabled={busyPlan !== null || (current && workspace.status === "active")}
+										onClick={() => void startCheckout(plan.id)}
+									>
+										{busyPlan === plan.id
+											? "Redirecting to Stripe..."
+											: current && workspace.status === "active"
+												? "Current active plan"
+												: current
+													? `Activate ${plan.name}`
+													: `Switch to ${plan.name}`}
+										{!(current && workspace.status === "active") && <ArrowRight className="h-4 w-4" />}
+									</Button>
+								)}
 							</CardContent>
 						</Card>
 					);
