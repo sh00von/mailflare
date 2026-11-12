@@ -17,7 +17,6 @@ import { getHomeBranding } from "./home-server-utils";
 import { HomeAuthProvider } from "./home-auth";
 import { HomeHeaderActions } from "./home-header-actions";
 import { HomeHeroActions } from "./home-hero-actions";
-import { HomeInboxPreview } from "./home-inbox-preview";
 import { faqs, landingNavItems } from "./utils";
 
 export const dynamic = "force-dynamic";
@@ -88,7 +87,7 @@ export default async function HomePage() {
 
 				<main id="main">
 					{/* Centered Editorial Hero */}
-					<section className="relative overflow-hidden pb-20 pt-14 sm:pt-20 lg:pb-24">
+					<section className="relative overflow-hidden pb-16 pt-14 sm:pt-20 lg:pb-20">
 						<div className="mx-auto max-w-5xl px-4 text-center sm:px-6 lg:px-8">
 							<div className="mx-auto mb-6 inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-3.5 py-1 text-xs font-medium text-neutral-700 shadow-2xs">
 								<span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
@@ -109,12 +108,6 @@ export default async function HomePage() {
 								<span>Shared team inboxes</span>
 								<span aria-hidden="true">·</span>
 								<span>14-day free trial</span>
-							</div>
-						</div>
-
-						<div className="mx-auto mt-14 max-w-5xl px-4 sm:px-6 lg:px-8">
-							<div className="rounded-3xl border border-neutral-200/80 bg-white p-2 shadow-[0_30px_80px_-35px_rgba(0,0,0,0.3)] sm:p-3">
-								<HomeInboxPreview />
 							</div>
 						</div>
 					</section>
