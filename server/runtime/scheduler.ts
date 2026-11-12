@@ -1,10 +1,8 @@
 import { runScheduledDatabaseBackup } from "@/lib/backups/runner";
 import { runTrashRetention } from "@/lib/email/trash-retention";
-import { runDriveTrashRetention } from "@/lib/drive/retention";
 import { runAccountRetention } from "@/lib/accounts/deletion";
 import { runJmapChangeRetention } from "@/lib/jmap/changes";
 import { runFollowUpReminders } from "@/lib/follow-ups/service";
-import { runCalendarReminders } from "@/lib/calendar/reminders";
 import { sweepImportJobs } from "@/lib/import/jobs";
 import { sweepOrphanedRawMail } from "@/lib/email/raw-sweeper";
 
@@ -16,12 +14,10 @@ export function startScheduler(env: CloudflareEnv) {
 		sweepImportJobs(env).catch((error) => console.error("Import job sweep failed", error));
 		const now = new Date();
 		runFollowUpReminders(env, now).catch((error) => console.error("Follow-up reminders failed", error));
-		runCalendarReminders(env, now).catch((error) => console.error("Calendar reminders failed", error));
 		const day = now.toISOString().slice(0, 10);
 		if (now.getUTCHours() !== 2 || lastRunDay === day) return;
 		lastRunDay = day;
 		runScheduledDatabaseBackup(env, now).catch((error) => console.error("Scheduled backup failed", error));
-		runDriveTrashRetention(env, now).catch((error) => console.error("Drive trash retention failed", error));
 		runAccountRetention(env, now).catch((error) => console.error("Account retention failed", error));
 		runJmapChangeRetention(env, now).catch((error) => console.error("JMAP change retention failed", error));
 		sweepOrphanedRawMail(env, now).catch((error) => console.error("Raw mail sweep failed", error));

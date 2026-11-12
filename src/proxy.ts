@@ -24,9 +24,6 @@ const MAIL_PATHS = [
 	"/snoozed",
 	"/folders",
 	"/compose",
-	"/calendar",
-	"/booking",
-	"/drive",
 	"/settings",
 	"/import-export",
 ];

@@ -600,62 +600,6 @@ export const emailTemplates = sqliteTable(
 	(t) => [index("email_templates_user_idx").on(t.userId)],
 );
 
-export const calendarEvents = sqliteTable(
-	"calendar_events",
-	{
-		id: text("id").primaryKey(),
-		userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-		mailboxId: text("mailbox_id").references(() => mailboxes.id, { onDelete: "set null" }),
-		title: text("title").notNull(),
-		description: text("description").notNull().default(""),
-		location: text("location").notNull().default(""),
-		attendees: text("attendees").notNull().default("[]"),
-		color: text("color").notNull().default("blue"),
-		repeat: text("repeat", { enum: ["none", "daily", "weekly", "monthly", "weekdays"] }).notNull().default("none"),
-		repeatDays: text("repeat_days").notNull().default("[]"),
-		repeatAnchorDay: integer("repeat_anchor_day"),
-		repeatUntil: timestamp("repeat_until"),
-		excludedOccurrences: text("excluded_occurrences").notNull().default("[]"),
-		timeZone: text("time_zone"),
-		startsAt: timestamp("starts_at").notNull(),
-		endsAt: timestamp("ends_at").notNull(),
-		/** Minutes before an occurrence's start to send a push reminder; null means no reminder. */
-		reminderMinutes: integer("reminder_minutes"),
-		/** Start of the latest occurrence a reminder was sent for; dedupes the five-minute cron. */
-		lastRemindedStart: timestamp("last_reminded_start"),
-		createdAt: timestamp("created_at").notNull().$defaultFn(() => new Date()),
-		updatedAt: timestamp("updated_at").notNull().$defaultFn(() => new Date()),
-	},
-	(t) => [
-		index("calendar_events_user_starts_idx").on(t.userId, t.startsAt),
-		index("calendar_events_mailbox_idx").on(t.mailboxId),
-	],
-);
-
-export const bookingEvents = sqliteTable(
-	"booking_events",
-	{
-		id: text("id").primaryKey(),
-		userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-		name: text("name").notNull(),
-		slug: text("slug").notNull().default(""),
-		description: text("description").notNull().default(""),
-		color: text("color").notNull().default("#2563eb"),
-		hostIds: text("host_ids").notNull().default("[]"),
-		durationMinutes: integer("duration_minutes").notNull(),
-		location: text("location").notNull().default(""),
-		weekdays: text("weekdays").notNull().default("[1,2,3,4,5]"),
-		startTime: text("start_time").notNull().default("09:00"),
-		endTime: text("end_time").notNull().default("17:00"),
-		timeRanges: text("time_ranges").notNull().default('[{"startTime":"09:00","endTime":"17:00"}]'),
-		timeZone: text("time_zone").notNull().default("UTC"),
-		enabled: bool("enabled").notNull().default(true),
-		createdAt: timestamp("created_at").notNull().$defaultFn(() => new Date()),
-		updatedAt: timestamp("updated_at").notNull().$defaultFn(() => new Date()),
-	},
-	(t) => [index("booking_events_user_idx").on(t.userId), uniqueIndex("booking_events_user_slug_idx").on(t.userId, t.slug)],
-);
-
 export const routingRules = sqliteTable(
 	"routing_rules",
 	{
@@ -1073,45 +1017,6 @@ export const backups = sqliteTable(
 	],
 );
 
-export const driveItems = sqliteTable("drive_items", {
-	id: text("id").primaryKey(),
-	ownerId: text("owner_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-	parentId: text("parent_id"),
-	kind: text("kind", { enum: ["file", "folder"] }).notNull(),
-	name: text("name").notNull(),
-	r2Key: text("r2_key"),
-	size: integer("size").notNull().default(0),
-	contentType: text("content_type").notNull().default("application/octet-stream"),
-	// Set while a multipart upload is in flight; such rows stay hidden until the upload completes.
-	uploadId: text("upload_id"),
-	uploadPartSize: integer("upload_part_size"),
-	uploadFingerprint: text("upload_fingerprint"),
-	linkToken: text("link_token"),
-	trashedAt: timestamp("trashed_at"),
-	createdAt: timestamp("created_at").notNull().$defaultFn(() => new Date()),
-	updatedAt: timestamp("updated_at").notNull().$defaultFn(() => new Date()),
-}, (t) => [
-	index("drive_items_owner_parent_idx").on(t.ownerId, t.parentId),
-	uniqueIndex("drive_items_link_token_idx").on(t.linkToken),
-]);
-
-export const driveUploadParts = sqliteTable("drive_upload_parts", {
-	itemId: text("item_id").notNull().references(() => driveItems.id, { onDelete: "cascade" }),
-	partNumber: integer("part_number").notNull(),
-	etag: text("etag").notNull(),
-}, (t) => [uniqueIndex("drive_upload_parts_idx").on(t.itemId, t.partNumber)]);
-
-export const driveShares = sqliteTable("drive_shares", {
-	id: text("id").primaryKey(),
-	itemId: text("item_id").notNull().references(() => driveItems.id, { onDelete: "cascade" }),
-	userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-	role: text("role", { enum: ["view", "edit"] }).notNull().default("view"),
-	createdAt: timestamp("created_at").notNull().$defaultFn(() => new Date()),
-}, (t) => [
-	uniqueIndex("drive_shares_item_user_idx").on(t.itemId, t.userId),
-	index("drive_shares_user_idx").on(t.userId),
-]);
-
 export const importJobs = sqliteTable("import_jobs", {
 	id: text("id").primaryKey(),
 	userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
@@ -1155,16 +1060,11 @@ export const schema = {
 	sharedAttachmentLinks,
 	outboundJobs,
 	emailTemplates,
-	calendarEvents,
-	bookingEvents,
 	routingRules,
 	webhooks,
 	webhookDeliveries,
 	sessions,
 	pushSubscriptions,
-	driveItems,
-	driveUploadParts,
-	driveShares,
 	auditLogs,
 	backupSettings,
 	backups,

@@ -349,6 +349,16 @@
         "DROP TABLE IF EXISTS \"mailbox_agent_settings\" CASCADE;",
         "DROP TABLE IF EXISTS \"mcp_key_mailboxes\" CASCADE;"
       ]
+    },
+    {
+      "name": "0009_gray_justice.sql",
+      "statements": [
+        "DROP TABLE \"booking_events\" CASCADE;",
+        "DROP TABLE \"calendar_events\" CASCADE;",
+        "DROP TABLE \"drive_items\" CASCADE;",
+        "DROP TABLE \"drive_shares\" CASCADE;",
+        "DROP TABLE \"drive_upload_parts\" CASCADE;"
+      ]
     }
   ]
 }

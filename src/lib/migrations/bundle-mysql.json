@@ -315,6 +315,16 @@
         "DROP TABLE `mailbox_agent_settings`;",
         "DROP TABLE `mcp_key_mailboxes`;"
       ]
+    },
+    {
+      "name": "0009_overconfident_slayback.sql",
+      "statements": [
+        "DROP TABLE `booking_events`;",
+        "DROP TABLE `calendar_events`;",
+        "DROP TABLE `drive_items`;",
+        "DROP TABLE `drive_shares`;",
+        "DROP TABLE `drive_upload_parts`;"
+      ]
     }
   ]
 }

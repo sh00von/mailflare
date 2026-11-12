@@ -6,19 +6,16 @@ import { requireSessionUser } from "@/lib/api/auth";
 import { isPrimaryAdmin } from "@/lib/auth/admin";
 import { hasValidSessionMutationOrigin } from "@/lib/auth/origin";
 import { getOutboundAttachmentMaxMb, MAX_OUTBOUND_ATTACHMENT_MAX_MB } from "@/lib/email/attachment-policy";
-import { getDriveStorageLimit } from "@/lib/drive/storage";
 
 const GIB = 1024 ** 3;
 
 const schema = z.object({
 	outboundAttachmentMaxMb: z.number().int().min(1).max(MAX_OUTBOUND_ATTACHMENT_MAX_MB).optional(),
-	/** Per-user Drive limit in GB; null removes the limit. */
 	driveStorageLimitGb: z.number().positive().max(1_000_000).nullable().optional(),
 });
 
 async function readSettings(env: CloudflareEnv) {
-	const limit = await getDriveStorageLimit(env);
-	return { outboundAttachmentMaxMb: await getOutboundAttachmentMaxMb(env), driveStorageLimitGb: limit === null ? null : Math.round((limit / GIB) * 100) / 100 };
+	return { outboundAttachmentMaxMb: await getOutboundAttachmentMaxMb(env), driveStorageLimitGb: null };
 }
 
 export async function GET(request: Request) {

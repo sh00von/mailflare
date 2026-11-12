@@ -1,10 +1,8 @@
 import { and, eq, inArray, isNotNull, isNull, lte } from "drizzle-orm";
 import { getDb } from "@/db";
-import { calendarEvents, driveItems, mailboxes, messageAttachments, messages, sessions, users } from "@/db/schema";
+import { mailboxes, messageAttachments, messages, sessions, users } from "@/db/schema";
 import { canManageUsers, isPrimaryAdmin } from "@/lib/auth/admin";
 import type { SessionUser } from "@/lib/auth/types";
-import { deleteDriveItems } from "@/lib/drive/access";
-import { driveObjectKey } from "@/lib/drive/utils";
 import { newId } from "@/lib/ids";
 import { getAccountSeatError } from "@/lib/licenses/seats";
 import { removeMailboxDomainRouting } from "@/lib/mailboxes/domain-addresses";
@@ -24,21 +22,8 @@ function chunks<T>(items: T[], size = CHUNK): T[][] {
  * Moves Drive files (documents included) and calendar events from one account to another. Drive items that sat at
  * the top level go into a folder on the receiving account so they do not mix with its own files.
  */
-export async function transferAccountData(env: CloudflareEnv, fromId: string, fromName: string, toId: string): Promise<void> {
-	const db = getDb(env);
-	const items = await db.select().from(driveItems).where(eq(driveItems.ownerId, fromId));
-	if (items.length) {
-		// Stored objects are keyed by owner unless the row records its key, so pin the key before the owner changes.
-		for (const row of items) {
-			if (row.kind === "file" && !row.r2Key) await db.update(driveItems).set({ r2Key: driveObjectKey(fromId, row.id) }).where(eq(driveItems.id, row.id));
-		}
-		const folderId = newId();
-		await db.insert(driveItems).values({ id: folderId, ownerId: toId, parentId: null, kind: "folder", name: `Files from ${fromName}`.slice(0, 255) });
-		const rootIds = items.filter((row) => !row.parentId).map((row) => row.id);
-		for (const ids of chunks(rootIds)) await db.update(driveItems).set({ parentId: folderId }).where(inArray(driveItems.id, ids));
-		await db.update(driveItems).set({ ownerId: toId }).where(and(eq(driveItems.ownerId, fromId), isNull(driveItems.uploadId)));
-	}
-	await db.update(calendarEvents).set({ userId: toId }).where(eq(calendarEvents.userId, fromId));
+export async function transferAccountData(_env: CloudflareEnv, _fromId: string, _fromName: string, _toId: string): Promise<void> {
+	// Drive and Calendar removed.
 }
 
 /**
@@ -101,8 +86,6 @@ async function purgeAccount(env: CloudflareEnv, account: typeof users.$inferSele
 			console.error("Account purge: could not remove routing", { mailboxId: mailbox.id, error });
 		}
 	}
-	const rootItems = await db.select().from(driveItems).where(and(eq(driveItems.ownerId, account.id), isNull(driveItems.parentId)));
-	if (rootItems.length) await deleteDriveItems(env, rootItems);
 	for (const mailbox of owned) {
 		const raw = await db.select({ key: messages.rawR2Key }).from(messages).where(and(eq(messages.mailboxId, mailbox.id), isNotNull(messages.rawR2Key)));
 		const attachments = await db.select({ key: messageAttachments.r2Key }).from(messageAttachments).innerJoin(messages, eq(messages.id, messageAttachments.messageId)).where(eq(messages.mailboxId, mailbox.id));
