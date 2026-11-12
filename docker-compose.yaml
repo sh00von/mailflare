@@ -48,3 +48,4 @@ services:
 volumes:
   replyot-data:
   postgres-data:
+
