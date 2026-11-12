@@ -359,6 +359,20 @@
         "DROP TABLE \"drive_shares\" CASCADE;",
         "DROP TABLE \"drive_upload_parts\" CASCADE;"
       ]
+    },
+    {
+      "name": "0010_reflective_chameleon.sql",
+      "statements": [
+        "CREATE TABLE \"workspaces\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"name\" text NOT NULL,\n\t\"owner_user_id\" text,\n\t\"plan\" text DEFAULT 'starter' NOT NULL,\n\t\"status\" text DEFAULT 'trialing' NOT NULL,\n\t\"trial_ends_at\" bigint,\n\t\"created_at\" bigint NOT NULL,\n\t\"updated_at\" bigint NOT NULL\n);",
+        "ALTER TABLE \"app_settings\" ALTER COLUMN \"app_name\" SET DEFAULT 'Replyot';",
+        "ALTER TABLE \"domains\" ADD COLUMN \"workspace_id\" text;",
+        "ALTER TABLE \"users\" ADD COLUMN \"workspace_id\" text;",
+        "CREATE INDEX \"workspaces_owner_idx\" ON \"workspaces\" USING btree (\"owner_user_id\");",
+        "ALTER TABLE \"domains\" ADD CONSTRAINT \"domains_workspace_id_workspaces_id_fk\" FOREIGN KEY (\"workspace_id\") REFERENCES \"public\".\"workspaces\"(\"id\") ON DELETE set null ON UPDATE no action;",
+        "ALTER TABLE \"users\" ADD CONSTRAINT \"users_workspace_id_workspaces_id_fk\" FOREIGN KEY (\"workspace_id\") REFERENCES \"public\".\"workspaces\"(\"id\") ON DELETE set null ON UPDATE no action;",
+        "CREATE INDEX \"domains_workspace_idx\" ON \"domains\" USING btree (\"workspace_id\");",
+        "CREATE INDEX \"users_workspace_idx\" ON \"users\" USING btree (\"workspace_id\");"
+      ]
     }
   ]
 }

@@ -29,7 +29,8 @@ type AdminLinkPermission = "primary" | "domains" | "users";
 
 type AdminNavLink = {
   href: string;
-  labelKey: string;
+  labelKey?: string;
+  label?: string;
   icon: typeof Settings;
   permission?: AdminLinkPermission;
 };
@@ -55,6 +56,8 @@ const sections: { id?: string; labelKey?: string; links: AdminNavLink[] }[] = [
     links: [
       { href: "/general", labelKey: "General", icon: Settings, permission: "primary" },
       { href: "/accounts", labelKey: "Accounts", icon: Users },
+      { href: "/plan", label: "Plan & Usage", icon: BadgeDollarSign },
+      { href: "/workspaces", label: "Workspaces", icon: Globe2, permission: "primary" },
       { href: "/activity", labelKey: "Activity", icon: Activity, permission: "primary" },
       { href: "/backups", labelKey: "Backups", icon: DatabaseBackup, permission: "primary" },
     ],
@@ -96,7 +99,7 @@ export function AdminNav({ className }: { className?: string }) {
     <SidebarScaffold className={className} header={<SidebarHeader href="/inbox" label={"Admin"} />} footer={<SidebarFooter />}>
       <div className={cn("space-y-4", minimal && "space-y-2 pl-1")}>
         {sections.map((section, sectionIndex) => {
-          const links = section.links.filter(canSee).map(({ labelKey, ...link }): NavLink => ({ ...link, label: labelKey }));
+          const links = section.links.filter(canSee).map(({ labelKey, label, ...link }): NavLink => ({ ...link, label: label ?? (labelKey ? labelKey : "") }));
           if (links.length === 0) return null;
 
           return (

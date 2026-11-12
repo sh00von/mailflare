@@ -5,6 +5,8 @@ const ADMIN_PATHS = [
 	"/domains",
 	"/accounts",
 	"/general",
+	"/plan",
+	"/workspaces",
 	"/webhooks",
 	"/spam-filter",
 	"/activity",

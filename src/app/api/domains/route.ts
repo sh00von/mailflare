@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { eq } from "drizzle-orm";
 import { getEnv } from "@/lib/cloudflare";
+import { getDb } from "@/db";
+import { domains as domainsTable } from "@/db/schema";
 import { requireUser } from "@/lib/auth/cookies";
 import { canManageDomains } from "@/lib/auth/admin";
 import { addDomainSchema } from "@/lib/validators";
@@ -8,6 +11,7 @@ import type { DnsStatusSummary } from "@/lib/dns-status";
 import { summariseDomainDns } from "@/lib/domains/dns-view";
 import { getDomainProvisioningError } from "@/lib/domains/errors";
 import { hasValidSessionMutationOrigin } from "@/lib/auth/origin";
+import { checkCanAddDomain } from "@/lib/plans/usage";
 
 export async function GET(request: NextRequest) {
 	const env = getEnv();
@@ -52,6 +56,11 @@ export async function POST(request: Request) {
 		return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 	}
 
+	const quota = await checkCanAddDomain(env, user);
+	if (!quota.ok) {
+		return NextResponse.json({ error: quota.error }, { status: 403 });
+	}
+
 	try {
 		const result = await addDomainForUser(env, user.id, parsed.data.hostname, {
 			enableRouting: parsed.data.enableRouting,
@@ -61,6 +70,7 @@ export async function POST(request: Request) {
 			receivingProvider: parsed.data.receivingProvider,
 			sendingProvider: parsed.data.sendingProvider,
 		});
+		await getDb(env).update(domainsTable).set({ workspaceId: quota.workspace.id }).where(eq(domainsTable.id, result.domain.id));
 		return NextResponse.json(result);
 	} catch (err) {
 		const failure = getDomainProvisioningError(err, "Failed to add domain");

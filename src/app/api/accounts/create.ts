@@ -8,21 +8,24 @@ import { rollbackEmailRoutingRuleChanges } from "@/lib/cloudflare-api";
 import type { CfEmailRoutingRuleChange } from "@/lib/cloudflare-api.types";
 import { normalizeRecipientLocalPart } from "@/lib/email/recipient-address";
 import { newId } from "@/lib/ids";
-import { getAccountSeatError } from "@/lib/licenses/seats";
+import { checkCanAddMailbox } from "@/lib/plans/usage";
 import { ensureMailboxDomainRouting } from "@/lib/mailboxes/domain-addresses";
 import type { CreateUserAccountInput } from "./types";
 import { accountListItemFromUser, domainOwnerIdsForAdmin, getDomainForAdmin } from "./utils";
 
 type AccountAdminActor = {
 	id: string;
+	name: string;
+	workspaceId?: string | null;
+	isPrimaryAdmin?: boolean;
 	canManageMailboxes: boolean;
 	createdByUserId: string | null;
 };
 
-/** Shared by dashboard and admin API/MCP account creation. */
+/** Shared by dashboard and admin account creation. */
 export async function createAccountResponse(env: CloudflareEnv, actor: AccountAdminActor, input: CreateUserAccountInput) {
-	const seatError = await getAccountSeatError(env);
-	if (seatError) return NextResponse.json({ error: seatError }, { status: 403 });
+	const quota = await checkCanAddMailbox(env, actor);
+	if (!quota.ok) return NextResponse.json({ error: quota.error }, { status: 403 });
 	const db = getDb(env);
 	const adminUserId = actor.id;
 	const domainOwnerIds = domainOwnerIdsForAdmin(actor);
@@ -67,7 +70,7 @@ export async function createAccountResponse(env: CloudflareEnv, actor: AccountAd
 	try {
 		const accountInsert = db.insert(users).values({
 			id: userId, email, passwordHash: hashPassword(input.password), name: username,
-			role: input.role, createdByUserId: adminUserId, remoteContentMode: "ask",
+			role: input.role, createdByUserId: adminUserId, workspaceId: quota.workspace.id, remoteContentMode: "ask",
 		}).returning();
 		const mailboxInsert = db.insert(mailboxes).values(mailbox);
 		// Five bound columns per alias: 20 rows fit D1's 100-parameter limit.

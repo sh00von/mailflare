@@ -11,15 +11,16 @@ import { Label } from "@/components/ui/label";
 import { TurnstileField } from "@/components/auth/turnstile";
 import {
 	checkExistingMx,
-	prepareSetup,
 	submitPrimaryDomain,
 	submitRegistration,
 } from "./utils";
+import { PLAN_LIST, resolvePlanId, type PlanId } from "@/lib/plans/catalog";
 import type { DnsRecordChecklistItem, DomainSetupResult } from "./types";
 
 export function RegisterClient() {
-	const [ready, setReady] = useState(false);
+	const [ready] = useState(true);
 	const [step, setStep] = useState<1 | 2 | 3>(1);
+	const [plan, setPlan] = useState<PlanId>("starter");
 	const [orgName, setOrgName] = useState("");
 	const [domainName, setDomainName] = useState("");
 	const [dnsChecklist, setDnsChecklist] = useState<DnsRecordChecklistItem[]>([]);
@@ -31,19 +32,10 @@ export function RegisterClient() {
 	const [usePasskey, setUsePasskey] = useState(false);
 
 	useEffect(() => {
-		let active = true;
-		void prepareSetup()
-			.then((res) => {
-				if (!active) return;
-				if (!res.ok) setError(res.data.error ?? "Workspace initialization failed. Please try again.");
-				setReady(true);
-			})
-			.catch((err: unknown) => {
-				if (!active) return;
-				setError(err instanceof Error ? err.message : "Could not initialize setup");
-				setReady(true);
-			});
-		return () => { active = false; };
+		if (typeof window !== "undefined") {
+			const qp = new URLSearchParams(window.location.search).get("plan");
+			if (qp) setPlan(resolvePlanId(qp));
+		}
 	}, []);
 
 	async function loadDnsChecklist(hostname: string) {
@@ -93,6 +85,7 @@ export function RegisterClient() {
 			const { ok, data } = await submitRegistration(formData, {
 				firstRun: true,
 				domain: domainName,
+				plan,
 				enableSending: true,
 				skipDns: false,
 			});
@@ -150,6 +143,28 @@ export function RegisterClient() {
 				</div>
 			) : step === 1 ? (
 				<form onSubmit={onDomainStepSubmit} className="space-y-4">
+					<div className="space-y-2">
+						<Label>Select your plan (14-day free trial)</Label>
+						<div className="grid grid-cols-3 gap-2">
+							{PLAN_LIST.map((item) => {
+								const active = plan === item.id;
+								return (
+									<button
+										key={item.id}
+										type="button"
+										onClick={() => setPlan(item.id)}
+										className={`rounded-xl border px-3 py-2 text-left transition-colors ${active ? "border-blue-600 bg-blue-50/70 ring-1 ring-blue-600" : "border-neutral-200 bg-white hover:border-neutral-300"}`}
+									>
+										<div className="text-xs font-semibold text-neutral-900">{item.name}</div>
+										<div className="text-xs text-neutral-600">${item.priceMonthlyUsd}/mo</div>
+										<div className="mt-0.5 text-[10px] text-neutral-500">
+											{item.maxDomains}d · {item.maxMailboxes}u · {item.storageLabel}
+										</div>
+									</button>
+								);
+							})}
+						</div>
+					</div>
 					<div className="space-y-2">
 						<Label htmlFor="orgName">Organization / Business name (optional)</Label>
 						<Input
@@ -238,19 +253,34 @@ export function RegisterClient() {
 							</div>
 						)}
 					</div>
-					{error && (
-						<p role="alert" className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-							{error}
-						</p>
-					)}
-					<div className="flex flex-col gap-2 sm:flex-row">
-						<Button type="button" variant="outline" className="h-11 rounded-full px-5" onClick={() => setStep(1)}>
-							Back
-						</Button>
-						<Button type="button" className="h-11 flex-1 rounded-full px-6" onClick={() => setStep(3)}>
-							Continue to Account Setup
-						</Button>
-					</div>
+					{(() => {
+						const allDnsVerified = dnsChecklist.length > 0 && dnsChecklist.every((rec) => rec.added);
+						return (
+							<>
+								<div className={`rounded-2xl border px-4 py-3 text-xs font-medium ${allDnsVerified ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-800"}`}>
+									{allDnsVerified
+										? `DNS verified for ${domainName}! You can now create your admin account.`
+										: "Waiting for DNS records (MX, SPF, DMARC). Add them at your DNS registrar and click Check DNS again."}
+								</div>
+								{error && (
+									<p role="alert" className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+										{error}
+									</p>
+								)}
+								<div className="flex flex-col gap-2 sm:flex-row">
+									<Button type="button" variant="outline" className="h-11 rounded-full px-5" onClick={() => setStep(1)}>
+										Back
+									</Button>
+									<Button type="button" variant="outline" className="h-11 rounded-full px-5" disabled={dnsChecking} onClick={() => void loadDnsChecklist(domainName)}>
+										{dnsChecking ? "Checking..." : "Check DNS again"}
+									</Button>
+									<Button type="button" className="h-11 flex-1 rounded-full px-6" disabled={!allDnsVerified || dnsChecking} onClick={() => setStep(3)}>
+										Continue to Account Setup
+									</Button>
+								</div>
+							</>
+						);
+					})()}
 				</div>
 			) : (
 				<form method="post" onSubmit={onAccountSubmit} className="space-y-4">

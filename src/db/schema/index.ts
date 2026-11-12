@@ -6,6 +6,21 @@ import { kit } from "./kits";
 // DATABASE_URL selects one. Everything below is typed as SQLite, which is the shape the app queries.
 const { table: sqliteTable, text, integer, bool, timestamp, autoId, index, uniqueIndex, desc, nowSeconds } = kit;
 
+export const workspaces = sqliteTable("workspaces", {
+	id: text("id").primaryKey(),
+	name: text("name").notNull(),
+	ownerUserId: text("owner_user_id"),
+	plan: text("plan", { enum: ["starter", "pro", "business"] }).notNull().default("starter"),
+	status: text("status", { enum: ["trialing", "active", "suspended"] }).notNull().default("trialing"),
+	trialEndsAt: timestamp("trial_ends_at"),
+	createdAt: timestamp("created_at")
+		.notNull()
+		.$defaultFn(() => new Date()),
+	updatedAt: timestamp("updated_at")
+		.notNull()
+		.$defaultFn(() => new Date()),
+}, (t) => [index("workspaces_owner_idx").on(t.ownerUserId)]);
+
 export const users = sqliteTable("users", {
 	id: text("id").primaryKey(),
 	email: text("email").notNull().unique(),
@@ -65,12 +80,14 @@ export const users = sqliteTable("users", {
 	// retention window ends, after which the scheduled purge removes it and its data.
 	deletedAt: timestamp("deleted_at"),
 	createdByUserId: text("created_by_user_id").references((): AnySQLiteColumn => users.id, { onDelete: "set null" }),
+	workspaceId: text("workspace_id").references(() => workspaces.id, { onDelete: "set null" }),
 	createdAt: timestamp("created_at")
 		.notNull()
 		.$defaultFn(() => new Date()),
 }, (t) => [
 	uniqueIndex("users_booking_username_idx").on(t.bookingUsername),
 	index("users_created_by_idx").on(t.createdByUserId),
+	index("users_workspace_idx").on(t.workspaceId),
 ]);
 
 export const domains = sqliteTable(
@@ -94,6 +111,7 @@ export const domains = sqliteTable(
 		routingEnabled: bool("routing_enabled").notNull().default(false),
 		/** The operator skipped adding/checking DNS; set until they confirm the records exist. */
 		dnsSkipped: bool("dns_skipped").notNull().default(false),
+		workspaceId: text("workspace_id").references(() => workspaces.id, { onDelete: "set null" }),
 		createdAt: timestamp("created_at")
 			.notNull()
 			.$defaultFn(() => new Date()),
@@ -101,6 +119,7 @@ export const domains = sqliteTable(
 	(t) => [
 		uniqueIndex("domains_hostname_idx").on(t.hostname),
 		index("domains_user_idx").on(t.userId),
+		index("domains_workspace_idx").on(t.workspaceId),
 	],
 );
 
@@ -1043,6 +1062,7 @@ export const importJobs = sqliteTable("import_jobs", {
 }, (t) => [index("import_jobs_user_idx").on(t.userId, t.createdAt), index("import_jobs_status_idx").on(t.status, t.updatedAt)]);
 
 export const schema = {
+	workspaces,
 	users,
 	domains,
 	mailboxes,

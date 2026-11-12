@@ -18,6 +18,9 @@ import { readJsonBody } from "@/lib/http/request";
 import { RequestBodyTooLargeError } from "@/lib/http/errors";
 import { verifyTurnstileToken } from "@/lib/auth/turnstile";
 import { getDomainProvisioningError } from "@/lib/domains/errors";
+import { auditDomainDns } from "@/lib/domains/dns-audit";
+import { resolvePlanId } from "@/lib/plans/catalog";
+import { createWorkspaceForOwner } from "@/lib/plans/usage";
 
 export async function POST(request: Request) {
 	const env = getEnv();
@@ -52,10 +55,25 @@ export async function POST(request: Request) {
 	}
 	const [existingDomain] = await db.select({ id: domains.id }).from(domains).where(eq(domains.hostname, domainName)).limit(1);
 	if (existingDomain) {
-		return NextResponse.json({ error: "Domain is already registered" }, { status: 409 });
+		return NextResponse.json({ error: "This domain is already registered. Only the workspace owner can create team accounts for it." }, { status: 409 });
 	}
 
+	const dnsAudit = await auditDomainDns(domainName, { routing: { records: [], missing: [] }, sending: [] });
+	if (dnsAudit.mx.status !== "ok" || dnsAudit.spf.status !== "ok" || dnsAudit.dmarc.status !== "ok") {
+		return NextResponse.json(
+			{ error: "Domain DNS is not verified yet. Add your MX, SPF, and DMARC records and check DNS again before creating your account." },
+			{ status: 400 },
+		);
+	}
+
+	const selectedPlan = resolvePlanId((body as Record<string, unknown>)?.plan);
 	const userId = newId("usr");
+	const workspaceId = await createWorkspaceForOwner(env, {
+		ownerUserId: userId,
+		name: `${name}'s Workspace`,
+		plan: selectedPlan,
+		status: isFirstUser ? "active" : "trialing",
+	});
 	await db.insert(users).values({
 		id: userId,
 		// Opening a message must not tell the sender; the column default predates this and stays "allow".
@@ -69,6 +87,7 @@ export async function POST(request: Request) {
 		canManageDomains: true,
 		canManageUsers: true,
 		canManageMailboxes: true,
+		workspaceId,
 	});
 
 	// Create the setup grant before touching DNS. If it cannot be written, the
@@ -100,6 +119,7 @@ export async function POST(request: Request) {
 		});
 		const domain = added.domain;
 		changes = added.changes;
+		await db.update(domains).set({ workspaceId }).where(eq(domains.id, domain.id));
 		if (domain.zoneId !== "manual") {
 			await ensureEmailRoutingRuleToWorker(env, domain.zoneId, email);
 			changes.createdAddressRules.push(email);

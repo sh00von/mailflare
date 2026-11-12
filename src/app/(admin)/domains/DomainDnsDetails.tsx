@@ -117,15 +117,14 @@ export default function DomainDnsDetails({
 					</div>
 
 					<ul className="mt-3 space-y-2">
-						{(["mx", "spf", "dkim", "dmarc"] as DnsAuthRecord[]).map((record) => {
+						{(["mx", "spf", "dmarc"] as DnsAuthRecord[]).map((record) => {
 							const item = audit[record];
 							const ok = item.status === "ok";
 							const expected = expectedValues[record];
-							const dkimManaged = record === "dkim" && !ok && !expected;
 
 							return (
-								<li key={record} className={`${ROW_GRID} ${dkimManaged ? "border-neutral-200 bg-neutral-50/70" : getDnsAuthItemClass(item.status)}`}>
-									<StatusBadge ok={ok || dkimManaged} tone={item.status === "missing" && !dkimManaged ? "red" : "neutral"} />
+								<li key={record} className={`${ROW_GRID} ${getDnsAuthItemClass(item.status)}`}>
+									<StatusBadge ok={ok} tone={item.status === "missing" ? "red" : "neutral"} />
 									<span className="min-w-0">
 										<span className="block font-medium text-neutral-900">{`${item.label} record`}</span>
 										<span className="block text-xs text-neutral-500">{dnsAuthDescriptions[record]}</span>

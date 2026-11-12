@@ -11,6 +11,7 @@ import { messages } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { loadMessageAttachmentContents } from "@/lib/email/attachments";
 import { userOwnsDraft } from "@/app/api/drafts/utils";
+import { checkCanSendEmail } from "@/lib/plans/usage";
 
 export async function POST(request: Request) {
 	const env = getEnv();
@@ -41,6 +42,12 @@ export async function POST(request: Request) {
 			return NextResponse.json({ error: "Draft not found" }, { status: 404 });
 		}
 		attachments.push(...(await loadMessageAttachmentContents(env, draftId)));
+	}
+
+	const attachmentBytes = attachments.reduce((sum, item) => sum + (item.content?.byteLength ?? 0), 0);
+	const quota = await checkCanSendEmail(env, user, attachmentBytes);
+	if (!quota.ok) {
+		return NextResponse.json({ error: quota.error }, { status: 403 });
 	}
 
 	try {

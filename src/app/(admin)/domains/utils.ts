@@ -1,7 +1,7 @@
 import { authFetch } from "@/lib/auth/client";
 import type { DnsAuthRecord, DnsAuthStatus, DomainPreflightResponse } from "./types";
 
-export const dnsAuthRecords: DnsAuthRecord[] = ["mx", "spf", "dkim", "dmarc"];
+export const dnsAuthRecords: DnsAuthRecord[] = ["mx", "spf", "dmarc"];
 
 export const dnsAuthDescriptions = {
 	mx: "Routes incoming email to Replyot",

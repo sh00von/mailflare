@@ -2,8 +2,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/db";
 import { createUserAccountSchema } from "@/lib/validators";
 import { canManageUsers, isPrimaryAdmin } from "@/lib/auth/admin";
-import { getLicenseEntitlements } from "@/lib/licenses/service";
-import { countUsedAccountSeats } from "@/lib/licenses/seats";
+import { getWorkspaceWithUsage } from "@/lib/plans/usage";
 import { deleteAccounts } from "@/lib/accounts/deletion";
 import { createAccountResponse } from "./create";
 import { accountListItemFromUser, listAccountsForAdmin, requireTeamAdmin } from "./utils";
@@ -11,14 +10,16 @@ import { accountListItemFromUser, listAccountsForAdmin, requireTeamAdmin } from 
 export async function GET(request: Request) {
 	const access = await requireTeamAdmin(request);
 	if (access.error) return access.error;
-	const allRows = await listAccountsForAdmin(getDb(access.env));
+	const [allRows, { workspace, usage }] = await Promise.all([
+		listAccountsForAdmin(getDb(access.env)),
+		getWorkspaceWithUsage(access.env, access.user!),
+	]);
 	const rows = isPrimaryAdmin(access.user!)
 		? allRows
-		: allRows.filter((row) => row.id === access.user!.id);
-	const [{ accountSeatLimit }, seatsUsed] = await Promise.all([getLicenseEntitlements(access.env), countUsedAccountSeats(access.env)]);
+		: allRows.filter((row) => row.workspaceId === workspace.id || row.id === access.user!.id);
 	return NextResponse.json({
 		accounts: rows.map((row) => accountListItemFromUser(row)),
-		seats: { limit: accountSeatLimit, used: seatsUsed },
+		seats: { limit: workspace.planDetails.maxMailboxes, used: usage.mailboxesUsed },
 	});
 }
 

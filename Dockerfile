@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 # Mailflare self-hosted image: Next.js app, SMTP listener, job queues and
 # backups in one Node process. Data lives in /data (mount a volume).
 FROM node:22-bookworm-slim AS base
@@ -16,7 +17,7 @@ FROM deps AS build
 COPY . .
 ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY
 ENV NEXT_PUBLIC_TURNSTILE_SITE_KEY=$NEXT_PUBLIC_TURNSTILE_SITE_KEY
-RUN pnpm run build:node && rm -rf .next-node/cache
+RUN --mount=type=cache,target=/app/.next-node/cache pnpm run build:node
 
 # Production dependencies only. The Workers toolchain arrives as transitive
 # dependencies of the Cloudflare adapter and is never loaded here, so it goes.

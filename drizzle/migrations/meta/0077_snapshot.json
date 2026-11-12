@@ -2,7 +2,7 @@
   "version": "6",
   "dialect": "sqlite",
   "id": "9e364a41-f1b1-4d2c-acb2-f2b73e5ca0f7",
-  "prevId": "97762ce2-2953-4361-bcf0-f4c2c0adbaf1",
+  "prevId": "17f5c0b2-d662-46a8-9e80-2cf234080ab5",
   "tables": {
     "api_keys": {
       "name": "api_keys",

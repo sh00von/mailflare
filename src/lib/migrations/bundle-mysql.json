@@ -325,6 +325,20 @@
         "DROP TABLE `drive_shares`;",
         "DROP TABLE `drive_upload_parts`;"
       ]
+    },
+    {
+      "name": "0010_mixed_hedge_knight.sql",
+      "statements": [
+        "CREATE TABLE `workspaces` (\n\t`id` varchar(191) NOT NULL,\n\t`name` longtext NOT NULL,\n\t`owner_user_id` varchar(191),\n\t`plan` varchar(64) NOT NULL DEFAULT 'starter',\n\t`status` varchar(64) NOT NULL DEFAULT 'trialing',\n\t`trial_ends_at` bigint,\n\t`created_at` bigint NOT NULL,\n\t`updated_at` bigint NOT NULL,\n\tCONSTRAINT `workspaces_id` PRIMARY KEY(`id`)\n);",
+        "ALTER TABLE `app_settings` MODIFY COLUMN `app_name` longtext NOT NULL DEFAULT ('Replyot');",
+        "ALTER TABLE `domains` ADD `workspace_id` varchar(191);",
+        "ALTER TABLE `users` ADD `workspace_id` varchar(191);",
+        "CREATE INDEX `workspaces_owner_idx` ON `workspaces` (`owner_user_id`);",
+        "ALTER TABLE `domains` ADD CONSTRAINT `domains_workspace_id_workspaces_id_fk` FOREIGN KEY (`workspace_id`) REFERENCES `workspaces`(`id`) ON DELETE set null ON UPDATE no action;",
+        "ALTER TABLE `users` ADD CONSTRAINT `users_workspace_id_workspaces_id_fk` FOREIGN KEY (`workspace_id`) REFERENCES `workspaces`(`id`) ON DELETE set null ON UPDATE no action;",
+        "CREATE INDEX `domains_workspace_idx` ON `domains` (`workspace_id`);",
+        "CREATE INDEX `users_workspace_idx` ON `users` (`workspace_id`);"
+      ]
     }
   ]
 }
