@@ -22,8 +22,8 @@ export function AuthShell({
   }, [branding.iconUrl]);
 
   return (
-    <div className="min-h-dvh bg-[#f1f4fa] text-neutral-900 sm:px-6 sm:py-6 lg:flex lg:items-center lg:px-10 lg:py-10">
-      <main className="mx-auto grid min-h-dvh w-full max-w-4xl grid-rows-[auto_1fr] overflow-hidden bg-white sm:min-h-0 sm:grid-rows-none sm:rounded-4xl lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
+    <div className="min-h-dvh bg-background text-neutral-900 sm:px-6 sm:py-6 lg:flex lg:items-center lg:px-10 lg:py-10">
+      <main className="mx-auto grid min-h-dvh w-full max-w-4xl grid-rows-[auto_1fr] overflow-hidden border-neutral-200/80 bg-white sm:min-h-0 sm:grid-rows-none sm:rounded-4xl sm:border lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
         <section className="flex flex-col p-7 sm:p-10 lg:p-14">
           <div className="flex items-center gap-2">
             <span className="flex items-center justify-center overflow-hidden">

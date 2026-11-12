@@ -21,7 +21,7 @@ export async function getResendKeyStatus(env: CloudflareEnv): Promise<ResendKeyS
 		.where(eq(appSettings.id, "default"))
 		.limit(1);
 	const saved = settings?.resendApiKey?.trim();
-	const fromEnv = (env as { RESEND_API_KEY?: string }).RESEND_API_KEY?.trim();
+	const fromEnv = ((env as { RESEND_API_KEY?: string }).RESEND_API_KEY ?? process.env.RESEND_API_KEY)?.trim();
 	return {
 		configured: !!(saved || fromEnv),
 		source: saved ? "settings" : fromEnv ? "environment" : null,

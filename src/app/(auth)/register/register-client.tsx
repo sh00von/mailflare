@@ -118,7 +118,7 @@ export function RegisterClient() {
 
 	const stepSubtitle =
 		step === 1
-			? "Enter your organization and custom domain to launch your free email & workspace."
+			? "Enter your organization and custom domain to start your 14-day free trial."
 			: step === 2
 				? "Add these DNS records at your domain registrar so you can send and receive mail."
 				: `Create your first email address on ${domainName}.`;
@@ -200,83 +200,75 @@ export function RegisterClient() {
 				</form>
 			) : step === 2 ? (
 				<div className="space-y-4">
-					<div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
-						<div className="mb-2 flex items-center justify-between gap-2">
-							<span className="text-sm font-semibold text-neutral-900">Required DNS records</span>
-							<button
-								type="button"
-								onClick={() => void loadDnsChecklist(domainName)}
-								disabled={dnsChecking}
-								className="cursor-pointer text-xs font-medium text-blue-700 hover:underline disabled:opacity-50"
-							>
-								{dnsChecking ? "Checking..." : "Re-check DNS"}
-							</button>
-						</div>
-						<p className="mb-3 text-xs text-neutral-500">
+					<div>
+						<h2 className="text-sm font-semibold text-neutral-900">Required DNS records</h2>
+						<p className="mt-1 text-xs text-neutral-500">
 							Open your DNS provider (Namecheap, GoDaddy, Route53, etc.) and add these records:
 						</p>
-						{dnsChecking && dnsChecklist.length === 0 ? (
-							<div className="flex items-center gap-2 py-4 text-xs text-neutral-500">
-								<LoaderCircle className="h-4 w-4 animate-spin" />
-								Checking live DNS for {domainName}...
-							</div>
-						) : (
-							<div className="space-y-2">
-								{dnsChecklist.map((rec, i) => (
-									<div key={`${rec.type}-${rec.name}-${i}`} className="rounded-xl border border-neutral-200 bg-white p-3 text-xs">
-										<div className="flex items-center justify-between gap-2">
-											<span className="font-semibold text-neutral-900">
-												{rec.type} &middot; Host: <code>{rec.name}</code>
-												{rec.priority !== undefined ? ` (Priority ${rec.priority})` : ""}
-											</span>
-											<span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${rec.added ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-800"}`}>
-												{rec.added ? <CheckCircle2 className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
-												{rec.added ? "Added" : "To Add"}
-											</span>
-										</div>
-										<div className="mt-1.5 flex items-center justify-between gap-2">
-											<code className="break-all text-neutral-600">{rec.value}</code>
-											<button
-												type="button"
-												onClick={() => {
-													void navigator.clipboard.writeText(rec.value);
-													setCopiedIdx(i);
-													setTimeout(() => setCopiedIdx(null), 1500);
-												}}
-												className="shrink-0 cursor-pointer rounded-md border border-neutral-200 px-2.5 py-1 text-[11px] font-medium text-neutral-700 hover:bg-neutral-100"
-											>
-												{copiedIdx === i ? "Copied" : "Copy"}
-											</button>
-										</div>
-									</div>
-								))}
-							</div>
-						)}
 					</div>
+					{dnsChecking && dnsChecklist.length === 0 ? (
+						<div className="flex items-center gap-2 py-4 text-xs text-neutral-500">
+							<LoaderCircle className="h-4 w-4 animate-spin" />
+							Checking live DNS for {domainName}...
+						</div>
+					) : (
+						<div className="space-y-2">
+							{dnsChecklist.map((rec, i) => (
+								<div key={`${rec.type}-${rec.name}-${i}`} className="rounded-xl border border-neutral-200 bg-white p-3 text-xs">
+									<div className="flex items-center justify-between gap-2">
+										<span className="font-semibold text-neutral-900">
+											{rec.type} &middot; Host: <code>{rec.name}</code>
+											{rec.priority !== undefined ? ` (Priority ${rec.priority})` : ""}
+										</span>
+										<span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${rec.added ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-800"}`}>
+											{rec.added ? <CheckCircle2 className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
+											{rec.added ? "Added" : "To Add"}
+										</span>
+									</div>
+									<div className="mt-1.5 flex items-center justify-between gap-2">
+										<code className="break-all text-neutral-600">{rec.value}</code>
+										<button
+											type="button"
+											onClick={() => {
+												void navigator.clipboard.writeText(rec.value);
+												setCopiedIdx(i);
+												setTimeout(() => setCopiedIdx(null), 1500);
+											}}
+											className="shrink-0 cursor-pointer rounded-md border border-neutral-200 px-2.5 py-1 text-[11px] font-medium text-neutral-700 hover:bg-neutral-100"
+										>
+											{copiedIdx === i ? "Copied" : "Copy"}
+										</button>
+									</div>
+								</div>
+							))}
+						</div>
+					)}
 					{(() => {
 						const allDnsVerified = dnsChecklist.length > 0 && dnsChecklist.every((rec) => rec.added);
 						return (
 							<>
-								<div className={`rounded-2xl border px-4 py-3 text-xs font-medium ${allDnsVerified ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-800"}`}>
+								<div className={`rounded-xl border px-3.5 py-2.5 text-xs font-medium ${allDnsVerified ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-800"}`}>
 									{allDnsVerified
 										? `DNS verified for ${domainName}! You can now create your admin account.`
 										: "Waiting for DNS records (MX, SPF, DMARC). Add them at your DNS registrar and click Check DNS again."}
 								</div>
 								{error && (
-									<p role="alert" className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+									<p role="alert" className="rounded-xl border border-red-100 bg-red-50 px-3.5 py-2.5 text-sm font-medium text-red-700">
 										{error}
 									</p>
 								)}
-								<div className="flex flex-col gap-2 sm:flex-row">
-									<Button type="button" variant="outline" className="h-11 rounded-full px-5" onClick={() => setStep(1)}>
-										Back
-									</Button>
-									<Button type="button" variant="outline" className="h-11 rounded-full px-5" disabled={dnsChecking} onClick={() => void loadDnsChecklist(domainName)}>
-										{dnsChecking ? "Checking..." : "Check DNS again"}
-									</Button>
-									<Button type="button" className="h-11 flex-1 rounded-full px-6" disabled={!allDnsVerified || dnsChecking} onClick={() => setStep(3)}>
+								<div className="space-y-2">
+									<Button type="button" className="h-11 w-full rounded-full px-6" disabled={!allDnsVerified || dnsChecking} onClick={() => setStep(3)}>
 										Continue to Account Setup
 									</Button>
+									<div className="grid grid-cols-2 gap-2">
+										<Button type="button" variant="outline" className="h-10 rounded-full" onClick={() => setStep(1)}>
+											Back
+										</Button>
+										<Button type="button" variant="outline" className="h-10 rounded-full" disabled={dnsChecking} onClick={() => void loadDnsChecklist(domainName)}>
+											{dnsChecking ? "Checking..." : "Check DNS again"}
+										</Button>
+									</div>
 								</div>
 							</>
 						);

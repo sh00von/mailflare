@@ -74,6 +74,7 @@ export function createNodeRuntime(): NodeRuntime {
 		CF_TOKEN: optional("CF_TOKEN"),
 		CF_API_KEY: optional("CF_API_KEY"),
 		CF_EMAIL: optional("CF_EMAIL"),
+		RESEND_API_KEY: optional("RESEND_API_KEY"),
 		TURNSTILE_SECRET_KEY: optional("TURNSTILE_SECRET_KEY"),
 		GITHUB_UPDATE_TOKEN: optional("GITHUB_UPDATE_TOKEN"),
 		GITHUB_UPDATE_REF: optional("GITHUB_UPDATE_REF"),

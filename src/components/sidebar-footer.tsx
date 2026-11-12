@@ -1,6 +1,5 @@
 "use client";
 
-import packageJson from "../../package.json";
 import { useSidebar } from "./sidebar-state";
 import { useShortcuts } from "./shortcuts";
 import { Keyboard } from "@/components/icons";
@@ -27,24 +26,6 @@ export function SidebarFooter() {
           </kbd>
         </button>
       )}
-      <PoweredBy />
     </div>
   );
-}
-
-/** The "Powered by Replyot vX" credit, shared by the mail and Drive sidebars. */
-export function PoweredBy({ className = "px-1" }: { className?: string }) {
-	return (
-      <p className={`${className} text-[11px] text-neutral-500`}>
-        Powered by{" "}
-        <a
-          href={`https://replyot.co/?ref=${typeof window !== "undefined" ? location.hostname : ""}&v=${packageJson.version}`}
-          target="_blank"
-          className="hover:underline text-neutral-500"
-          rel="noreferrer"
-        >
-          Replyot v{packageJson.version}
-        </a>
-      </p>
-	);
 }

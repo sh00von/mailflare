@@ -10,7 +10,6 @@ import {
   BadgeDollarSign,
   Users,
   Route,
-  Webhook,
   KeyRound,
   Bot,
   ShieldCheck,
@@ -46,7 +45,6 @@ const sections: { id?: string; labelKey?: string; links: AdminNavLink[] }[] = [
     labelKey: "Email",
     links: [
       { href: "/domains", labelKey: "Domains", icon: Globe2, permission: "domains" },
-      { href: "/webhooks", labelKey: "Webhooks", icon: Webhook, permission: "primary" },
       { href: "/spam-filter", labelKey: "Spam filter", icon: ShieldCheck, permission: "primary" },
     ],
   },

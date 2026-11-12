@@ -78,9 +78,6 @@ export default function DomainsPage() {
       return createDomain({
         hostname: checkedDomain.hostname,
         enableRouting: true,
-        skipDns,
-        sendingProvider,
-        receivingProvider,
       });
     },
     onSuccess: () => {
@@ -311,81 +308,6 @@ export default function DomainsPage() {
                   placeholder="example.com"
                 />
               </div>
-              <div className="flex items-center justify-between gap-4 rounded-xl bg-neutral-50 px-4 py-3">
-                <div>
-                  <Label htmlFor="skip-dns">Skip DNS setup</Label>
-                  <p className="mt-1 text-xs leading-5 text-neutral-500">
-                    {skipDns ? "DNS is not added or checked. Set the records yourself before mail can flow." : "Add the domain without adding or checking DNS records. You can set them later."}
-                  </p>
-                </div>
-                <Switch
-                  id="skip-dns"
-                  checked={skipDns}
-                  onCheckedChange={(checked) => {
-                    setSkipDns(checked);
-                    setDomainCheckError(null);
-                  }}
-                />
-              </div>
-              {!skipDns && (
-                <>
-              <div className="flex items-center justify-between gap-4 rounded-xl bg-neutral-50 px-4 py-3">
-                <div>
-                  <Label htmlFor="receiving-provider">Receive mail with</Label>
-                  <p className="mt-1 text-xs leading-5 text-neutral-500">
-                    {receivingProvider === "cloudflare"
-                      ? "Cloudflare Email Routing is enabled on the zone."
-                      : receivingProvider === "none"
-                        ? "The domain only sends. Add a receiving service later."
-                        : "Add your credentials and set it up from the domain page after adding."}
-                  </p>
-                </div>
-                <select
-                  id="receiving-provider"
-                  value={receivingProvider}
-                  onChange={(e) => setReceivingProvider(e.target.value as ReceivingProvider)}
-                  className="h-9 shrink-0 rounded-md border border-neutral-200 bg-white px-3 text-sm"
-                >
-                  <option value="cloudflare">Cloudflare Email Routing</option>
-                  <option value="resend">Resend</option>
-                  <option value="ses">Amazon SES</option>
-                  <option value="none">Not selected</option>
-                </select>
-              </div>
-              <div className="flex items-center justify-between gap-4 rounded-xl bg-neutral-50 px-4 py-3">
-                <div>
-                  <Label htmlFor="sending-provider">Send mail with</Label>
-                  <p className="mt-1 text-xs leading-5 text-neutral-500">
-                    {domainChecking
-                      ? "Checking Cloudflare access..."
-                      : sendingProvider === "cloudflare"
-                        ? "Cloudflare Email Sending is enabled on the zone."
-                        : sendingProvider === "none"
-                          ? "Receive-only mode. Add a sending service later."
-                          : "Add your credentials and set it up from the domain page after adding."}
-                  </p>
-                </div>
-                {domainChecking && <LoaderCircle className="h-4 w-4 shrink-0 animate-spin text-neutral-500" />}
-                <select
-                  id="sending-provider"
-                  value={sendingProvider}
-                  onChange={(e) => setSendingProvider(e.target.value as SendingProvider)}
-                  className="h-9 shrink-0 rounded-md border border-neutral-200 bg-white px-3 text-sm"
-                >
-                  <option value="cloudflare">Cloudflare Email Sending</option>
-                  <option value="resend">Resend</option>
-                  <option value="ses">Amazon SES</option>
-                  <option value="none">Not selected</option>
-                </select>
-              </div>
-                </>
-              )}
-              {domainCheck && !skipDns && (
-                <div className="flex items-center gap-3 rounded-xl bg-green-50 px-4 py-3 text-sm text-green-700">
-                  <CheckCircle2 className="h-4 w-4" />
-                  {`Domain found in Cloudflare as ${domainCheck.zone.name}`}
-                </div>
-              )}
               {domainCheckError && (
                 <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
                   {domainCheckError}

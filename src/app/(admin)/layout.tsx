@@ -23,7 +23,6 @@ import { RouteTitle } from "@/components/route-title";
 const primaryOnlyPrefixes = [
   "/agent",
   "/api-keys",
-  "/webhooks",
   "/spam-filter",
   "/backups",
   "/branding",

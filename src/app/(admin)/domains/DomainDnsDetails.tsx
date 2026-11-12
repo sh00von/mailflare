@@ -149,6 +149,41 @@ export default function DomainDnsDetails({
 							);
 						})}
 					</ul>
+					{dns.sending.length > 0 && (
+						<div className="mt-4 border-t border-neutral-200/80 pt-4">
+							<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+								Sending Verification Records
+							</p>
+							<ul className="space-y-2">
+								{dns.sending.map((rec, i) => {
+									const verified = rec.status === "ok" || rec.status === "verified";
+									return (
+										<li
+											key={`${rec.type}-${rec.name}-${i}`}
+											className={`${ROW_GRID} ${verified ? "border-neutral-200 bg-neutral-50/70" : "border-amber-200 bg-amber-50/60"}`}
+										>
+											<StatusBadge ok={verified} tone={verified ? "neutral" : "red"} />
+											<span className="min-w-0">
+												<span className="block font-medium text-neutral-900">
+													{rec.type} &middot; {rec.name || "@"}
+													{rec.priority !== undefined ? ` (Priority ${rec.priority})` : ""}
+												</span>
+												<span className="block text-xs text-neutral-500">
+													{verified ? "Verified for outbound sending" : "Add this DNS record to enable outbound sending"}
+												</span>
+											</span>
+											<div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
+												<span className="min-w-0 break-all rounded-md border border-neutral-200 bg-white px-2.5 py-1 font-mono text-xs text-neutral-700">
+													{rec.value}
+												</span>
+												<CopyValueButton value={rec.value} />
+											</div>
+										</li>
+									);
+								})}
+							</ul>
+						</div>
+					)}
 					{setupMessage && <p role="alert" className="mt-2 text-xs text-red-600">{setupMessage}</p>}
 				</section>
 			)}

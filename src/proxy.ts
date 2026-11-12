@@ -7,7 +7,6 @@ const ADMIN_PATHS = [
 	"/general",
 	"/plan",
 	"/workspaces",
-	"/webhooks",
 	"/spam-filter",
 	"/activity",
 	"/backups",
@@ -30,6 +29,13 @@ const MAIL_PATHS = [
 	"/import-export",
 ];
 
+const AUTH_PATHS = [
+	"/login",
+	"/register",
+	"/forgot-password",
+	"/reset-password",
+];
+
 function matchesPrefix(pathname: string, prefixes: string[]): boolean {
 	return prefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 }
@@ -43,6 +49,10 @@ export function proxy(request: NextRequest) {
 	const adminHost = new URL(adminBase).host.toLowerCase();
 	const mailHost = new URL(mailBase).host.toLowerCase();
 	const { pathname, search } = request.nextUrl;
+
+	if (host !== mailHost && matchesPrefix(pathname, AUTH_PATHS)) {
+		return NextResponse.redirect(new URL(`${pathname}${search}`, mailBase));
+	}
 
 	if (host === adminHost) {
 		if (pathname === "/") {

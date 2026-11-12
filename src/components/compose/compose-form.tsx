@@ -245,13 +245,13 @@ export function ComposeForm({
 		const signatureOnly = bodyContent === (selectedMailbox?.signature?.trim() ?? "");
 		const hasContent =
 			to.length > 0 || cc.length > 0 || bcc.length > 0 || subject.trim() || quotedHtml || attachments.length > 0 || (bodyContent && !signatureOnly);
-		if (!fromAddr || !hasContent || loadingDraft || reviewInProgressRef.current) return;
+		if (!fromAddr || !hasContent || loadingDraft) return;
 		if (saveTimer.current) clearTimeout(saveTimer.current);
 
 		const generation = draftGeneration.current;
 		const save = () => {
 			const run = saveQueue.current.then(async () => {
-				if (generation !== draftGeneration.current || reviewInProgressRef.current) return;
+				if (generation !== draftGeneration.current) return;
 				const payload = {
 					mailboxId: selectedMailbox?.id,
 					from: fromAddr,
@@ -722,7 +722,7 @@ export function ComposeForm({
 				</div>
 			))}
 		</div>
-		<p className="px-3 pb-2 text-xs text-amber-700">{[...attachments.map((item) => item.file.size), ...storedAttachments.map((item) => item.size)].some((size) => size > attachmentPolicy.cloudThresholdBytes) ? "Cloudflare limits general email messages to 5 MiB including encoding. Files over 3 MB here will be sent as 30-day download links." : "Cloudflare limits general email messages to 5 MiB including encoding. Files over 3 MB or files that exceed the message budget may be sent as 30-day download links."}</p>
+		<p className="px-3 pb-2 text-xs text-neutral-500">{`Total attachment limit: ${attachmentPolicy.maxMb} MB per message.`}</p>
 		</div>
 	);
 
@@ -909,7 +909,7 @@ export function ComposeForm({
 								className="hidden"
 								onChange={(event) => addAttachments(event.target.files)}
 							/>
-							<Tooltip label={`Attach files (up to ${attachmentPolicy.maxMb} MB total). Files over 3 MB are sent as 30-day download links.`}>
+							<Tooltip label={`Attach files (up to ${attachmentPolicy.maxMb} MB total)`}>
 								<button
 									type="button"
 									aria-label={"Attach files"}

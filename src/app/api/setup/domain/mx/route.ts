@@ -2,6 +2,7 @@ import { resolveMx, resolveTxt } from "node:dns/promises";
 import { NextResponse } from "next/server";
 import { getEnv } from "@/lib/cloudflare";
 import { preflightDomain } from "@/lib/domains/preflight";
+import { ensureResendSendingDomain } from "@/lib/email/resend-domain-setup";
 import { setupDomainSchema } from "@/lib/validators";
 import { readJsonBody } from "@/lib/http/request";
 import { RequestBodyTooLargeError } from "@/lib/http/errors";
@@ -53,14 +54,21 @@ export async function POST(request: Request) {
 		const spfAdded = rootTxt.some((txt) => txt.toLowerCase().startsWith("v=spf1") && txt.toLowerCase().includes(expectedMx));
 		const dmarcAdded = dmarcTxt.some((txt) => txt.toLowerCase().startsWith("v=dmarc1"));
 
+		const resendSetup = await ensureResendSendingDomain(env, domain.hostname).catch((err) => {
+			console.error("[setup/domain/mx] Resend domain setup failed:", err);
+			return null;
+		});
+		const requiredRecords = [
+			{ type: "MX", name: "@", value: expectedMx, priority: 10, added: mxAdded },
+			{ type: "TXT", name: "@", value: `v=spf1 a:${expectedMx} ~all`, added: spfAdded },
+			{ type: "TXT", name: "_dmarc", value: "v=DMARC1; p=none", added: dmarcAdded },
+			...(resendSetup?.records ?? []),
+		];
+
 		return NextResponse.json({
 			hasExistingMx: false,
 			currentMx,
-			requiredRecords: [
-				{ type: "MX", name: "@", value: expectedMx, priority: 10, added: mxAdded },
-				{ type: "TXT", name: "@", value: `v=spf1 a:${expectedMx} ~all`, added: spfAdded },
-				{ type: "TXT", name: "_dmarc", value: "v=DMARC1; p=none", added: dmarcAdded },
-			],
+			requiredRecords,
 		});
 	} catch (error) {
 		const message = error instanceof Error ? error.message : "MX record check failed";

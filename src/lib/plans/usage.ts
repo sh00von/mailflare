@@ -134,11 +134,7 @@ export async function getWorkspaceUsage(env: CloudflareEnv, workspaceId: string)
 	const startOfUtcDay = new Date();
 	startOfUtcDay.setUTCHours(0, 0, 0, 0);
 
-	const [[msgStats], [attStats], [sentStats]] = await Promise.all([
-		db
-			.select({ total: sql<number>`coalesce(sum(${messages.size}), 0)` })
-			.from(messages)
-			.where(inArray(messages.mailboxId, mailboxIds)),
+	const [[attStats], [sentStats]] = await Promise.all([
 		db
 			.select({ total: sql<number>`coalesce(sum(${messageAttachments.size}), 0)` })
 			.from(messageAttachments)
@@ -159,7 +155,7 @@ export async function getWorkspaceUsage(env: CloudflareEnv, workspaceId: string)
 	return {
 		domainsUsed: domainIds.length,
 		mailboxesUsed: mailboxIds.length,
-		storageUsedBytes: Number(msgStats?.total ?? 0) + Number(attStats?.total ?? 0),
+		storageUsedBytes: Number(attStats?.total ?? 0),
 		dailySentCount: Number(sentStats?.total ?? 0),
 	};
 }

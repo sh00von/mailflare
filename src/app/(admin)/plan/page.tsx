@@ -81,12 +81,12 @@ export default function PlanAndUsagePage() {
 				</p>
 			</div>
 
-			<Card>
-				<CardHeader className="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-100 pb-4">
+			<Card className="rounded-3xl border border-neutral-200/80 bg-white p-6">
+				<CardHeader className="flex-col items-start justify-between gap-4 border-b border-neutral-100 p-0 pb-5 sm:flex-row sm:items-center">
 					<div>
-						<div className="flex items-center gap-2.5">
-							<h2 className="text-lg font-semibold text-neutral-900">{limits.name} Plan</h2>
-							<Badge variant={workspace.status === "suspended" ? "destructive" : "secondary"}>
+						<div className="flex flex-wrap items-center gap-2.5">
+							<h2 className="text-lg font-semibold text-neutral-950">{limits.name} Plan</h2>
+							<Badge variant={workspace.status === "suspended" ? "destructive" : "secondary"} className="rounded-full">
 								{workspace.status === "trialing"
 									? workspace.trialExpired
 										? "Trial ended"
@@ -100,11 +100,11 @@ export default function PlanAndUsagePage() {
 							${limits.priceMonthlyUsd}/month · {limits.tagline}
 						</p>
 					</div>
-					<p className="rounded-full bg-neutral-100 px-3 py-1.5 text-xs font-medium text-neutral-600">
+					<p className="shrink-0 rounded-full bg-neutral-100 px-3.5 py-1.5 text-xs font-medium text-neutral-600">
 						Online billing &amp; self-serve upgrades coming soon
 					</p>
 				</CardHeader>
-				<CardContent className="grid gap-5 pt-6 sm:grid-cols-2">
+				<CardContent className="grid gap-5 p-0 pt-6 sm:grid-cols-2">
 					<UsageBar
 						label="Custom domains"
 						usedLabel={String(usage.domainsUsed)}
@@ -136,24 +136,35 @@ export default function PlanAndUsagePage() {
 				{plans.map((plan) => {
 					const current = plan.id === workspace.plan;
 					return (
-						<Card key={plan.id} className={current ? "border-blue-600 ring-1 ring-blue-600" : ""}>
-							<CardHeader className="pb-3">
+						<Card
+							key={plan.id}
+							className={`rounded-3xl bg-white p-6 ${
+								current
+									? "border border-blue-600 ring-1 ring-blue-600"
+									: "border border-neutral-200/80"
+							}`}
+						>
+							<CardHeader className="space-y-2 p-0 pb-4">
 								<div className="flex items-center justify-between gap-2">
-									<h3 className="text-base font-semibold text-neutral-900">{plan.name}</h3>
-									{current && <Badge>Current</Badge>}
+									<h3 className="text-base font-semibold text-neutral-950">{plan.name}</h3>
+									{current && (
+										<span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
+											Current
+										</span>
+									)}
 								</div>
-								<p className="text-2xl font-bold text-neutral-900">
+								<p className="text-3xl font-semibold tracking-tight text-neutral-950">
 									${plan.priceMonthlyUsd}
 									<span className="text-sm font-normal text-neutral-500">/mo</span>
 								</p>
 								<p className="text-xs text-neutral-500">{plan.tagline}</p>
 							</CardHeader>
-							<CardContent className="space-y-2 text-sm text-neutral-700">
-								<p className="flex items-center gap-2"><Check className="h-4 w-4 text-emerald-600" /> {plan.maxDomains} {plan.maxDomains === 1 ? "domain" : "domains"}</p>
-								<p className="flex items-center gap-2"><Check className="h-4 w-4 text-emerald-600" /> {plan.maxMailboxes} mailboxes</p>
-								<p className="flex items-center gap-2"><Check className="h-4 w-4 text-emerald-600" /> {plan.storageLabel} storage</p>
-								<p className="flex items-center gap-2"><Check className="h-4 w-4 text-emerald-600" /> {plan.dailySendLimit.toLocaleString()} emails/day</p>
-								<p className="flex items-center gap-2"><Check className="h-4 w-4 text-emerald-600" /> {plan.maxAttachmentMb} MB max attachment</p>
+							<CardContent className="space-y-2.5 border-t border-neutral-100 p-0 pt-4 text-sm text-neutral-700">
+								<p className="flex items-center gap-2"><Check className="h-4 w-4 shrink-0 text-blue-600" /> {plan.maxDomains} {plan.maxDomains === 1 ? "domain" : "domains"}</p>
+								<p className="flex items-center gap-2"><Check className="h-4 w-4 shrink-0 text-blue-600" /> {plan.maxMailboxes} mailboxes</p>
+								<p className="flex items-center gap-2"><Check className="h-4 w-4 shrink-0 text-blue-600" /> {plan.storageLabel} storage</p>
+								<p className="flex items-center gap-2"><Check className="h-4 w-4 shrink-0 text-blue-600" /> {plan.dailySendLimit.toLocaleString()} emails/day</p>
+								<p className="flex items-center gap-2"><Check className="h-4 w-4 shrink-0 text-blue-600" /> {plan.maxAttachmentMb} MB max attachment</p>
 							</CardContent>
 						</Card>
 					);

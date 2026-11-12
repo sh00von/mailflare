@@ -6,7 +6,6 @@ const staticRouteTitles: Array<[string, string]> = [
 	["/mailboxes", "Mailboxes"],
 	["/domains", "Domains"],
 	["/routing", "Routing"],
-	["/webhooks", "Webhooks"],
 	["/spam-filter", "Spam filter"],
 	["/api-keys", "API keys"],
 	["/general", "General"],

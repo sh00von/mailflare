@@ -19,6 +19,7 @@ import { RequestBodyTooLargeError } from "@/lib/http/errors";
 import { verifyTurnstileToken } from "@/lib/auth/turnstile";
 import { getDomainProvisioningError } from "@/lib/domains/errors";
 import { auditDomainDns } from "@/lib/domains/dns-audit";
+import { ensureResendSendingDomain } from "@/lib/email/resend-domain-setup";
 import { resolvePlanId } from "@/lib/plans/catalog";
 import { createWorkspaceForOwner } from "@/lib/plans/usage";
 
@@ -62,6 +63,13 @@ export async function POST(request: Request) {
 	if (dnsAudit.mx.status !== "ok" || dnsAudit.spf.status !== "ok" || dnsAudit.dmarc.status !== "ok") {
 		return NextResponse.json(
 			{ error: "Domain DNS is not verified yet. Add your MX, SPF, and DMARC records and check DNS again before creating your account." },
+			{ status: 400 },
+		);
+	}
+	const resendSetup = await ensureResendSendingDomain(env, domainName).catch(() => null);
+	if (resendSetup && resendSetup.domain.status !== "verified") {
+		return NextResponse.json(
+			{ error: "Resend DNS records are not verified yet. Add all required records and click Check DNS again." },
 			{ status: 400 },
 		);
 	}

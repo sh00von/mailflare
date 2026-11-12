@@ -6,7 +6,6 @@ export const adminPageTitles: Record<string, string> = {
 	"/mailboxes": "Mailboxes",
 	"/domains": "Domains",
 	"/routing": "Routing",
-	"/webhooks": "Webhooks",
 	"/spam-filter": "Spam filter",
 	"/api-keys": "Admin API keys",
 	"/general": "General",

@@ -3,35 +3,35 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-	--color-neutral-500: #6b6b6b;
-	--background: #f6f8fc;
-	--foreground: #202124;
+	--color-neutral-500: #71717a;
+	--background: #fafafa;
+	--foreground: #09090b;
 	--card: #ffffff;
-	--muted: #eef3fb;
-	--border: #dadce0;
-	--primary: #0b57d0;
+	--muted: #f4f4f5;
+	--border: #e4e4e7;
+	--primary: #18181b;
 	--primary-foreground: #ffffff;
 }
 
 @theme inline {
 	--color-background: var(--background);
 	--color-foreground: var(--foreground);
-	--font-sans: var(--font-geist-sans);
+	--font-sans: var(--font-poppins);
 	--no-font-mono: var(--font-geist-mono);
 }
 
 body {
 	background: var(--background);
 	color: var(--foreground);
-	font-family: var(--font-geist-sans), system-ui, sans-serif;
+	font-family: var(--font-poppins), system-ui, sans-serif;
 }
 
 pre {
-	font-family: var(--font-geist-sans), system-ui, sans-serif;
+	font-family: var(--font-poppins), system-ui, sans-serif;
 }
 
 .text {
-	font-family: var(--font-geist-sans), system-ui, sans-serif;
+	font-family: var(--font-poppins), system-ui, sans-serif;
 }
 
 @keyframes dialog-overlay-show {
@@ -233,23 +233,23 @@ button {
    instead of dimming it. */
 .dark {
 	color-scheme: dark;
-	--background: #202124;
-	--foreground: #e8eaed;
-	--card: #292a2d;
-	--muted: #303134;
-	--border: #3c4043;
-	--primary: #8ab4f8;
-	--primary-foreground: #202124;
-	--color-white: #292a2d;
+	--background: #09090b;
+	--foreground: #fafafa;
+	--card: #111113;
+	--muted: #18181b;
+	--border: #27272a;
+	--primary: #fafafa;
+	--primary-foreground: #09090b;
+	--color-white: #111113;
 	--color-black: #000;
-	--color-neutral-50: #303134;
-	--color-neutral-100: #35363a;
-	--color-neutral-200: #3c4043;
-	--color-neutral-300: #5f6368;
-	--color-neutral-400: #9aa0a6;
-	--color-neutral-500: #a8aeb4;
-	--color-neutral-600: #bdc1c6;
-	--color-neutral-700: #dadce0;
+	--color-neutral-50: #18181b;
+	--color-neutral-100: #1f1f23;
+	--color-neutral-200: #27272a;
+	--color-neutral-300: #3f3f46;
+	--color-neutral-400: #a1a1aa;
+	--color-neutral-500: #a1a1aa;
+	--color-neutral-600: #d4d4d8;
+	--color-neutral-700: #e4e4e7;
 	--color-neutral-800: #e8eaed;
 	--color-neutral-900: #f1f3f4;
 	--color-neutral-950: #ffffff;
@@ -492,12 +492,12 @@ button {
 .dark .bg-pink-600 { background-color: oklch(59.2% 0.249 0.584); }
 .dark .bg-orange-600 { background-color: oklch(64.6% 0.222 41.116); }
 /* Fixed-hex backgrounds (page, panels) and their hover: variants (inbox rows, mailbox selector) */
-.dark .bg-\[\#f6f8fc\], .dark .bg-\[\#f7f9fc\] { background-color: #202124; }
-.dark .bg-\[\#f2f6fc\], .dark .bg-\[\#f1f4fa\], .dark .bg-\[\#f0f3f9\] { background-color: #303134; }
-.dark .bg-\[\#eef3fb\], .dark .bg-\[\#eaf1fb\], .dark .bg-\[\#e6ecf6\] { background-color: #383a3e; }
+.dark .bg-\[\#f6f8fc\], .dark .bg-\[\#f7f9fc\] { background-color: #09090b; }
+.dark .bg-\[\#f2f6fc\], .dark .bg-\[\#f1f4fa\], .dark .bg-\[\#f0f3f9\] { background-color: #18181b; }
+.dark .bg-\[\#eef3fb\], .dark .bg-\[\#eaf1fb\], .dark .bg-\[\#e6ecf6\] { background-color: #1f1f23; }
 .dark .hover\:bg-\[\#f2f6fc\]:hover,
-.dark .bg-\[\#f2f6fc\] { background-color: #35363a; }
-.dark .hover\:bg-\[\#e6ecf6\]:hover { background-color: #3c4043; }
+.dark .bg-\[\#f2f6fc\] { background-color: #18181b; }
+.dark .hover\:bg-\[\#e6ecf6\]:hover { background-color: #27272a; }
 /* Soft shadows turn dark */
 .dark .shadow-neutral-200, .dark .shadow-neutral-300 { --tw-shadow-color: rgb(0 0 0 / 0.6); }
 /* HTML emails assume a white background: keep them on light "paper" inside the dark theme */
