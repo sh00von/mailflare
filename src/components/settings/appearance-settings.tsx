@@ -17,7 +17,7 @@ const OPTIONS: { value: ThemePreference; labelKey: string }[] = [
 ];
 
 export function AppearanceSettings() {
-	const [preference, setPreference] = useState<ThemePreference>("system");
+	const [preference, setPreference] = useState<ThemePreference>("light");
 
 	useEffect(() => {
 		setPreference(readThemePreference());

@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent } from "react";
-import { Archive, ChevronLeft, ChevronRight, ListFilter, Mail, MailOpen, Trash2 } from "@/components/icons";
+import { Archive, ChevronLeft, ChevronRight, Inbox, ListFilter, Mail, MailOpen, Search, Trash2 } from "@/components/icons";
+import { MessageListSkeleton } from "@/components/page-skeletons";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -211,7 +213,7 @@ function MessageListRow({
 	}
 
 	const className =
-		`group relative grid min-h-12 w-full grid-cols-[24px_32px_minmax(160px,80px)_1fr_auto] items-center gap-3 px-6 text-left text-sm hover:z-10 hover:bg-[#f2f6fc] hover:shadow-sm has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-inset has-[a:focus-visible]:ring-blue-600 ${active || selected || opening ? "bg-blue-50" : ""
+		`group relative grid min-h-12 w-full grid-cols-[24px_32px_minmax(160px,80px)_1fr_auto] items-center gap-3 px-6 text-left text-sm hover:z-10 hover:bg-row-hover hover:shadow-sm has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-inset has-[a:focus-visible]:ring-blue-600 ${active || selected || opening ? "bg-blue-50" : ""
 		} ${draggable ? "cursor-grab active:cursor-grabbing" : ""}`;
 	const content = (
 		<>
@@ -556,9 +558,13 @@ export function MessageFolderPage({
 				</div>
 				{(selectedIds.length === 0 || compact) && (
 					<div className="flex items-center gap-2 text-neutral-500">
-						<span className="text-xs text-neutral-500 whitespace-nowrap">
-							{`${pageRange.start} - ${pageRange.end} of ${pageRange.total}`}
-						</span>
+						{isLoading && messages.length === 0 ? (
+							<Skeleton className="h-3 w-16" />
+						) : (
+							<span className="text-xs text-neutral-500 whitespace-nowrap">
+								{`${pageRange.start} - ${pageRange.end} of ${pageRange.total}`}
+							</span>
+						)}
 						<Tooltip label={"Previous page"}>
 							<Button
 								variant="ghost"
@@ -651,10 +657,19 @@ export function MessageFolderPage({
 						/>
 					))}
 				</div>
+				{isLoading && messages.length === 0 && <MessageListSkeleton compact={compact || isMobile} />}
 				{!isLoading && messages.length === 0 && (
-					<p className="px-6 py-4 text-sm text-neutral-500">
-						{hasActiveFilters ? "No messages match these filters" : config.emptyTextKey ? config.emptyTextKey : config.emptyText}
-					</p>
+					<div className="flex flex-col items-center justify-center px-6 py-20 text-center">
+						<span className="flex h-16 w-16 items-center justify-center rounded-full bg-neutral-100 text-neutral-400">
+							{hasActiveFilters ? <Search className="h-7 w-7" /> : <Inbox className="h-7 w-7" />}
+						</span>
+						<p className="mt-4 text-base font-medium text-neutral-800">
+							{hasActiveFilters ? "No messages match these filters" : config.emptyTextKey ? config.emptyTextKey : config.emptyText}
+						</p>
+						<p className="mt-1 text-sm text-neutral-500">
+							{hasActiveFilters ? "Try different words or clear the filters." : "New mail will show up here."}
+						</p>
+					</div>
 				)}
 			</div>
 		</div>

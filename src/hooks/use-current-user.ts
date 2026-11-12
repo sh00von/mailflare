@@ -48,10 +48,10 @@ export function peekSessionInfo(): SessionInfo | null {
 }
 
 async function requestSessionInfo(): Promise<SessionInfo> {
-	const cookieResponse = await fetch("/api/auth/me", { cache: "no-store", signal: AbortSignal.timeout(5_000) });
+	const cookieResponse = await fetch("/api/auth/me", { cache: "no-store", signal: AbortSignal.timeout(10_000) });
 	const response = cookieResponse.ok || cookieResponse.status !== 401
 		? cookieResponse
-		: await authFetch("/api/auth/me", { redirectOnUnauthorized: false, signal: AbortSignal.timeout(5_000) });
+		: await authFetch("/api/auth/me", { redirectOnUnauthorized: false, signal: AbortSignal.timeout(10_000) });
 	if (!response.ok) return { status: response.status };
 	const data = (await response.json()) as Omit<SessionInfo, "status">;
 	return { status: response.status, ...data };

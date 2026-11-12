@@ -9,8 +9,18 @@ import {
 	startAuthentication,
 	WebAuthnAbortService,
 } from "@simplewebauthn/browser";
-import { KeyRound, Mail, ShieldCheck } from "@/components/icons";
+import { AlertCircle, KeyRound, Mail, ShieldCheck } from "@/components/icons";
+import { AuthDivider } from "@/components/auth/auth-divider";
 import { AuthShell } from "@/components/auth/auth-shell";
+import {
+	AUTH_ERROR_CLASS,
+	AUTH_INPUT_CLASS,
+	AUTH_LABEL_CLASS,
+	AUTH_PRIMARY_BUTTON_CLASS,
+	AUTH_SECONDARY_BUTTON_CLASS,
+	AUTH_TEXT_BUTTON_CLASS,
+} from "@/components/auth/auth-ui-utils";
+import { PasswordInput } from "@/components/auth/password-input";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -187,72 +197,72 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
     return (
       <AuthShell
         icon={ShieldCheck}
-        title={"Two-factor authentication"}
+        title={"2-Step Verification"}
         description={description}
       >
-        <form onSubmit={onSubmitCode} className="space-y-5">
+        <form onSubmit={onSubmitCode} className="space-y-6">
           {canUsePasskey && (
-            <div className="space-y-4">
-              <Button
-                type="button"
-                className="h-11 w-full rounded-full"
-                disabled={loading}
-                onClick={() => void onPasskeyMfa()}
-              >
-                <KeyRound className="h-4 w-4" />
-                Use a passkey
-              </Button>
-              {hasCodeMethods && (
-                <p className="text-center text-xs uppercase tracking-wide text-neutral-400">Or use a code</p>
-              )}
+            <Button
+              type="button"
+              className={`${AUTH_SECONDARY_BUTTON_CLASS} h-12 w-full`}
+              disabled={loading}
+              onClick={() => void onPasskeyMfa()}
+            >
+              <KeyRound className="h-4 w-4" />
+              Use your passkey
+            </Button>
+          )}
+          {canUsePasskey && hasCodeMethods && <AuthDivider label="or enter a code" />}
+          {hasCodeMethods && (
+            <div className="space-y-2">
+              <Label htmlFor="code" className={AUTH_LABEL_CLASS}>{codeLabel}</Label>
+              <Input
+                id="code"
+                name="code"
+                value={code}
+                onChange={(event) => setCode(event.target.value)}
+                inputMode="text"
+                autoComplete="one-time-code"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                autoFocus
+                placeholder={"123 456 or abcde-fghjk"}
+                className={`${AUTH_INPUT_CLASS} tracking-wide`}
+                aria-invalid={error ? true : undefined}
+                aria-describedby={error ? "mfa-error" : undefined}
+                required={hasCodeMethods}
+              />
             </div>
           )}
-          {hasCodeMethods && (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="code">{codeLabel}</Label>
-                <Input
-                  id="code"
-                  name="code"
-                  value={code}
-                  onChange={(event) => setCode(event.target.value)}
-                  inputMode="text"
-                  autoComplete="one-time-code"
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                  spellCheck={false}
-                  autoFocus
-                  placeholder={"123 456 or abcde-fghjk"}
-                  aria-invalid={error ? true : undefined}
-                  aria-describedby={error ? "mfa-error" : undefined}
-                  required={hasCodeMethods}
-                />
-              </div>
-              <Button type="submit" className="h-11 w-full rounded-full px-6 active:scale-[0.98]" disabled={loading}>
-                {loading ? "Verifying..." : "Verify"}
-              </Button>
-            </>
-          )}
           {error && (
-            <p id="mfa-error" role="alert" className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+            <p id="mfa-error" role="alert" className={AUTH_ERROR_CLASS}>
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
               {error}
             </p>
           )}
           {!hasCodeMethods && (
-            <p className="text-xs leading-5 text-neutral-500">Lost every passkey? Ask an administrator for a recovery link. If you are the only administrator, use the server recovery procedure.</p>
+            <p className="text-sm leading-6 text-neutral-500">Lost every passkey? Ask an administrator for a recovery link. If you are the only administrator, use the server recovery procedure.</p>
           )}
-          <button
-            type="button"
-            className="w-full text-center text-sm text-neutral-500 hover:text-neutral-800"
-            onClick={() => {
-              setChallengeToken(null);
-              setMethods([]);
-              setCode("");
-              setError(null);
-            }}
-          >
-            Back to sign in
-          </button>
+          <div className="flex items-center justify-between gap-3 pt-2">
+            <button
+              type="button"
+              className={AUTH_TEXT_BUTTON_CLASS}
+              onClick={() => {
+                setChallengeToken(null);
+                setMethods([]);
+                setCode("");
+                setError(null);
+              }}
+            >
+              Back to sign in
+            </button>
+            {hasCodeMethods && (
+              <Button type="submit" className={AUTH_PRIMARY_BUTTON_CLASS} disabled={loading}>
+                {loading ? "Verifying..." : "Verify"}
+              </Button>
+            )}
+          </div>
         </form>
       </AuthShell>
     );
@@ -265,65 +275,62 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
       description={
         adding
           ? "Sign in to another account. You can switch between accounts from the account menu."
-          : "Open your mailbox and continue from the same inbox workspace."
+          : "Use your work email to continue to your inbox."
       }
     >
-      <form method="post" onSubmit={onSubmit} className="space-y-5">
+      <form method="post" onSubmit={onSubmit} className="space-y-6">
         <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email" className={AUTH_LABEL_CLASS}>Email</Label>
           <Input
             id="email"
             name="email"
             type="email"
             autoComplete="username webauthn"
+            placeholder="you@yourcompany.com"
+            className={AUTH_INPUT_CLASS}
             aria-invalid={error ? true : undefined}
             aria-describedby={error ? "login-error" : undefined}
+            autoFocus
             required
           />
         </div>
         <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="password">Password</Label>
-            <Link href="/forgot-password" className="text-xs font-medium text-blue-600 hover:underline">
-              Forgot password?
-            </Link>
-          </div>
-          <Input
+          <Label htmlFor="password" className={AUTH_LABEL_CLASS}>Password</Label>
+          <PasswordInput
             id="password"
             name="password"
-            type="password"
             autoComplete="current-password"
             aria-invalid={error ? true : undefined}
             aria-describedby={error ? "login-error" : undefined}
             required
           />
+          <Link href="/forgot-password" className="inline-block pt-1 text-sm font-medium text-blue-600 hover:underline">
+            Forgot password?
+          </Link>
         </div>
         {error && (
-          <p id="login-error" role="alert" className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+          <p id="login-error" role="alert" className={AUTH_ERROR_CLASS}>
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
             {error}
           </p>
         )}
         <TurnstileField resetSignal={turnstileReset} />
-        <Button
-          type="submit"
-          className="h-11 w-full rounded-full px-6 active:scale-[0.98]"
-          disabled={loading}
-        >
-          {loading ? "Signing in..." : "Sign in"}
-        </Button>
-        {!adding && (
-          <p className="text-center text-sm text-neutral-600">
-            Don&apos;t have a workspace?{" "}
-            <Link href="/register" className="font-medium text-blue-600 hover:underline">
+        <div className="flex items-center justify-between gap-3 pt-2">
+          {adding ? (
+            <span />
+          ) : (
+            <Link href="/register" className={AUTH_TEXT_BUTTON_CLASS}>
               Create account
             </Link>
-          </p>
-        )}
-        <p className="text-center text-xs uppercase tracking-wide text-neutral-400">or</p>
+          )}
+          <Button type="submit" className={AUTH_PRIMARY_BUTTON_CLASS} disabled={loading}>
+            {loading ? "Signing in..." : "Sign in"}
+          </Button>
+        </div>
+        <AuthDivider label="or" />
         <Button
           type="button"
-          variant="outline"
-          className="h-11 w-full rounded-full"
+          className={`${AUTH_SECONDARY_BUTTON_CLASS} h-12 w-full`}
           disabled={loading}
           onClick={() => void onPasskey()}
         >

@@ -15,6 +15,8 @@ import {
 	saveManagedAccount,
 	uploadManagedAccountAvatar,
 } from "./utils";
+import { FormSkeleton } from "@/components/page-skeletons";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function AccountDetailsPage() {
 	const { id } = useParams<{ id: string }>();
@@ -54,7 +56,26 @@ export default function AccountDetailsPage() {
 		}
 	}
 
-	if (!account) return <p className="text-sm text-neutral-500">{message ?? "Loading account..."}</p>;
+	if (!account) {
+		return (
+			<div className="space-y-6">
+				<div>
+					<h1 className="text-2xl md:text-3xl font-medium text-neutral-900">Details</h1>
+					<p className="mt-2 text-sm text-neutral-500">{"Update this account's profile and status."}</p>
+				</div>
+				<section className="space-y-5 rounded-3xl bg-white p-6">
+					{message ? (
+						<p className="text-sm text-neutral-500">{message}</p>
+					) : (
+						<>
+							<Skeleton className="h-16 w-16 rounded-full" />
+							<FormSkeleton fields={["Email", "Name", "Forwarding email (optional)"]} />
+						</>
+					)}
+				</section>
+			</div>
+		);
+	}
 
 	return (
 		<div className="space-y-6">

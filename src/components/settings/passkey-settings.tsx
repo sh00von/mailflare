@@ -17,6 +17,7 @@ import { authErrorText } from "@/lib/auth/error-messages";
 import { isPasskeyCancellation, isPasskeyUnsupported } from "@/lib/auth/webauthn/browser-errors";
 import { ClientRequestError } from "@/lib/http/client-error";
 import type { StepUpAction } from "@/lib/auth/webauthn/step-up-types";
+import { FormSkeleton } from "@/components/page-skeletons";
 
 /** The security changes the first-passkey choice can ask for, in order. */
 type PolicyStep = "mfa.disable" | "password.remove" | "second_factor.toggle";
@@ -148,7 +149,7 @@ export function PasskeySettings() {
 		}
 	}
 
-	if (!status) return <p role={loadFailed ? "alert" : undefined} className="text-sm text-neutral-500">{loadFailed ? "Could not load passkeys" : "Loading two-factor settings..."}</p>;
+	if (!status) return loadFailed ? <p role="alert" className="text-sm text-neutral-500">Could not load passkeys</p> : <FormSkeleton rows={2} />;
 
 	// Password accounts can fall back to password sign-in; passkey-only accounts cannot.
 	const canRemove = status.passkeys.length > 1 || status.passwordSet;

@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Copy, Download, LoaderCircle } from "@/components/icons";
+import { CheckCircle2, Copy, Download } from "@/components/icons";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import type { MessageSourceDialogProps } from "./message-source-dialog-types";
 import { copyMessageSource, downloadMessageSource, fetchMessageSource, summarizeMessageSource } from "./message-source-utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function MessageSourceDialog({ messageId, open, onOpenChange }: MessageSourceDialogProps) {
 	const [source, setSource] = useState<string | null>(null);
@@ -43,7 +44,7 @@ export function MessageSourceDialog({ messageId, open, onOpenChange }: MessageSo
 					<DialogTitle>Original Message</DialogTitle>
 					<DialogDescription>Message details and full source, including headers and MIME body.</DialogDescription>
 				</DialogHeader>
-				{loading && <div className="flex items-center gap-2 text-sm text-neutral-500"><LoaderCircle className="h-4 w-4 animate-spin" />Loading source…</div>}
+				{loading && <div role="status" aria-label="Loading source" className="space-y-3"><Skeleton className="h-40 w-full rounded-lg" /><Skeleton className="h-48 w-full rounded-lg" /></div>}
 				{error && <p className="text-sm text-neutral-600">{error}</p>}
 				{source !== null && summary && (
 					<div className="space-y-5">

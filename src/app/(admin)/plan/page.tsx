@@ -5,8 +5,9 @@ import { Check } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { authFetch } from "@/lib/auth/client";
-import type { PlanDefinition } from "@/lib/plans/catalog";
+import { PLAN_LIST, type PlanDefinition } from "@/lib/plans/catalog";
 import type { WorkspaceSummary, WorkspaceUsage } from "@/lib/plans/usage";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type PlanResponse = {
 	workspace: WorkspaceSummary;
@@ -22,20 +23,28 @@ function formatBytes(bytes: number): string {
 	return `${(bytes / 1024 ** 3).toFixed(2)} GB`;
 }
 
-function UsageBar({ label, usedLabel, maxLabel, pct }: { label: string; usedLabel: string; maxLabel: string; pct: number }) {
-	const clamped = Math.min(100, Math.max(0, Math.round(pct)));
+function UsageBar({ label, usedLabel, maxLabel, pct, loading = false }: { label: string; usedLabel?: string; maxLabel?: string; pct?: number; loading?: boolean }) {
+	const clamped = Math.min(100, Math.max(0, Math.round(pct ?? 0)));
 	const tone = clamped >= 95 ? "bg-red-600" : clamped >= 80 ? "bg-amber-500" : "bg-blue-600";
 	return (
 		<div className="space-y-1.5">
 			<div className="flex items-center justify-between text-sm">
 				<span className="font-medium text-neutral-800">{label}</span>
-				<span className="text-xs text-neutral-500">
-					{usedLabel} / {maxLabel}
-				</span>
+				{loading ? (
+					<Skeleton className="h-3 w-14" />
+				) : (
+					<span className="text-xs text-neutral-500">
+						{usedLabel} / {maxLabel}
+					</span>
+				)}
 			</div>
-			<div className="h-2 w-full overflow-hidden rounded-full bg-neutral-100">
-				<div className={`h-full rounded-full transition-all ${tone}`} style={{ width: `${clamped}%` }} />
-			</div>
+			{loading ? (
+				<Skeleton className="h-2 w-full rounded-full" />
+			) : (
+				<div className="h-2 w-full overflow-hidden rounded-full bg-neutral-100">
+					<div className={`h-full rounded-full transition-all ${tone}`} style={{ width: `${clamped}%` }} />
+				</div>
+			)}
 		</div>
 	);
 }
@@ -61,16 +70,11 @@ export default function PlanAndUsagePage() {
 		};
 	}, []);
 
-	if (error) {
-		return <p role="alert" className="text-sm text-red-600">{error}</p>;
-	}
-
-	if (!data) {
-		return <div className="text-sm text-neutral-500">Loading plan and usage...</div>;
-	}
-
-	const { workspace, usage, plans } = data;
-	const limits = workspace.planDetails;
+	const workspace = data?.workspace;
+	const usage = data?.usage;
+	const limits = workspace?.planDetails;
+	const plans = data?.plans ?? PLAN_LIST;
+	const loading = !data && !error;
 
 	return (
 		<div className="space-y-8">
@@ -83,22 +87,36 @@ export default function PlanAndUsagePage() {
 
 			<Card className="rounded-3xl border border-neutral-200/80 bg-white p-6">
 				<CardHeader className="flex-col items-start justify-between gap-4 border-b border-neutral-100 p-0 pb-5 sm:flex-row sm:items-center">
-					<div>
-						<div className="flex flex-wrap items-center gap-2.5">
-							<h2 className="text-lg font-semibold text-neutral-950">{limits.name} Plan</h2>
-							<Badge variant={workspace.status === "suspended" ? "destructive" : "secondary"} className="rounded-full">
-								{workspace.status === "trialing"
-									? workspace.trialExpired
-										? "Trial ended"
-										: `14-day Trial · ${workspace.daysLeftInTrial ?? 0}d left`
-									: workspace.status === "active"
-										? "Active"
-										: "Suspended"}
-							</Badge>
-						</div>
-						<p className="mt-1 text-sm text-neutral-500">
-							${limits.priceMonthlyUsd}/month · {limits.tagline}
-						</p>
+					<div className="min-w-0">
+						{workspace && limits ? (
+							<>
+								<div className="flex flex-wrap items-center gap-2.5">
+									<h2 className="text-lg font-semibold text-neutral-950">{limits.name} Plan</h2>
+									<Badge
+										variant="secondary"
+										className={`rounded-full ${workspace.status === "suspended" ? "bg-red-50 text-red-700" : ""}`}
+									>
+										{workspace.status === "trialing"
+											? workspace.trialExpired
+												? "Trial ended"
+												: `14-day Trial · ${workspace.daysLeftInTrial ?? 0}d left`
+											: workspace.status === "active"
+												? "Active"
+												: "Suspended"}
+									</Badge>
+								</div>
+								<p className="mt-1 text-sm text-neutral-500">
+									${limits.priceMonthlyUsd}/month · {limits.tagline}
+								</p>
+							</>
+						) : error ? (
+							<p role="alert" className="text-sm text-red-600">{error}</p>
+						) : (
+							<div role="status" aria-label="Loading plan" className="space-y-2.5">
+								<Skeleton className="h-5 w-40" />
+								<Skeleton className="h-3.5 w-56" />
+							</div>
+						)}
 					</div>
 					<p className="shrink-0 rounded-full bg-neutral-100 px-3.5 py-1.5 text-xs font-medium text-neutral-600">
 						Online billing &amp; self-serve upgrades coming soon
@@ -107,34 +125,38 @@ export default function PlanAndUsagePage() {
 				<CardContent className="grid gap-5 p-0 pt-6 sm:grid-cols-2">
 					<UsageBar
 						label="Custom domains"
-						usedLabel={String(usage.domainsUsed)}
-						maxLabel={String(limits.maxDomains)}
-						pct={(usage.domainsUsed / limits.maxDomains) * 100}
+						loading={loading}
+						usedLabel={usage && String(usage.domainsUsed)}
+						maxLabel={limits && String(limits.maxDomains)}
+						pct={usage && limits ? (usage.domainsUsed / limits.maxDomains) * 100 : 0}
 					/>
 					<UsageBar
 						label="Mailboxes & users"
-						usedLabel={String(usage.mailboxesUsed)}
-						maxLabel={String(limits.maxMailboxes)}
-						pct={(usage.mailboxesUsed / limits.maxMailboxes) * 100}
+						loading={loading}
+						usedLabel={usage && String(usage.mailboxesUsed)}
+						maxLabel={limits && String(limits.maxMailboxes)}
+						pct={usage && limits ? (usage.mailboxesUsed / limits.maxMailboxes) * 100 : 0}
 					/>
 					<UsageBar
 						label="Workspace storage"
-						usedLabel={formatBytes(usage.storageUsedBytes)}
-						maxLabel={limits.storageLabel}
-						pct={(usage.storageUsedBytes / limits.storageLimitBytes) * 100}
+						loading={loading}
+						usedLabel={usage && formatBytes(usage.storageUsedBytes)}
+						maxLabel={limits?.storageLabel}
+						pct={usage && limits ? (usage.storageUsedBytes / limits.storageLimitBytes) * 100 : 0}
 					/>
 					<UsageBar
 						label="Emails sent today (UTC)"
-						usedLabel={String(usage.dailySentCount)}
-						maxLabel={String(limits.dailySendLimit)}
-						pct={(usage.dailySentCount / limits.dailySendLimit) * 100}
+						loading={loading}
+						usedLabel={usage && String(usage.dailySentCount)}
+						maxLabel={limits && String(limits.dailySendLimit)}
+						pct={usage && limits ? (usage.dailySentCount / limits.dailySendLimit) * 100 : 0}
 					/>
 				</CardContent>
 			</Card>
 
 			<div className="grid gap-4 md:grid-cols-3">
 				{plans.map((plan) => {
-					const current = plan.id === workspace.plan;
+					const current = plan.id === workspace?.plan;
 					return (
 						<Card
 							key={plan.id}

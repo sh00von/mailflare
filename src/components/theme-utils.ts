@@ -4,11 +4,12 @@ export const THEME_STORAGE_KEY = "replyot-theme";
 export const THEME_CHANGED_EVENT = "replyot:theme-changed";
 
 // Runs in <head> before paint, so the first frame already has the right theme (same approach as the
-// sidebar width). Keep it in sync with resolveTheme/applyTheme below.
+// sidebar width). Keep it in sync with resolveTheme/applyTheme below. Light is the default; dark or
+// "match system" only apply when the user picks them in Settings.
 export const themeBootstrapScript = `(() => {
 	try {
 		const saved = localStorage.getItem("replyot-theme");
-		const preference = saved === "light" || saved === "dark" ? saved : "system";
+		const preference = saved === "dark" || saved === "system" ? saved : "light";
 		const dark = preference === "dark" || (preference === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
 		document.documentElement.classList.toggle("dark", dark);
 		document.documentElement.classList.toggle("light", !dark);
@@ -20,12 +21,12 @@ export function isThemePreference(value: unknown): value is ThemePreference {
 }
 
 export function readThemePreference(): ThemePreference {
-	if (typeof window === "undefined") return "system";
+	if (typeof window === "undefined") return "light";
 	try {
 		const saved = localStorage.getItem(THEME_STORAGE_KEY);
-		return isThemePreference(saved) ? saved : "system";
+		return isThemePreference(saved) ? saved : "light";
 	} catch {
-		return "system";
+		return "light";
 	}
 }
 
@@ -44,7 +45,7 @@ export function applyTheme(preference: ThemePreference): void {
 
 export function saveThemePreference(preference: ThemePreference): void {
 	try {
-		if (preference === "system") localStorage.removeItem(THEME_STORAGE_KEY);
+		if (preference === "light") localStorage.removeItem(THEME_STORAGE_KEY);
 		else localStorage.setItem(THEME_STORAGE_KEY, preference);
 	} catch {
 		// Storage can be unavailable in private windows; the theme still applies for this page.

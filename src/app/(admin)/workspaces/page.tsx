@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { authFetch } from "@/lib/auth/client";
 import type { PlanDefinition, PlanId, WorkspaceStatus } from "@/lib/plans/catalog";
 import type { WorkspaceUsage } from "@/lib/plans/usage";
+import { SkeletonRows } from "@/components/ui/skeleton";
 
 type SelectOption<T extends string> = { value: T; label: string };
 
@@ -168,7 +169,7 @@ export default function AdminWorkspacesPage() {
 			{error && <p role="alert" className="text-sm text-red-600">{error}</p>}
 
 			{loading ? (
-				<p className="text-sm text-neutral-500">Loading workspaces...</p>
+				<SkeletonRows count={4} compact />
 			) : items.length === 0 ? (
 				<p className="text-sm text-neutral-500">No workspaces yet.</p>
 			) : (

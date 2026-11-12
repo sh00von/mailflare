@@ -1,7 +1,8 @@
 "use client";
 
 import { useId, useState, type ReactNode } from "react";
-import { AlertTriangle, CheckCircle2, ExternalLink, LoaderCircle, ShieldAlert, ShieldCheck, X } from "@/components/icons";
+import { AlertTriangle, CheckCircle2, ExternalLink, ShieldAlert, ShieldCheck, X } from "@/components/icons";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { splitEmailAddressList } from "@/lib/email/address";
 import { formatRecipientAddressList } from "@/lib/email/recipient-display";
@@ -167,10 +168,11 @@ export function MessageDetailsPanel({ message, onClose, className }: MessageDeta
 						{authenticationFailed ? (
 							<p className="mt-2 text-neutral-500">Could not check authentication.</p>
 						) : loading ? (
-							<p className="mt-2 flex items-center gap-1.5 text-neutral-500">
-								<LoaderCircle className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-								Checking authentication…
-							</p>
+							<div role="status" aria-label="Checking authentication" className="mt-2 space-y-2">
+								<Skeleton className="h-3.5 w-40" />
+								<Skeleton className="h-3.5 w-48" />
+								<Skeleton className="h-3.5 w-36" />
+							</div>
 						) : !authentication || !authentication.available ? (
 							<p className="mt-2 text-neutral-500">Provider-verified authentication results are not available for this message.</p>
 						) : (

@@ -1,8 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { getHomeActions } from "./utils";
 import { HomeAccountMenu } from "./home-account-menu";
 import { useHomeAuth } from "./home-auth";
 
@@ -12,11 +10,18 @@ export function HomeHeaderActions() {
 
 	return (
 		<>
-			{getHomeActions(false).map((action) => (
-				<Button key={action.href} variant={action.variant} asChild>
-					<Link href={action.href}>{action.labelKey}</Link>
-				</Button>
-			))}
+			<Link
+				href="/login"
+				className="hidden h-10 items-center rounded-full px-4 text-sm font-medium text-blue-600 transition hover:bg-blue-50 sm:inline-flex"
+			>
+				Sign in
+			</Link>
+			<Link
+				href="/register"
+				className="inline-flex h-10 items-center rounded-full bg-blue-600 px-5 text-sm font-medium text-white transition hover:bg-blue-700 hover:shadow-sm"
+			>
+				Get started
+			</Link>
 		</>
 	);
 }

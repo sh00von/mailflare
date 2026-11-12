@@ -1,26 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight } from "@/components/icons";
-import { Button } from "@/components/ui/button";
 import { useHomeAuth } from "./home-auth";
 
 export function HomeHeroActions() {
 	const hasUser = !!useHomeAuth();
 
 	return (
-		<div className="mt-8 flex flex-col gap-3 sm:flex-row">
-			<Button size="lg" asChild className="rounded-full px-6">
-				<Link href={hasUser ? "/inbox" : "/register"}>
-					{hasUser ? "Open dashboard" : "Create account"}
-					<ArrowRight className="h-4 w-4" />
-				</Link>
-			</Button>
-			<Button size="lg" variant="outline" asChild className="rounded-full border-neutral-200 bg-white px-6">
-				<Link href={hasUser ? "/inbox" : "/login"}>
-					{hasUser ? "View inbox" : "Log in"}
-				</Link>
-			</Button>
+		<div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
+			<Link
+				href={hasUser ? "/inbox" : "/register"}
+				className="inline-flex h-12 items-center justify-center rounded-full bg-blue-600 px-7 text-[15px] font-medium text-white shadow-sm transition hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+			>
+				{hasUser ? "Open your inbox" : "Start a free trial"}
+			</Link>
+			<Link
+				href={hasUser ? "/plan" : "/login"}
+				className="inline-flex h-12 items-center justify-center rounded-full border border-neutral-300 bg-white px-7 text-[15px] font-medium text-blue-600 transition hover:border-blue-100 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+			>
+				{hasUser ? "Manage your plan" : "Sign in"}
+			</Link>
 		</div>
 	);
 }

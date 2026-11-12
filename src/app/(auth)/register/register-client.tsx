@@ -1,9 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle, CheckCircle2, LoaderCircle, MailPlus } from "@/components/icons";
+import { AlertCircle, AlertTriangle, Check, CheckCircle2, Copy, Info, KeyRound, LoaderCircle, MailPlus, RefreshCw } from "@/components/icons";
 import { useEffect, useState } from "react";
 import { AuthShell } from "@/components/auth/auth-shell";
+import {
+	AUTH_ERROR_CLASS,
+	AUTH_INPUT_CLASS,
+	AUTH_LABEL_CLASS,
+	AUTH_PRIMARY_BUTTON_CLASS,
+	AUTH_SECONDARY_BUTTON_CLASS,
+	AUTH_TEXT_BUTTON_CLASS,
+} from "@/components/auth/auth-ui-utils";
+import { PasswordInput } from "@/components/auth/password-input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -111,30 +120,37 @@ export function RegisterClient() {
 
 	const stepTitle =
 		step === 1
-			? "Set up your business domain"
+			? "Create your workspace"
 			: step === 2
 				? `Connect ${domainName}`
 				: "Create your admin account";
 
 	const stepSubtitle =
 		step === 1
-			? "Enter your organization and custom domain to start your 14-day free trial."
+			? "Pick a plan and enter your business domain. Every plan starts with a 14-day free trial."
 			: step === 2
-				? "Add these DNS records at your domain registrar so you can send and receive mail."
-				: `Create your first email address on ${domainName}.`;
+				? "Add these DNS records at your domain registrar so your team can send and receive mail."
+				: `Choose your first email address on ${domainName}.`;
+
+	const allDnsVerified = dnsChecklist.length > 0 && dnsChecklist.every((rec) => rec.added);
+	const errorBox = error && (
+		<p role="alert" className={AUTH_ERROR_CLASS}>
+			<AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+			{error}
+		</p>
+	);
 
 	return (
 		<AuthShell
 			icon={MailPlus}
 			title={stepTitle}
 			description={stepSubtitle}
-			steps={["1 Domain", "2 Connect DNS", "3 Account"]}
-			currentStep={step}
-			footer={
-				<Link href="/login" className="hover:underline">
-					Already have a workspace? Sign in
-				</Link>
-			}
+			wide={step === 2}
+			steps={[
+				{ label: "Plan and domain", active: step === 1, done: step > 1 },
+				{ label: "Connect DNS", active: step === 2, done: step > 2 },
+				{ label: "Admin account", active: step === 3 },
+			]}
 		>
 			{!ready ? (
 				<div className="flex items-center justify-center gap-3 py-8 text-sm text-neutral-500">
@@ -142,91 +158,136 @@ export function RegisterClient() {
 					Preparing workspace...
 				</div>
 			) : step === 1 ? (
-				<form onSubmit={onDomainStepSubmit} className="space-y-4">
-					<div className="space-y-2">
-						<Label>Select your plan (14-day free trial)</Label>
-						<div className="grid grid-cols-3 gap-2">
+				<form onSubmit={onDomainStepSubmit} className="space-y-6">
+					<fieldset className="space-y-3">
+						<legend className={`${AUTH_LABEL_CLASS} mb-3`}>Plan</legend>
+						<div role="radiogroup" aria-label="Plan" className="grid grid-cols-1 gap-3 sm:grid-cols-3">
 							{PLAN_LIST.map((item) => {
 								const active = plan === item.id;
 								return (
 									<button
 										key={item.id}
 										type="button"
+										role="radio"
+										aria-checked={active}
 										onClick={() => setPlan(item.id)}
-										className={`rounded-xl border px-3 py-2 text-left transition-colors ${active ? "border-blue-600 bg-blue-50/70 ring-1 ring-blue-600" : "border-neutral-200 bg-white hover:border-neutral-300"}`}
+										className={`relative rounded-xl border p-4 text-left transition ${
+											active
+												? "border-blue-600 bg-blue-50 ring-1 ring-blue-600"
+												: "border-neutral-300 bg-white hover:border-neutral-400 hover:bg-neutral-50"
+										}`}
 									>
-										<div className="text-xs font-semibold text-neutral-900">{item.name}</div>
-										<div className="text-xs text-neutral-600">${item.priceMonthlyUsd}/mo</div>
-										<div className="mt-0.5 text-[10px] text-neutral-500">
-											{item.maxDomains}d · {item.maxMailboxes}u · {item.storageLabel}
-										</div>
+										<span className="flex items-center justify-between gap-2">
+											<span className="text-sm font-medium text-neutral-900">{item.name}</span>
+											<span
+												aria-hidden="true"
+												className={`flex h-4 w-4 items-center justify-center rounded-full border-2 ${active ? "border-blue-600" : "border-neutral-400"}`}
+											>
+												{active && <span className="h-2 w-2 rounded-full bg-blue-600" />}
+											</span>
+										</span>
+										<span className="mt-2 block">
+											<span className="text-xl font-normal text-neutral-900">${item.priceMonthlyUsd}</span>
+											<span className="text-xs text-neutral-500"> / month</span>
+										</span>
+										<span className="mt-1.5 block text-xs leading-5 text-neutral-500">
+											{item.maxDomains} {item.maxDomains === 1 ? "domain" : "domains"} · {item.maxMailboxes} mailboxes · {item.storageLabel}
+										</span>
 									</button>
 								);
 							})}
 						</div>
-					</div>
+					</fieldset>
 					<div className="space-y-2">
-						<Label htmlFor="orgName">Organization / Business name (optional)</Label>
+						<Label htmlFor="orgName" className={AUTH_LABEL_CLASS}>
+							Business name <span className="font-normal text-neutral-500">(optional)</span>
+						</Label>
 						<Input
 							id="orgName"
-							placeholder="Ordify Inc."
+							placeholder="Acme Inc."
+							autoComplete="organization"
+							className={AUTH_INPUT_CLASS}
 							value={orgName}
 							onChange={(e) => setOrgName(e.target.value)}
 						/>
 					</div>
 					<div className="space-y-2">
-						<Label htmlFor="domain">Your custom domain</Label>
+						<Label htmlFor="domain" className={AUTH_LABEL_CLASS}>Business domain</Label>
 						<Input
 							id="domain"
 							name="domain"
-							placeholder="ordify.site"
+							placeholder="yourcompany.com"
 							autoComplete="off"
+							autoCapitalize="none"
+							spellCheck={false}
+							inputMode="url"
 							required
+							className={AUTH_INPUT_CLASS}
 							value={domainName}
 							onChange={(e) => setDomainName(e.target.value)}
+							aria-describedby="domain-hint"
 						/>
-						<p className="text-xs leading-5 text-neutral-500">
-							Your team email addresses will end with @{domainName.trim() || "yourdomain.com"}.
+						<p id="domain-hint" className="text-sm leading-6 text-neutral-500">
+							Your team’s addresses will look like{" "}
+							<span className="font-medium text-neutral-700">you@{domainName.trim() || "yourcompany.com"}</span>
 						</p>
 					</div>
-					{error && (
-						<p role="alert" className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-							{error}
-						</p>
-					)}
-					<Button type="submit" className="h-11 w-full rounded-full px-6" disabled={loading}>
-						{loading ? "Checking domain..." : "Continue"}
-					</Button>
+					{errorBox}
+					<div className="flex items-center justify-between gap-3 pt-2">
+						<Link href="/login" className={AUTH_TEXT_BUTTON_CLASS}>
+							Sign in instead
+						</Link>
+						<Button type="submit" className={AUTH_PRIMARY_BUTTON_CLASS} disabled={loading}>
+							{loading ? "Checking domain..." : "Next"}
+						</Button>
+					</div>
 				</form>
 			) : step === 2 ? (
-				<div className="space-y-4">
-					<div>
-						<h2 className="text-sm font-semibold text-neutral-900">Required DNS records</h2>
-						<p className="mt-1 text-xs text-neutral-500">
-							Open your DNS provider (Namecheap, GoDaddy, Route53, etc.) and add these records:
-						</p>
+				<div className="space-y-5">
+					<div
+						role="status"
+						className={`flex items-start gap-3 rounded-xl px-4 py-3 text-sm ${
+							allDnsVerified ? "bg-green-50 text-green-800" : "bg-amber-50 text-amber-900"
+						}`}
+					>
+						{allDnsVerified ? (
+							<CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-700" />
+						) : (
+							<Info className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" />
+						)}
+						<span>
+							{allDnsVerified
+								? `All records found for ${domainName}. You can continue.`
+								: "Add the records below at your registrar (Namecheap, GoDaddy, Cloudflare…), then check again. Changes can take a few minutes to appear."}
+						</span>
 					</div>
+
 					{dnsChecking && dnsChecklist.length === 0 ? (
-						<div className="flex items-center gap-2 py-4 text-xs text-neutral-500">
+						<div className="flex items-center gap-2 py-6 text-sm text-neutral-500">
 							<LoaderCircle className="h-4 w-4 animate-spin" />
 							Checking live DNS for {domainName}...
 						</div>
 					) : (
-						<div className="space-y-2">
+						<ul className="divide-y divide-neutral-200 overflow-hidden rounded-xl border border-neutral-300">
 							{dnsChecklist.map((rec, i) => (
-								<div key={`${rec.type}-${rec.name}-${i}`} className="rounded-xl border border-neutral-200 bg-white p-3 text-xs">
-									<div className="flex items-center justify-between gap-2">
-										<span className="font-semibold text-neutral-900">
-											{rec.type} &middot; Host: <code>{rec.name}</code>
-											{rec.priority !== undefined ? ` (Priority ${rec.priority})` : ""}
+								<li key={`${rec.type}-${rec.name}-${i}`} className="space-y-2.5 p-4">
+									<div className="flex flex-wrap items-center gap-2">
+										<span className="rounded-md bg-neutral-100 px-2 py-0.5 font-mono text-xs font-medium text-neutral-700">{rec.type}</span>
+										<span className="text-sm text-neutral-500">
+											Host <code className="font-mono text-neutral-900">{rec.name}</code>
+											{rec.priority !== undefined ? ` · Priority ${rec.priority}` : ""}
 										</span>
-										<span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${rec.added ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-800"}`}>
-											{rec.added ? <CheckCircle2 className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
-											{rec.added ? "Added" : "To Add"}
+										<span
+											className={`ml-auto inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+												rec.added ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-800"
+											}`}
+										>
+											{rec.added ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />}
+											{rec.added ? "Found" : "Not found yet"}
 										</span>
 									</div>
-									<div className="mt-1.5 flex items-center justify-between gap-2">
-										<code className="break-all text-neutral-600">{rec.value}</code>
+									<div className="flex items-center gap-2 rounded-lg bg-neutral-50 py-1.5 pl-3 pr-1.5">
+										<code className="min-w-0 flex-1 break-all font-mono text-xs leading-5 text-neutral-700">{rec.value}</code>
 										<button
 											type="button"
 											onClick={() => {
@@ -234,65 +295,60 @@ export function RegisterClient() {
 												setCopiedIdx(i);
 												setTimeout(() => setCopiedIdx(null), 1500);
 											}}
-											className="shrink-0 cursor-pointer rounded-md border border-neutral-200 px-2.5 py-1 text-[11px] font-medium text-neutral-700 hover:bg-neutral-100"
+											className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-xs font-medium text-blue-600 transition hover:bg-blue-50"
+											aria-label={`Copy ${rec.type} value`}
 										>
+											{copiedIdx === i ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
 											{copiedIdx === i ? "Copied" : "Copy"}
 										</button>
 									</div>
-								</div>
+								</li>
 							))}
-						</div>
+						</ul>
 					)}
-					{(() => {
-						const allDnsVerified = dnsChecklist.length > 0 && dnsChecklist.every((rec) => rec.added);
-						return (
-							<>
-								<div className={`rounded-xl border px-3.5 py-2.5 text-xs font-medium ${allDnsVerified ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-800"}`}>
-									{allDnsVerified
-										? `DNS verified for ${domainName}! You can now create your admin account.`
-										: "Waiting for DNS records (MX, SPF, DMARC). Add them at your DNS registrar and click Check DNS again."}
-								</div>
-								{error && (
-									<p role="alert" className="rounded-xl border border-red-100 bg-red-50 px-3.5 py-2.5 text-sm font-medium text-red-700">
-										{error}
-									</p>
-								)}
-								<div className="space-y-2">
-									<Button type="button" className="h-11 w-full rounded-full px-6" disabled={!allDnsVerified || dnsChecking} onClick={() => setStep(3)}>
-										Continue to Account Setup
-									</Button>
-									<div className="grid grid-cols-2 gap-2">
-										<Button type="button" variant="outline" className="h-10 rounded-full" onClick={() => setStep(1)}>
-											Back
-										</Button>
-										<Button type="button" variant="outline" className="h-10 rounded-full" disabled={dnsChecking} onClick={() => void loadDnsChecklist(domainName)}>
-											{dnsChecking ? "Checking..." : "Check DNS again"}
-										</Button>
-									</div>
-								</div>
-							</>
-						);
-					})()}
+					{errorBox}
+					<div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+						<button type="button" className={AUTH_TEXT_BUTTON_CLASS} onClick={() => setStep(1)}>
+							Back
+						</button>
+						<div className="flex items-center gap-2">
+							<Button
+								type="button"
+								className={AUTH_SECONDARY_BUTTON_CLASS}
+								disabled={dnsChecking}
+								onClick={() => void loadDnsChecklist(domainName)}
+							>
+								<RefreshCw className={`h-4 w-4 ${dnsChecking ? "animate-spin" : ""}`} />
+								{dnsChecking ? "Checking..." : "Check again"}
+							</Button>
+							<Button type="button" className={AUTH_PRIMARY_BUTTON_CLASS} disabled={!allDnsVerified || dnsChecking} onClick={() => setStep(3)}>
+								Next
+							</Button>
+						</div>
+					</div>
 				</div>
 			) : (
-				<form method="post" onSubmit={onAccountSubmit} className="space-y-4">
+				<form method="post" onSubmit={onAccountSubmit} className="space-y-6">
 					<div className="space-y-2">
-						<Label htmlFor="username">Your admin email</Label>
-						<div className="relative flex items-center">
-							<Input
+						<Label htmlFor="username" className={AUTH_LABEL_CLASS}>Your email address</Label>
+						<div className="flex items-stretch overflow-hidden rounded-lg border border-neutral-400 bg-white transition hover:border-neutral-700 focus-within:border-blue-600 focus-within:ring-1 focus-within:ring-blue-600">
+							<input
 								id="username"
 								name="username"
 								placeholder="you"
 								autoComplete="username"
+								autoCapitalize="none"
+								spellCheck={false}
 								required
-								className="pr-36"
+								autoFocus
+								className="h-12 min-w-0 flex-1 bg-transparent px-4 text-base outline-none placeholder:text-neutral-400"
 							/>
-							<span className="pointer-events-none absolute right-4 max-w-36 truncate text-sm font-medium text-neutral-500">
+							<span className="flex max-w-[55%] items-center truncate border-l border-neutral-200 bg-neutral-50 px-4 text-base text-neutral-500">
 								@{domainName}
 							</span>
 						</div>
 					</div>
-					<label className="flex cursor-pointer items-start gap-3 rounded-2xl bg-neutral-50 px-4 py-3">
+					<label className="flex cursor-pointer items-start gap-3 rounded-xl border border-neutral-200 px-4 py-3.5 transition hover:bg-neutral-50">
 						<Checkbox
 							name="usePasskey"
 							checked={usePasskey}
@@ -300,46 +356,51 @@ export function RegisterClient() {
 							className="mt-1"
 						/>
 						<span>
-							<span className="block text-sm font-medium text-neutral-800">Use a passkey instead of a password</span>
-							<span className="mt-1 block text-xs leading-5 text-neutral-500">You will create the passkey on the next step. Passkeys use your fingerprint, face, or device PIN and never leave your devices.</span>
+							<span className="flex items-center gap-1.5 text-sm font-medium text-neutral-900">
+								<KeyRound className="h-4 w-4 text-blue-600" />
+								Use a passkey instead of a password
+							</span>
+							<span className="mt-1 block text-sm leading-6 text-neutral-500">
+								Sign in with your fingerprint, face or device PIN. You’ll create it on the next step.
+							</span>
 						</span>
 					</label>
 					{!usePasskey && (
 						<div className="space-y-2">
-							<Label htmlFor="password">Password</Label>
-							<Input
+							<Label htmlFor="password" className={AUTH_LABEL_CLASS}>Password</Label>
+							<PasswordInput
 								id="password"
 								name="password"
-								type="password"
 								minLength={8}
 								autoComplete="new-password"
+								aria-describedby="password-hint"
 								required
 							/>
+							<p id="password-hint" className="text-sm text-neutral-500">Use 8 or more characters.</p>
 						</div>
 					)}
 					<div className="space-y-2">
-						<Label htmlFor="resetEmail">Recovery email</Label>
+						<Label htmlFor="resetEmail" className={AUTH_LABEL_CLASS}>Recovery email</Label>
 						<Input
 							id="resetEmail"
 							name="resetEmail"
 							type="email"
 							autoComplete="email"
 							placeholder="you@gmail.com"
+							className={AUTH_INPUT_CLASS}
+							aria-describedby="recovery-hint"
 							required
 						/>
+						<p id="recovery-hint" className="text-sm text-neutral-500">We’ll send password reset links here.</p>
 					</div>
-					<TurnstileField resetTrigger={turnstileReset} />
-					{error && (
-						<p role="alert" className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-							{error}
-						</p>
-					)}
-					<div className="flex flex-col gap-2 sm:flex-row">
-						<Button type="button" variant="outline" className="h-11 rounded-full px-5" onClick={() => setStep(2)}>
+					<TurnstileField resetSignal={turnstileReset} />
+					{errorBox}
+					<div className="flex items-center justify-between gap-3 pt-2">
+						<button type="button" className={AUTH_TEXT_BUTTON_CLASS} onClick={() => setStep(2)}>
 							Back
-						</Button>
-						<Button type="submit" className="h-11 flex-1 rounded-full px-6" disabled={loading}>
-							{loading ? "Creating workspace..." : "Create Workspace"}
+						</button>
+						<Button type="submit" className={AUTH_PRIMARY_BUTTON_CLASS} disabled={loading}>
+							{loading ? "Creating workspace..." : "Create workspace"}
 						</Button>
 					</div>
 				</form>

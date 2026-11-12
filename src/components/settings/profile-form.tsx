@@ -11,6 +11,8 @@ import { InboxSwitcher } from "./inbox-switcher";
 import { ProfileAvatarForm } from "./profile-avatar-form";
 import type { ProfileFormProps, ProfileFormResponse } from "./types";
 import { getMailboxAddress, updateCurrentMailboxName } from "./utils";
+import { FormSkeleton } from "@/components/page-skeletons";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function ProfileForm({
   accountName,
@@ -105,7 +107,18 @@ export function ProfileForm({
   }
 
   if (isLoading) {
-    return <p className="rounded-t-3xl rounded-b-lg bg-white p-6 text-sm text-neutral-500">Loading inbox…</p>;
+    return (
+      <div className="space-y-6 rounded-b-lg rounded-t-3xl bg-white p-6">
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-16 w-16 shrink-0 rounded-full" />
+          <div>
+            <p className="text-sm font-medium text-neutral-900">Profile picture</p>
+            <p className="mt-1 text-sm text-neutral-500">Choose a picture to show across your account.</p>
+          </div>
+        </div>
+        <FormSkeleton fields={["Name", "Current email"]} />
+      </div>
+    );
   }
   if (!selectedMailbox) {
     return <p className="rounded-t-3xl rounded-b-lg bg-white p-6 text-sm text-neutral-500">Select an inbox to configure its signature.</p>;

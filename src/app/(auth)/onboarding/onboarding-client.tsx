@@ -136,7 +136,7 @@ export function OnboardingClient() {
 			<div className="space-y-5">
 				{step === 1 && (
 					<>
-						<p className="rounded-2xl bg-[#eaf1fb] px-4 py-3 text-sm leading-6 text-neutral-700">
+						<p className="rounded-2xl bg-search px-4 py-3 text-sm leading-6 text-neutral-700">
 							{`Your domain must use Cloudflare DNS on the same account as ${"\u0001"}.`.split("\u0001").flatMap((part, index) => index === 0 ? [part] : [<code key={index} className="no-font-mono text-xs font-semibold text-blue-800">CF_TOKEN</code>, part])}
 						</p>
 						<div className="space-y-2">

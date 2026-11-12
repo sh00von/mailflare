@@ -10,6 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import type { MailboxAutoReplySettings } from "./types";
 import { updateMailboxAutoReply } from "./utils";
 import { Switch } from "../ui/switch";
+import { FormSkeleton } from "@/components/page-skeletons";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const defaultSettings: MailboxAutoReplySettings = {
   enabled: false,
@@ -71,7 +73,18 @@ export function MailboxAutoReplyForm() {
   }
 
   if (isLoading)
-    return <p className="text-sm text-neutral-500">Loading inbox…</p>;
+    return (
+      <div className="space-y-4">
+        <div className="flex items-start gap-3 rounded-xl bg-neutral-50 p-4">
+          <span className="flex-1">
+            <span className="block text-sm font-medium text-neutral-900">Enable auto-reply</span>
+            <span className="mt-1 block text-sm text-neutral-500">Each sender receives at most one automatic response every 24 hours.</span>
+          </span>
+          <Skeleton className="h-6 w-11 rounded-full" />
+        </div>
+        <FormSkeleton fields={["Subject", { label: "Message", tall: true }]} />
+      </div>
+    );
   if (!selectedMailbox)
     return (
       <p className="text-sm text-neutral-500">

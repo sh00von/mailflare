@@ -13,6 +13,7 @@ import { ClientRequestError } from "@/lib/http/client-error";
 import { generateRecoveryCodes, setSecondFactorRequirement } from "./passkey-settings-utils";
 import { refreshSecurityStatus, useSecurityStatus } from "./security-status-store";
 import { StepUpDialog } from "./step-up-dialog";
+import { FormSkeleton } from "@/components/page-skeletons";
 
 type PendingAction = "toggle-on" | "toggle-off" | "enroll" | "disable" | "codes";
 
@@ -60,7 +61,7 @@ export function TwoStepSettings() {
 					<h2 className="text-lg font-semibold text-neutral-900">Two-step verification</h2>
 					<p className="mt-1 text-sm text-neutral-500">Add an extra step after password sign-in. Passkeys and authenticator apps both qualify; signing in directly with a passkey never needs another step.</p>
 				</div>
-				<p role={loadFailed ? "alert" : undefined} className="text-sm text-neutral-500">{loadFailed ? "Failed to load" : "Loading two-factor settings..."}</p>
+				{loadFailed ? <p role="alert" className="text-sm text-neutral-500">Failed to load</p> : <FormSkeleton rows={1} />}
 			</div>
 		);
 	}

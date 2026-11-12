@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Bell, Smartphone } from "@/components/icons";
 import { Button } from "@/components/ui/button";
+import { SkeletonRows } from "@/components/ui/skeleton";
 import { formatUserDate } from "@/lib/time/utils";
 import type { MobileDevice } from "./device-settings-types";
 import { loadDevices, signOutDevice } from "./device-settings-utils";
@@ -34,7 +35,7 @@ export function DeviceSettings() {
 		}
 	}
 
-	if (!devices) return <p className="text-sm text-neutral-500">{error ?? "Loading devices..."}</p>;
+	if (!devices) return error ? <p className="text-sm text-neutral-500">{error}</p> : <SkeletonRows count={2} compact />;
 	if (devices.length === 0) return <p className="text-sm text-neutral-500">No devices are signed in.</p>;
 
 	return (

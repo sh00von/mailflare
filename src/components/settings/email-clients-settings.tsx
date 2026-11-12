@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { createJmapApiKey } from "./utils";
 import { buildSignInQrPayload } from "./sign-in-qr-utils";
 
@@ -109,7 +110,10 @@ export function EmailClientsSettings() {
 					<fieldset className="space-y-2">
 						<legend className="text-sm font-medium">Mailboxes this app can use</legend>
 						{isLoading ? (
-							<p className="text-sm text-neutral-500">Loading mailboxes...</p>
+							<div role="status" aria-label="Loading mailboxes" className="space-y-2.5">
+								<Skeleton className="h-5 w-56" />
+								<Skeleton className="h-5 w-44" />
+							</div>
 						) : mailboxes.length === 0 ? (
 							<p className="text-sm text-neutral-500">No accessible mailboxes.</p>
 						) : (

@@ -10,6 +10,7 @@ import { getAvatarColorStyle } from "@/lib/avatar-colors";
 import { getAccountPurgeDate, getAccountStatus } from "@/lib/accounts/deletion-utils";
 import { formatAccountDate, formatAccountDateTime } from "./utils";
 import type { AccountsTableProps } from "./accounts-table-types";
+import { SkeletonRows } from "@/components/ui/skeleton";
 
 const COLUMNS = "grid grid-cols-[auto_minmax(0,1fr)_1.75rem] items-center gap-x-4 md:grid-cols-[auto_minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_1.75rem]";
 const STATUS_STYLES = {
@@ -46,7 +47,7 @@ export function AccountsTable({ accounts, currentUserId, isPrimaryAdmin, loading
 				</DropdownMenu.Root>
 			</span>
 		</div>
-		{loading && <p className="px-5 py-4 text-sm text-neutral-500">Loading...</p>}
+		{loading && <SkeletonRows count={5} compact />}
 		{accounts.map((account) => {
 			const locked = !isPrimaryAdmin && account.role === "admin" && account.id !== currentUserId;
 			const status = getAccountStatus({ disabled: !!account.disabled, deletedAt: account.deletedAt });

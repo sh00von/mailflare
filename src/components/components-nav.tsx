@@ -42,10 +42,10 @@ export function NavItem({ link, iconClassName, labelClassName, wrap }: Props) {
   const classes = cn(
     "flex h-9 items-center gap-3 rounded-r-full text-sm text-neutral-700 transition-colors max-md:min-h-11 max-md:text-base",
     minimal && "relative mx-auto w-10 justify-center rounded-full px-0",
-    active ? "bg-blue-100 text-blue-900 font-semibold" : "hover:bg-neutral-200/60",
+    active ? "bg-nav-active text-on-nav-active font-semibold" : "hover:bg-neutral-200/70",
     dragOver && "bg-blue-50 text-blue-900 ring-1 ring-blue-200",
     link.primary &&
-    "mb-3 h-12 w-fit rounded-2xl bg-blue-100 px-5 text-blue-950 shadow-sm hover:bg-blue-200",
+    "mb-3 h-14 w-fit rounded-2xl bg-compose px-5 font-medium text-on-compose transition-shadow hover:bg-compose hover:shadow-md",
     link.count && "font-semibold",
     link.primary && minimal && "h-11 w-11 rounded-2xl px-0",
     wrap && !minimal && "h-auto min-h-9 items-start py-2",

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { updateMailboxSignature } from "./utils";
+import { FormSkeleton } from "@/components/page-skeletons";
 
 export function MailboxSignatureForm() {
 	const { selectedMailbox, setSelectedMailbox, isLoading } = useSelectedMailbox();
@@ -41,7 +42,7 @@ export function MailboxSignatureForm() {
 		}
 	}
 
-	if (isLoading) return <p className="text-sm text-neutral-500">Loading inbox…</p>;
+	if (isLoading) return <FormSkeleton fields={[{ label: "Signature", tall: true }]} />;
 	if (!selectedMailbox) return <p className="text-sm text-neutral-500">Select an inbox to configure its signature.</p>;
 
 	const address = `${selectedMailbox.localPart}@${selectedMailbox.hostname}`;

@@ -209,7 +209,19 @@ function MessageDetailContent({ messageId }: { messageId: string }) {
   );
 
   if (loading) {
-    return <MessageDetailSkeleton />;
+    return (
+      <>
+        <div className="flex h-12 items-center gap-3 border-b border-transparent px-2 py-2">
+          <MessageReadingHeaderButton assistantVisible={false} />
+          <div className="flex items-center gap-2" aria-hidden="true">
+            {Array.from({ length: 4 }, (_, index) => (
+              <Skeleton key={index} className="h-8 w-8 rounded-full" />
+            ))}
+          </div>
+        </div>
+        <MessageDetailSkeleton withToolbar={false} />
+      </>
+    );
   }
 
   if (!message) {

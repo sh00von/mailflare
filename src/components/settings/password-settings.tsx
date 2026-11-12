@@ -13,6 +13,7 @@ import { removePassword, setPassword } from "./passkey-settings-utils";
 import { refreshSecurityStatus, useSecurityStatus } from "./security-status-store";
 import { StepUpDialog } from "./step-up-dialog";
 import { PasskeyFirstChoice, type PasskeyPolicyChoice } from "./passkey-first-choice";
+import { FormSkeleton } from "@/components/page-skeletons";
 
 /**
  * Password controls that understand passkey-only accounts: set one, change it,
@@ -92,7 +93,7 @@ export function PasswordSettings() {
 		}
 	}
 
-	if (!status) return <p role={loadFailed ? "alert" : undefined} className="text-sm text-neutral-500">{loadFailed ? "Failed to change password" : "Loading two-factor settings..."}</p>;
+	if (!status) return loadFailed ? <p role="alert" className="text-sm text-neutral-500">Could not load password settings</p> : <FormSkeleton rows={2} />;
 
 	return (
 		<div className="space-y-4">
