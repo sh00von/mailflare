@@ -93,7 +93,7 @@ export function clearMessageThreadCache(): void {
 
 if (typeof window !== "undefined") {
 	window.addEventListener(AUTH_SESSION_CHANGED_EVENT, clearMessageThreadCache);
-	window.addEventListener("mailflare:messages-changed", (event) => {
+	window.addEventListener("replyot:messages-changed", (event) => {
 		if (!isReadOnlyChange(event)) {
 			clearMessageThreadCache();
 			return;

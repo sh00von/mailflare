@@ -7,7 +7,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { build } from "esbuild";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const outDir = mkdtempSync(join(tmpdir(), "mailflare-inbound-hardening-test-"));
+const outDir = mkdtempSync(join(tmpdir(), "replyot-inbound-hardening-test-"));
 after(() => rmSync(outDir, { recursive: true, force: true }));
 
 await build({

@@ -3,7 +3,7 @@ import type { DueFollowUp, MessageFollowUp } from "@/lib/follow-ups/types";
 import type { TranslationKey } from "@/lib/i18n/types";
 
 /** Fired after a reminder changes so the inbox block and thread view reload. */
-export const FOLLOW_UPS_CHANGED_EVENT = "mailflare:follow-ups-changed";
+export const FOLLOW_UPS_CHANGED_EVENT = "replyot:follow-ups-changed";
 
 export function followUpOptionKey(days: number): TranslationKey {
 	if (days === 1) return "followUp.in1Day";

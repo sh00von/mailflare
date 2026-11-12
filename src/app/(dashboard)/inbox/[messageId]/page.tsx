@@ -154,8 +154,8 @@ function MessageDetailContent({ messageId }: { messageId: string }) {
         return { ...current, message: { ...current.message, read: cachedRead } };
       });
     }
-    window.addEventListener("mailflare:messages-changed", syncCachedReadState);
-    return () => window.removeEventListener("mailflare:messages-changed", syncCachedReadState);
+    window.addEventListener("replyot:messages-changed", syncCachedReadState);
+    return () => window.removeEventListener("replyot:messages-changed", syncCachedReadState);
   }, [messageId]);
 
   async function retryBody() {

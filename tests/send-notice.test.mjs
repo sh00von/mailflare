@@ -6,7 +6,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { build } from "esbuild";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const bundleDirectory = mkdtempSync(join(root, "node_modules", "mailflare-send-notice-bundle-"));
+const bundleDirectory = mkdtempSync(join(root, "node_modules", "replyot-send-notice-bundle-"));
 await build({
 	stdin: {
 		contents: `export { resolveSendNotice, splitSendTemplate } from "./src/components/compose/send-notice-utils.ts";

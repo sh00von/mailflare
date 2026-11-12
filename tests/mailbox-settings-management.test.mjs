@@ -77,7 +77,7 @@ async function fixture(t, plan = "team") {
 	sql.prepare("UPDATE license_settings SET plan=?, state=? WHERE id='default'").run(plan, plan === "community" ? "inactive" : "active");
 	const objects = new Map([["avatars/sam", new Uint8Array([1, 2, 3])]]);
 	const env = {
-		DB: database, MAILFLARE_RUNTIME: "node", CF_TOKEN: "test-only",
+		DB: database, REPLYOT_RUNTIME: "node", CF_TOKEN: "test-only",
 		BUCKET: {
 			async put(key, data) { objects.set(key, new Uint8Array(data)); },
 			async get(key) {
@@ -86,8 +86,8 @@ async function fixture(t, plan = "team") {
 			},
 		},
 	};
-	globalThis.__mailflareNodeEnv = env;
-	t.after(() => { delete globalThis.__mailflareNodeEnv; });
+	globalThis.__replyotNodeEnv = env;
+	t.after(() => { delete globalThis.__replyotNodeEnv; });
 	const sessions = new Map();
 	for (const id of ["primary", "manager", "mailbox-admin", "other-admin", "sam", "remote"]) {
 		sessions.set(id, await createSession(env, id));

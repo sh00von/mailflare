@@ -1,9 +1,9 @@
 /**
- * Imports a Google Takeout Gmail export (.mbox) into a Mailflare mailbox from the command line. The import
+ * Imports a Google Takeout Gmail export (.mbox) into a Replyot mailbox from the command line. The import
  * page (Settings → Import → Google Takeout) does the same in the browser, straight from the Takeout zip.
  *
  *   node scripts/import-gmail-takeout.mjs \
- *     --url https://mailflare.example.workers.dev \
+ *     --url https://replyot.example.workers.dev \
  *     --mailbox you@example.com \
  *     --file "All mail Including Spam and Trash.mbox"
  *
@@ -15,9 +15,9 @@
  * wins), and mail without either is archived. Unread and Starred carry over. Uploads skip duplicates, so an
  * interrupted run can simply be started again.
  *
- * Sign-in: set MAILFLARE_TOKEN to a session token (DevTools → Application → Local Storage →
- * mailflare-session-token), or pass --email and enter the password (and a 2FA code) when asked.
- * MAILFLARE_PASSWORD skips the prompt.
+ * Sign-in: set REPLYOT_TOKEN to a session token (DevTools → Application → Local Storage →
+ * replyot-session-token), or pass --email and enter the password (and a 2FA code) when asked.
+ * REPLYOT_PASSWORD skips the prompt.
  *
  * Options:
  *   --dry-run               parse the file and print where messages would go
@@ -49,7 +49,7 @@ function prompt(question, { hidden = false } = {}) {
 	});
 }
 
-class MailflareClient {
+class ReplyotClient {
 	constructor(baseUrl, token) {
 		this.baseUrl = baseUrl.replace(/\/$/, "");
 		this.token = token;
@@ -57,7 +57,7 @@ class MailflareClient {
 
 	static async signIn(baseUrl, email) {
 		const url = baseUrl.replace(/\/$/, "");
-		const password = process.env.MAILFLARE_PASSWORD || (await prompt(`Mailflare password for ${email}: `, { hidden: true }));
+		const password = process.env.REPLYOT_PASSWORD || (await prompt(`Replyot password for ${email}: `, { hidden: true }));
 		const login = await fetch(`${url}/api/auth/login`, {
 			method: "POST",
 			headers: { "Content-Type": "application/json", Origin: url },
@@ -65,7 +65,7 @@ class MailflareClient {
 		});
 		let data = await login.json().catch(() => ({}));
 		if (!login.ok) {
-			throw new Error(`Sign-in failed (${login.status}): ${JSON.stringify(data.error ?? data)}. If sign-in uses a captcha, set MAILFLARE_TOKEN instead.`);
+			throw new Error(`Sign-in failed (${login.status}): ${JSON.stringify(data.error ?? data)}. If sign-in uses a captcha, set REPLYOT_TOKEN instead.`);
 		}
 		if (data.mfaRequired) {
 			const code = await prompt("Two-factor code: ");
@@ -78,7 +78,7 @@ class MailflareClient {
 			if (!verify.ok) throw new Error(`Two-factor verification failed (${verify.status}): ${data.error ?? ""}`);
 		}
 		if (!data.token) throw new Error("Sign-in returned no session token");
-		return new MailflareClient(url, data.token);
+		return new ReplyotClient(url, data.token);
 	}
 
 	async request(path, init = {}) {
@@ -149,7 +149,7 @@ function formatBytes(bytes) {
 async function main() {
 	const { values } = parseArgs({
 		options: {
-			url: { type: "string", default: process.env.MAILFLARE_URL },
+			url: { type: "string", default: process.env.REPLYOT_URL },
 			mailbox: { type: "string" },
 			file: { type: "string" },
 			email: { type: "string" },
@@ -169,9 +169,9 @@ async function main() {
 	let mailboxId = null;
 	if (!dryRun) {
 		if (!values.url || !values.mailbox) throw new Error("--url and --mailbox are required");
-		client = process.env.MAILFLARE_TOKEN
-			? new MailflareClient(values.url, process.env.MAILFLARE_TOKEN)
-			: await MailflareClient.signIn(values.url, values.email ?? values.mailbox);
+		client = process.env.REPLYOT_TOKEN
+			? new ReplyotClient(values.url, process.env.REPLYOT_TOKEN)
+			: await ReplyotClient.signIn(values.url, values.email ?? values.mailbox);
 		mailboxId = (await client.findMailbox(values.mailbox)).id;
 		console.log(`Importing ${values.file} (${formatBytes(fileSize)}) into ${values.mailbox} (${mailboxId})`);
 	}
@@ -201,7 +201,7 @@ async function main() {
 	console.log(`\n\n${summary.read} messages in file.`);
 	for (const [key, count] of Object.entries(summary.destinations).sort((a, b) => b[1] - a[1])) console.log(`  ${String(count).padStart(7)}  ${key}`);
 	if (summary.ignored) console.log(`  ${summary.ignored} spam/trash messages skipped by option`);
-	if (summary.tooLarge) console.log(`  ${summary.tooLarge} messages over 24 MB skipped (Mailflare's upload size limit)`);
+	if (summary.tooLarge) console.log(`  ${summary.tooLarge} messages over 24 MB skipped (Replyot's upload size limit)`);
 	if (!dryRun) {
 		console.log(`Imported ${summary.imported}, skipped ${summary.skipped} (already present).`);
 		if (summary.failed) {

@@ -6,7 +6,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { build } from "esbuild";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const bundleDirectory = mkdtempSync(join(root, "node_modules", "mailflare-dns-bundle-"));
+const bundleDirectory = mkdtempSync(join(root, "node_modules", "replyot-dns-bundle-"));
 
 const mocks = {
 	"drizzle-orm": "export const eq=(c,v)=>({eq:[c,v]});",

@@ -8,7 +8,7 @@ import { generateText, stepCountIs, streamText } from "ai";
 import { z } from "zod";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const directory = mkdtempSync(join(root, "node_modules", "mailflare-openai-parameters-"));
+const directory = mkdtempSync(join(root, "node_modules", "replyot-openai-parameters-"));
 after(() => rmSync(directory, { recursive: true, force: true }));
 await build({
 	entryPoints: [join(root, "src/lib/agent/model.ts")],

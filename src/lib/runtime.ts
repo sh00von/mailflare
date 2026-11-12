@@ -5,15 +5,15 @@
  * the same way.
  */
 declare global {
-	var __mailflareNodeEnv: CloudflareEnv | undefined;
+	var __replyotNodeEnv: CloudflareEnv | undefined;
 }
 
 export function getNodeEnv(): CloudflareEnv | undefined {
-	return globalThis.__mailflareNodeEnv;
+	return globalThis.__replyotNodeEnv;
 }
 
-export function isNodeRuntime(env?: Pick<CloudflareEnv, "MAILFLARE_RUNTIME">): boolean {
-	return (env ?? getNodeEnv())?.MAILFLARE_RUNTIME === "node";
+export function isNodeRuntime(env?: Pick<CloudflareEnv, "REPLYOT_RUNTIME">): boolean {
+	return (env ?? getNodeEnv())?.REPLYOT_RUNTIME === "node";
 }
 
 /** Cloudflare API integration is disabled in Node-only mode. */

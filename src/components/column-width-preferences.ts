@@ -1,11 +1,11 @@
 import type { ColumnWidthPreference } from "./column-width-preferences-types";
 
 function storageKey(userId: string, column: ColumnWidthPreference) {
-	return `mailflare-column-width:${column}:${userId}`;
+	return `replyot-column-width:${column}:${userId}`;
 }
 
 function immediateStorageKey(column: ColumnWidthPreference) {
-	return `mailflare-column-width:${column}`;
+	return `replyot-column-width:${column}`;
 }
 
 export function readInitialColumnWidth(column: ColumnWidthPreference, fallback: number, min: number, max: number) {

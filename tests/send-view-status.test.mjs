@@ -73,7 +73,7 @@ await build({
 
 			export async function messagesChanged() {
 				await act(async () => {
-					window.dispatchEvent(new window.Event("mailflare:messages-changed"));
+					window.dispatchEvent(new window.Event("replyot:messages-changed"));
 				});
 				await settle();
 			}
@@ -130,8 +130,8 @@ function prepare({ pathname, responses = [] }) {
 function trackMessagesChanged(t) {
 	const seen = [];
 	const listener = () => { seen.push("changed"); };
-	window.addEventListener("mailflare:messages-changed", listener);
-	t.after(() => window.removeEventListener("mailflare:messages-changed", listener));
+	window.addEventListener("replyot:messages-changed", listener);
+	t.after(() => window.removeEventListener("replyot:messages-changed", listener));
 	return seen;
 }
 

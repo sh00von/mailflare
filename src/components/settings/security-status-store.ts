@@ -82,7 +82,7 @@ function subscribe(listener: () => void) {
 	listeners.add(listener);
 	if (!listening && typeof window !== "undefined") {
 		listening = true;
-		window.addEventListener("mailflare:security-changed", onWindowActivity);
+		window.addEventListener("replyot:security-changed", onWindowActivity);
 		window.addEventListener(AUTH_SESSION_CHANGED_EVENT, invalidateForSessionChange);
 		window.addEventListener("focus", onWindowActivity);
 		document.addEventListener("visibilitychange", onWindowActivity);
@@ -97,7 +97,7 @@ function subscribe(listener: () => void) {
 			// next mount must not wait for it or discard its own fetch.
 			inflight = null;
 			inflightGeneration = 0;
-			window.removeEventListener("mailflare:security-changed", onWindowActivity);
+			window.removeEventListener("replyot:security-changed", onWindowActivity);
 			window.removeEventListener(AUTH_SESSION_CHANGED_EVENT, invalidateForSessionChange);
 			window.removeEventListener("focus", onWindowActivity);
 			document.removeEventListener("visibilitychange", onWindowActivity);

@@ -124,13 +124,13 @@ export function resolveDatabaseConfig(env: EnvLike, hyperdriveUrl?: string): Dat
 
 /**
  * The dialect the schema module builds its tables for. Read from `process.env` at import time
- * (Workers populate it from vars and secrets), with `MAILFLARE_DB_DIALECT` to force one for tooling.
+ * (Workers populate it from vars and secrets), with `REPLYOT_DB_DIALECT` to force one for tooling.
  */
 export function schemaDialect(): DatabaseDialect {
 	const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env;
-	const forced = text(env, "MAILFLARE_DB_DIALECT");
+	const forced = text(env, "REPLYOT_DB_DIALECT");
 	if (forced === "sqlite" || forced === "postgres" || forced === "mysql") return forced;
-	if (forced) throw new Error(`MAILFLARE_DB_DIALECT must be sqlite, postgres or mysql, got "${forced}".`);
+	if (forced) throw new Error(`REPLYOT_DB_DIALECT must be sqlite, postgres or mysql, got "${forced}".`);
 	const named = text(env, "DATABASE_DRIVER")?.toLowerCase();
 	// A driver without a URL is the Hyperdrive case: the connection string only exists at request time.
 	if (named && !text(env, "DATABASE_URL") && DRIVER_ALIASES[named]) return DRIVER_DIALECT[DRIVER_ALIASES[named]];

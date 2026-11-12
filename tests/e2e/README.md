@@ -17,7 +17,7 @@ To keep your normal local database untouched, start a separate instance with
 disposable storage, then target it with `PLAYWRIGHT_BASE_URL`:
 
 ```sh
-MAILFLARE_TEST_STATE_PATH="$(mktemp -d)" npx vp dev --port 3002 --strictPort
+REPLYOT_TEST_STATE_PATH="$(mktemp -d)" npx vp dev --port 3002 --strictPort
 ```
 
 On a clean instance the suite calls `POST /api/setup/prepare` once before the

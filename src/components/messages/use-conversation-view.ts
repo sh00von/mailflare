@@ -2,8 +2,8 @@
 
 import { useCallback, useSyncExternalStore } from "react";
 
-const STORAGE_KEY = "mailflare-conversation-view";
-const CHANGE_EVENT = "mailflare:conversation-view-changed";
+const STORAGE_KEY = "replyot-conversation-view";
+const CHANGE_EVENT = "replyot:conversation-view-changed";
 
 function readStored(): boolean {
 	try {

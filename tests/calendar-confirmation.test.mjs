@@ -7,7 +7,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { build } from "esbuild";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const dir = mkdtempSync(join(tmpdir(), "mailflare-calendar-confirm-"));
+const dir = mkdtempSync(join(tmpdir(), "replyot-calendar-confirm-"));
 after(() => rmSync(dir, { recursive: true, force: true }));
 await build({ entryPoints: [join(root, "src/lib/calendar/confirmation.ts")], outfile: join(dir, "c.mjs"), bundle: true, platform: "node", format: "esm", logLevel: "silent", alias: { "@": join(root, "src") } });
 const { createCalendarConfirmation, readCalendarConfirmation } = await import(pathToFileURL(join(dir, "c.mjs")).href);

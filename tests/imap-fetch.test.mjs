@@ -9,7 +9,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { build } from "esbuild";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const outDir = mkdtempSync(join(tmpdir(), "mailflare-imap-fetch-test-"));
+const outDir = mkdtempSync(join(tmpdir(), "replyot-imap-fetch-test-"));
 after(() => rmSync(outDir, { recursive: true, force: true }));
 
 const mockSockets = join(outDir, "sockets.mjs");

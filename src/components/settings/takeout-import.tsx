@@ -142,7 +142,7 @@ export function TakeoutImport() {
 			controllerRef.current = null;
 			liveRef.current = null;
 			setRun(null);
-			if (mode === "import") window.dispatchEvent(new Event("mailflare:messages-changed"));
+			if (mode === "import") window.dispatchEvent(new Event("replyot:messages-changed"));
 		}
 	}
 

@@ -34,12 +34,12 @@ export function createNodeRuntime(): NodeRuntime {
 	mkdirSync(join(dataDir, "blobs"), { recursive: true });
 
 	// DATABASE_URL moves the data to PostgreSQL, MySQL or libSQL; otherwise it lives in a local SQLite file.
-	const database = getDatabaseConfig({}).driver === "d1" ? openSqliteDatabase(join(dataDir, "mailflare.sqlite")) : undefined;
+	const database = getDatabaseConfig({}).driver === "d1" ? openSqliteDatabase(join(dataDir, "replyot.sqlite")) : undefined;
 	const bucket = openFileBucket(join(dataDir, "blobs"));
 	const mailer = openMailer(mailerConfig());
-	const inboundQueue = openQueue("mailflare-inbound");
-	const outboundQueue = openQueue("mailflare-outbound");
-	const agentQueue = openQueue("mailflare-agent");
+	const inboundQueue = openQueue("replyot-inbound");
+	const outboundQueue = openQueue("replyot-outbound");
+	const agentQueue = openQueue("replyot-agent");
 	const realtime = new RealtimeHubRegistry();
 	const publicDir = resolve(optional("PUBLIC_DIR") ?? "./public");
 
@@ -76,7 +76,7 @@ export function createNodeRuntime(): NodeRuntime {
 		GITHUB_UPDATE_REF: optional("GITHUB_UPDATE_REF"),
 		GITHUB_UPDATE_REPO: optional("GITHUB_UPDATE_REPO"),
 		// Marks the runtime for the few places that must behave differently.
-		MAILFLARE_RUNTIME: "node",
+		REPLYOT_RUNTIME: "node",
 		APP_URL: optional("APP_URL")?.replace(/\/$/, ""),
 		INBOUND_WEBHOOK_SECRET: optional("INBOUND_WEBHOOK_SECRET"),
 		VAPID_PUBLIC_KEY: optional("VAPID_PUBLIC_KEY"),

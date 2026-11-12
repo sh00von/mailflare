@@ -84,13 +84,13 @@ export function useMessages(
 				void loadMessages(true);
 			}, REFRESH_DEBOUNCE_MS);
 		}
-		window.addEventListener("mailflare:messages-changed", onMessagesChanged);
-		window.addEventListener("mailflare:messages-changed", patchReadState);
+		window.addEventListener("replyot:messages-changed", onMessagesChanged);
+		window.addEventListener("replyot:messages-changed", patchReadState);
 
 		return () => {
 			cancelled = true;
-			window.removeEventListener("mailflare:messages-changed", onMessagesChanged);
-			window.removeEventListener("mailflare:messages-changed", patchReadState);
+			window.removeEventListener("replyot:messages-changed", onMessagesChanged);
+			window.removeEventListener("replyot:messages-changed", patchReadState);
 			if (refreshTimer) window.clearTimeout(refreshTimer);
 		};
 	}, [enabled, filters?.group, filters?.limit, filters?.offset, filters?.query, filters?.read, filters?.title, folder, folderId, mailboxId]);

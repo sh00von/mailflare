@@ -30,7 +30,7 @@ export function useSendViewStatus(messageId: string) {
 				if (!destination) return;
 				moved = true;
 				clearMessageDetailCache();
-				window.dispatchEvent(new Event("mailflare:messages-changed"));
+				window.dispatchEvent(new Event("replyot:messages-changed"));
 				router.replace(destination);
 			} catch {
 				// Transient failures are retried by the timer or the next change event.
@@ -42,11 +42,11 @@ export function useSendViewStatus(messageId: string) {
 		const onChange = () => void check();
 		void check();
 		const timer = scheduled ? window.setInterval(onChange, 1000) : undefined;
-		window.addEventListener("mailflare:messages-changed", onChange);
+		window.addEventListener("replyot:messages-changed", onChange);
 		return () => {
 			disposed = true;
 			if (timer !== undefined) window.clearInterval(timer);
-			window.removeEventListener("mailflare:messages-changed", onChange);
+			window.removeEventListener("replyot:messages-changed", onChange);
 		};
 	}, [messageId, pathname, router]);
 }

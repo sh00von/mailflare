@@ -119,7 +119,7 @@ export function markMessagesReadInCaches(messageIds: string[], read: boolean) {
 // Caches must drop on every change, including ones made while no list is mounted
 // (e.g. reading a message from the popup on a page without the inbox list).
 if (typeof window !== "undefined") {
-	window.addEventListener("mailflare:messages-changed", (event) => {
+	window.addEventListener("replyot:messages-changed", (event) => {
 		if (!isReadOnlyChange(event)) clearMessageListCache();
 		clearMessageCountsCache();
 	});

@@ -50,7 +50,7 @@ test("every route group layout that renders a NavItem sidebar mounts MailSearchP
 	assert.ok(checked >= 3, `expected the admin, dashboard and settings layouts, checked ${checked}`);
 });
 
-const tempDirectory = mkdtempSync(join(root, "node_modules", "mailflare-mail-search-test-"));
+const tempDirectory = mkdtempSync(join(root, "node_modules", "replyot-mail-search-test-"));
 after(() => rmSync(tempDirectory, { recursive: true, force: true }));
 
 await build({

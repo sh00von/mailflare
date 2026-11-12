@@ -7,7 +7,7 @@ import { build } from "esbuild";
 import { JSDOM } from "jsdom";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
-const temp = mkdtempSync(join(root, "node_modules", "mailflare-message-selection-"));
+const temp = mkdtempSync(join(root, "node_modules", "replyot-message-selection-"));
 after(() => rmSync(temp, { recursive: true, force: true }));
 
 const dom = new JSDOM("<!doctype html><html><body></body></html>", {

@@ -7,7 +7,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { build } from "esbuild";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const dir = mkdtempSync(join(tmpdir(), "mailflare-intake-sig-test-"));
+const dir = mkdtempSync(join(tmpdir(), "replyot-intake-sig-test-"));
 after(() => rmSync(dir, { recursive: true, force: true }));
 await build({ entryPoints: [join(root, "src/lib/email/intake-signature.ts")], outfile: join(dir, "sig.mjs"), bundle: true, platform: "node", format: "esm", logLevel: "silent" });
 const sig = await import(pathToFileURL(join(dir, "sig.mjs")).href);

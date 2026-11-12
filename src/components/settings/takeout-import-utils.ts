@@ -6,7 +6,7 @@ import type { TakeoutBatchMessage, TakeoutImportSummary, TakeoutUploadResponse }
 import { listZipEntries, openZipEntry } from "@/lib/import/zip-utils";
 import type { TakeoutSource, TakeoutSourceList } from "./takeout-import-types";
 
-const PROGRESS_STORAGE_PREFIX = "mailflare:takeout-import:";
+const PROGRESS_STORAGE_PREFIX = "replyot:takeout-import:";
 
 function isZipFile(file: File): boolean {
 	return /\.zip$/i.test(file.name) || file.type === "application/zip" || file.type === "application/x-zip-compressed";

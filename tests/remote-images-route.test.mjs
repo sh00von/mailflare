@@ -29,7 +29,7 @@ test("unauthenticated requests never make outbound proxy requests", async () => 
 
 test("the self-hosted runtime proxies images too, and one user is rate limited", async () => {
 	globalThis.proxyAuth = { user: { id: "node-user" }, error: null };
-	globalThis.proxyEnv = { MAILFLARE_RUNTIME: "node" };
+	globalThis.proxyEnv = { REPLYOT_RUNTIME: "node" };
 	globalThis.proxyFetch = async () => ({ body: new Uint8Array([1]), contentType: "image/png" });
 	assert.equal((await GET(request())).status, 200);
 	let limited = 0;

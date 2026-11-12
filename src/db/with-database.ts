@@ -5,7 +5,7 @@ const wrapped = new WeakMap<object, CloudflareEnv>();
 const proxies = new WeakSet<object>();
 const opened = new Map<string, ExternalDatabase>();
 
-type DatabaseEnv = Partial<Pick<CloudflareEnv, "DATABASE_URL" | "DATABASE_DRIVER" | "DATABASE_AUTH_TOKEN" | "HYPERDRIVE" | "MAILFLARE_RUNTIME">>;
+type DatabaseEnv = Partial<Pick<CloudflareEnv, "DATABASE_URL" | "DATABASE_DRIVER" | "DATABASE_AUTH_TOKEN" | "HYPERDRIVE" | "REPLYOT_RUNTIME">>;
 
 /** Resolve the configured database: env vars first, then process.env (self-hosted), then a Hyperdrive binding. */
 export function getDatabaseConfig(env: DatabaseEnv): DatabaseConfig {
@@ -31,7 +31,7 @@ export function withDatabase(env: CloudflareEnv): CloudflareEnv {
 	const key = `${config.driver}|${config.url}`;
 	let database = opened.get(key);
 	if (!database) {
-		database = openExternalDatabase(config, env.MAILFLARE_RUNTIME === "node");
+		database = openExternalDatabase(config, env.REPLYOT_RUNTIME === "node");
 		opened.set(key, database);
 	}
 	const proxy = new Proxy(env, { get: (target, property) => (property === "DB" ? database : Reflect.get(target, property)) });

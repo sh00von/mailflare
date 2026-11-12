@@ -19,6 +19,6 @@ await build({
 	],
 	alias: { "cloudflare:workers": "./server/runtime/cloudflare-workers.ts" },
 	banner: { js: "import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);" },
-	define: { "process.env.MAILFLARE_RUNTIME": '"node"' },
+	define: { "process.env.REPLYOT_RUNTIME": '"node"' },
 	logLevel: "info",
 });

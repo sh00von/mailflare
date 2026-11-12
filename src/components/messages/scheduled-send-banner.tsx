@@ -25,7 +25,7 @@ export function ScheduledSendBanner({ messageId, scheduledAt, onRescheduled }: {
 			const response = await authFetch(`/api/messages/${messageId}/cancel-schedule`, { method: "POST" });
 			if (!response.ok) throw new Error("Unable to cancel");
 			clearMessageDetailCache();
-			window.dispatchEvent(new Event("mailflare:messages-changed"));
+			window.dispatchEvent(new Event("replyot:messages-changed"));
 			router.push("/drafts");
 			if (edit) openDraftComposer(messageId);
 		} catch {
@@ -44,7 +44,7 @@ export function ScheduledSendBanner({ messageId, scheduledAt, onRescheduled }: {
 			});
 			if (!response.ok) throw new Error("Unable to reschedule");
 			clearMessageDetailCache();
-			window.dispatchEvent(new Event("mailflare:messages-changed"));
+			window.dispatchEvent(new Event("replyot:messages-changed"));
 			onRescheduled?.(date.toISOString());
 		} catch {
 			window.alert(t("schedule.rescheduleFailed"));

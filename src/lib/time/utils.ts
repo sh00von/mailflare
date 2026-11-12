@@ -58,7 +58,7 @@ export function getUserTimeZone(): string {
 	if (resolvedUserTimeZone) return resolvedUserTimeZone;
 	let zone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 	try {
-		const saved = JSON.parse(window.localStorage.getItem("mailflare-user-time-zone") ?? "null") as { timeZone?: unknown } | null;
+		const saved = JSON.parse(window.localStorage.getItem("replyot-user-time-zone") ?? "null") as { timeZone?: unknown } | null;
 		if (typeof saved?.timeZone === "string" && isValidTimeZone(saved.timeZone)) zone = normalizeTimeZone(saved.timeZone);
 	} catch { /* Device time remains available without storage. */ }
 	resolvedUserTimeZone = zone;

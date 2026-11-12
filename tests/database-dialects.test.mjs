@@ -48,9 +48,9 @@ test("drivers are inferred from the connection string", () => {
 		["mysql://u:p@db.example.com/app", "mysql2", "mysql"],
 		["mysql://u:p@aws.connect.psdb.cloud/app", "planetscale", "mysql"],
 		["mariadb://u:p@db.example.com/app", "mysql2", "mysql"],
-		["libsql://mailflare-me.turso.io", "libsql", "sqlite"],
-		["https://mailflare-me.turso.io", "libsql", "sqlite"],
-		["file:./data/mailflare.db", "better-sqlite3", "sqlite"],
+		["libsql://replyot-me.turso.io", "libsql", "sqlite"],
+		["https://replyot-me.turso.io", "libsql", "sqlite"],
+		["file:./data/replyot.db", "better-sqlite3", "sqlite"],
 	];
 	for (const [url, driver, dialect] of cases) {
 		assert.equal(inferDriver(url), driver, url);
@@ -80,16 +80,16 @@ test("the schema dialect follows the environment", () => {
 	try {
 		delete process.env.DATABASE_URL;
 		delete process.env.DATABASE_DRIVER;
-		delete process.env.MAILFLARE_DB_DIALECT;
+		delete process.env.REPLYOT_DB_DIALECT;
 		assert.equal(schemaDialect(), "sqlite");
 		process.env.DATABASE_URL = "postgres://h/db";
 		assert.equal(schemaDialect(), "postgres");
 		process.env.DATABASE_URL = "mysql://h/db";
 		assert.equal(schemaDialect(), "mysql");
-		process.env.MAILFLARE_DB_DIALECT = "postgres";
+		process.env.REPLYOT_DB_DIALECT = "postgres";
 		assert.equal(schemaDialect(), "postgres");
-		process.env.MAILFLARE_DB_DIALECT = "oracle";
-		assert.throws(() => schemaDialect(), /MAILFLARE_DB_DIALECT/);
+		process.env.REPLYOT_DB_DIALECT = "oracle";
+		assert.throws(() => schemaDialect(), /REPLYOT_DB_DIALECT/);
 	} finally {
 		for (const key of Object.keys(process.env)) if (!(key in original)) delete process.env[key];
 		Object.assign(process.env, original);
@@ -110,7 +110,7 @@ test("parameters are normalised for every driver", () => {
 });
 
 function inspect(dialect) {
-	const result = spawnSync(process.execPath, [join(outDir, "inspect.mjs")], { env: { ...process.env, MAILFLARE_DB_DIALECT: dialect }, encoding: "utf8" });
+	const result = spawnSync(process.execPath, [join(outDir, "inspect.mjs")], { env: { ...process.env, REPLYOT_DB_DIALECT: dialect }, encoding: "utf8" });
 	assert.equal(result.status, 0, result.stderr);
 	return JSON.parse(result.stdout);
 }

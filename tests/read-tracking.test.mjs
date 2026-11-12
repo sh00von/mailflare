@@ -6,7 +6,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { build } from "esbuild";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const bundleDirectory = mkdtempSync(join(root, "node_modules", "mailflare-read-tracking-bundle-"));
+const bundleDirectory = mkdtempSync(join(root, "node_modules", "replyot-read-tracking-bundle-"));
 await build({
 	stdin: {
 		contents: `export * from "./src/lib/tracking/open-tracking-utils.ts";`,

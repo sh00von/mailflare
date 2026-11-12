@@ -7,7 +7,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { build } from "esbuild";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const dir = mkdtempSync(join(tmpdir(), "mailflare-attachment-risk-"));
+const dir = mkdtempSync(join(tmpdir(), "replyot-attachment-risk-"));
 after(() => rmSync(dir, { recursive: true, force: true }));
 await build({ entryPoints: [join(root, "src/lib/email/attachment-risk.ts")], outfile: join(dir, "r.mjs"), bundle: true, platform: "node", format: "esm", logLevel: "silent" });
 const risk = await import(pathToFileURL(join(dir, "r.mjs")).href);

@@ -5,7 +5,7 @@ import { withStorage } from "@/lib/storage";
 export function getEnv(): CloudflareEnv {
 	const env = getNodeEnv();
 	if (!env) {
-		throw new Error("Node runtime environment is not initialized (globalThis.__mailflareNodeEnv is unset).");
+		throw new Error("Node runtime environment is not initialized (globalThis.__replyotNodeEnv is unset).");
 	}
 	return withDatabase(withStorage(env));
 }

@@ -1,10 +1,10 @@
-// Prints the table/column/index layout of the schema built for the dialect in MAILFLARE_DB_DIALECT.
+// Prints the table/column/index layout of the schema built for the dialect in REPLYOT_DB_DIALECT.
 import { getTableConfig as pgConfig } from "drizzle-orm/pg-core";
 import { getTableConfig as mysqlConfig } from "drizzle-orm/mysql-core";
 import { getTableConfig as sqliteConfig } from "drizzle-orm/sqlite-core";
 import * as schema from "../../src/db/schema/index";
 
-const dialect = process.env.MAILFLARE_DB_DIALECT ?? "sqlite";
+const dialect = process.env.REPLYOT_DB_DIALECT ?? "sqlite";
 const configOf = dialect === "postgres" ? pgConfig : dialect === "mysql" ? mysqlConfig : sqliteConfig;
 const out: Record<string, unknown> = {};
 type Named = { name?: string };

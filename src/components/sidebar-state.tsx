@@ -54,7 +54,7 @@ export function SidebarProvider({ children, expandedWidth = 260, mobileOverlay =
 				const userId = user?.id;
 					if (!userId) return;
 					setUserId(userId);
-					const key = `mailflare-sidebar-minimal:${userId}`;
+					const key = `replyot-sidebar-minimal:${userId}`;
 				setStorageKey(key);
 		if (isMobileViewport()) return;
 				try {

@@ -378,7 +378,7 @@ export function ComposeForm({
 		}
 
 		// With a draft, refresh once it is gone so the lists reload a single time.
-		const refreshLists = () => window.dispatchEvent(new Event("mailflare:messages-changed"));
+		const refreshLists = () => window.dispatchEvent(new Event("replyot:messages-changed"));
 		if (currentDraftId) void authFetch(`/api/drafts/${currentDraftId}`, { method: "DELETE" }).finally(refreshLists);
 		draftGeneration.current += 1;
 		draftIdRef.current = null;
@@ -489,7 +489,7 @@ export function ComposeForm({
 		// The message is delivered, so the lists and the cached detail are stale
 		// whichever toast is on screen; refresh them before the notice check.
 		clearMessageDetailCache();
-		window.dispatchEvent(new Event("mailflare:messages-changed"));
+		window.dispatchEvent(new Event("replyot:messages-changed"));
 		if (!isCurrentNotice(sourceNoticeId)) return;
 		const content = buildSubjectNotice("compose.sentSubject", subjectLabel, messageId, false);
 		showNotice(content.message, { parts: content.parts, durationMs: SENT_NOTICE_MS });
@@ -544,7 +544,7 @@ export function ComposeForm({
 			// The message is back in Drafts, so the lists and the cached detail are
 			// stale whichever toast is on screen; refresh them before the notice check.
 			clearMessageDetailCache();
-			window.dispatchEvent(new Event("mailflare:messages-changed"));
+			window.dispatchEvent(new Event("replyot:messages-changed"));
 			if (!isCurrentNotice(sourceNoticeId)) return;
 			showNotice(t("compose.sendCancelled"));
 			openDraftComposer(messageId);
@@ -591,7 +591,7 @@ export function ComposeForm({
 		setQuotedHtml(null);
 		setAttachments([]);
 		setScheduledAt(null);
-		window.dispatchEvent(new Event("mailflare:messages-changed"));
+		window.dispatchEvent(new Event("replyot:messages-changed"));
 
 		if (onClose) {
 			dismiss();

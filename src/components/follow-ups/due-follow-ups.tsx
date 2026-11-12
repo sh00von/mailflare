@@ -26,10 +26,10 @@ export function DueFollowUps({ mailboxId }: { mailboxId?: string | null }) {
 	useEffect(() => {
 		load();
 		window.addEventListener(FOLLOW_UPS_CHANGED_EVENT, load);
-		window.addEventListener("mailflare:messages-changed", load);
+		window.addEventListener("replyot:messages-changed", load);
 		return () => {
 			window.removeEventListener(FOLLOW_UPS_CHANGED_EVENT, load);
-			window.removeEventListener("mailflare:messages-changed", load);
+			window.removeEventListener("replyot:messages-changed", load);
 		};
 	}, [load]);
 

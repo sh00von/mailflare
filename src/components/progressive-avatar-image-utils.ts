@@ -4,7 +4,7 @@ export function getAvatarPreviewUrl(src: string): string {
 	return `${url.pathname}${url.search}`;
 }
 
-const LOADED_STORAGE_KEY = "mailflare:avatars-loaded";
+const LOADED_STORAGE_KEY = "replyot:avatars-loaded";
 const MAX_REMEMBERED = 200;
 /** Matches the Cache-Control the avatar route sends: versioned URLs are immutable, others live five minutes. */
 const VERSIONED_TTL_MS = 30 * 24 * 60 * 60 * 1000;

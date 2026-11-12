@@ -1,4 +1,4 @@
-import { forwardedMarker, getAccountForwardingDestination, isForwardedMarkerValid, MAILFLARE_FORWARDED_HEADER } from "@/lib/email/account-forwarding";
+import { forwardedMarker, getAccountForwardingDestination, isForwardedMarkerValid, REPLYOT_FORWARDED_HEADER } from "@/lib/email/account-forwarding";
 import { resolveIncomingMail } from "@/lib/email/incoming";
 import { inboundStorageKey } from "@/lib/email/inbound-id";
 import type { InboundQueueMessage } from "@/lib/email/inbound";
@@ -11,8 +11,8 @@ import type { IntakeActions, IntakeInput, IntakeResult } from "@/lib/email/intak
  * callbacks, then store the raw MIME and enqueue it for parsing.
  */
 export async function intakeIncomingMail(env: CloudflareEnv, input: IntakeInput, actions: IntakeActions): Promise<IntakeResult> {
-	const alreadyForwarded = await isForwardedMarkerValid(env, input.headers[MAILFLARE_FORWARDED_HEADER.toLowerCase()] ?? input.headers[MAILFLARE_FORWARDED_HEADER]);
-	const marker = { [MAILFLARE_FORWARDED_HEADER]: await forwardedMarker(env) };
+	const alreadyForwarded = await isForwardedMarkerValid(env, input.headers[REPLYOT_FORWARDED_HEADER.toLowerCase()] ?? input.headers[REPLYOT_FORWARDED_HEADER]);
+	const marker = { [REPLYOT_FORWARDED_HEADER]: await forwardedMarker(env) };
 	const decision = await resolveIncomingMail(env, input.from, input.to, {
 		subject: input.headers.subject,
 		alreadyForwarded,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { registerMailflareServiceWorker } from "@/lib/push/client";
+import { registerReplyotServiceWorker } from "@/lib/push/client";
 
 const UPDATE_CHECK_INTERVAL_MS = 60 * 60 * 1000;
 
@@ -39,7 +39,7 @@ export function PwaServiceWorker() {
 		};
 		navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
 
-		void registerMailflareServiceWorker()
+		void registerReplyotServiceWorker()
 			.then((registration) => {
 				if (cancelled) return;
 				console.log("[pwa] service worker registered");
@@ -55,7 +55,7 @@ export function PwaServiceWorker() {
 				cleanups.push(() => document.removeEventListener("visibilitychange", onVisible));
 			})
 			.catch((error) => {
-				console.warn("Mailflare service worker registration failed", error);
+				console.warn("Replyot service worker registration failed", error);
 			});
 
 		return () => {

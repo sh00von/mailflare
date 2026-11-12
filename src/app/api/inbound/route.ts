@@ -19,11 +19,11 @@ export async function POST(request: Request) {
 
 	const raw = await request.arrayBuffer();
 	if (raw.byteLength > 25 * 1024 * 1024) return NextResponse.json({ error: "Message exceeds the 25 MiB receiving limit" }, { status: 413 });
-	const from = request.headers.get("x-mailflare-from") ?? "";
-	const to = request.headers.get("x-mailflare-to") ?? "";
-	const signature = request.headers.get("x-mailflare-signature") ?? "";
-	const headerMap = request.headers.get("x-mailflare-headers") ?? "{}";
-	const timestamp = request.headers.get("x-mailflare-timestamp");
+	const from = request.headers.get("x-replyot-from") ?? "";
+	const to = request.headers.get("x-replyot-to") ?? "";
+	const signature = request.headers.get("x-replyot-signature") ?? "";
+	const headerMap = request.headers.get("x-replyot-headers") ?? "{}";
+	const timestamp = request.headers.get("x-replyot-timestamp");
 	// Relays that send a timestamp sign the header map too and cannot be replayed; older relays only
 	// sign the body, which stays accepted unless INBOUND_REQUIRE_SIGNED_HEADERS is set.
 	const valid = !from || !to
