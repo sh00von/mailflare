@@ -17,14 +17,18 @@ import { ensureMailboxDomainRouting } from "@/lib/mailboxes/domain-addresses";
 import { readJsonBody } from "@/lib/http/request";
 import { RequestBodyTooLargeError } from "@/lib/http/errors";
 import { verifyTurnstileToken } from "@/lib/auth/turnstile";
+import { allowLoginAttempt } from "@/lib/auth/rate-limit";
 import { getDomainProvisioningError } from "@/lib/domains/errors";
 import { auditDomainDns } from "@/lib/domains/dns-audit";
-import { ensureResendSendingDomain } from "@/lib/email/resend-domain-setup";
+import { ensureOutboundSendingDomain } from "@/lib/email/resend-domain-setup";
 import { resolvePlanId } from "@/lib/plans/catalog";
 import { createWorkspaceForOwner } from "@/lib/plans/usage";
 
 export async function POST(request: Request) {
 	const env = getEnv();
+	if (!(await allowLoginAttempt(env, request))) {
+		return NextResponse.json({ error: "Too many registration attempts. Please wait a minute and try again." }, { status: 429, headers: { "Retry-After": "60" } });
+	}
 	const db = getDb(env);
 	const isFirstUser = !(await hasAdminAccount(env));
 
@@ -66,10 +70,10 @@ export async function POST(request: Request) {
 			{ status: 400 },
 		);
 	}
-	const resendSetup = await ensureResendSendingDomain(env, domainName).catch(() => null);
-	if (resendSetup && resendSetup.domain.status !== "verified") {
+	const outboundSetup = await ensureOutboundSendingDomain(env, domainName).catch(() => null);
+	if (outboundSetup && !outboundSetup.verified) {
 		return NextResponse.json(
-			{ error: "Resend DNS records are not verified yet. Add all required records and click Check DNS again." },
+			{ error: "Outbound sending DNS records are not verified yet. Add all required records and click Check DNS again." },
 			{ status: 400 },
 		);
 	}

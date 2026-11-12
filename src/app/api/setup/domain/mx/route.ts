@@ -1,8 +1,9 @@
 import { resolveMx, resolveTxt } from "node:dns/promises";
 import { NextResponse } from "next/server";
 import { getEnv } from "@/lib/cloudflare";
+import { allowLoginAttempt } from "@/lib/auth/rate-limit";
 import { preflightDomain } from "@/lib/domains/preflight";
-import { ensureResendSendingDomain } from "@/lib/email/resend-domain-setup";
+import { ensureOutboundSendingDomain } from "@/lib/email/resend-domain-setup";
 import { setupDomainSchema } from "@/lib/validators";
 import { readJsonBody } from "@/lib/http/request";
 import { RequestBodyTooLargeError } from "@/lib/http/errors";
@@ -27,6 +28,9 @@ async function safeResolveTxt(hostname: string): Promise<string[]> {
 
 export async function POST(request: Request) {
 	const env = getEnv();
+	if (!(await allowLoginAttempt(env, request))) {
+		return NextResponse.json({ error: "Too many DNS checks. Please wait a minute and try again." }, { status: 429, headers: { "Retry-After": "60" } });
+	}
 
 	let body: unknown;
 	try {
@@ -54,15 +58,15 @@ export async function POST(request: Request) {
 		const spfAdded = rootTxt.some((txt) => txt.toLowerCase().startsWith("v=spf1") && txt.toLowerCase().includes(expectedMx));
 		const dmarcAdded = dmarcTxt.some((txt) => txt.toLowerCase().startsWith("v=dmarc1"));
 
-		const resendSetup = await ensureResendSendingDomain(env, domain.hostname).catch((err) => {
-			console.error("[setup/domain/mx] Resend domain setup failed:", err);
+		const outboundSetup = await ensureOutboundSendingDomain(env, domain.hostname).catch((err) => {
+			console.error("[setup/domain/mx] Outbound domain setup failed:", err);
 			return null;
 		});
 		const requiredRecords = [
 			{ type: "MX", name: "@", value: expectedMx, priority: 10, added: mxAdded },
 			{ type: "TXT", name: "@", value: `v=spf1 a:${expectedMx} ~all`, added: spfAdded },
 			{ type: "TXT", name: "_dmarc", value: "v=DMARC1; p=none", added: dmarcAdded },
-			...(resendSetup?.records ?? []),
+			...(outboundSetup?.records ?? []),
 		];
 
 		return NextResponse.json({

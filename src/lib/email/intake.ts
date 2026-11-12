@@ -1,6 +1,7 @@
 import { forwardedMarker, getAccountForwardingDestination, isForwardedMarkerValid, REPLYOT_FORWARDED_HEADER } from "@/lib/email/account-forwarding";
 import { resolveIncomingMail } from "@/lib/email/incoming";
 import { inboundStorageKey } from "@/lib/email/inbound-id";
+import { checkCanReceiveStorage } from "@/lib/plans/usage";
 import type { InboundQueueMessage } from "@/lib/email/inbound";
 import type { IntakeActions, IntakeInput, IntakeResult } from "@/lib/email/intake-types";
 
@@ -34,6 +35,14 @@ export async function intakeIncomingMail(env: CloudflareEnv, input: IntakeInput,
 	if (!alreadyForwarded) {
 		const destination = await getAccountForwardingDestination(env, input.to);
 		if (destination) await actions.forward?.(destination, marker);
+	}
+
+	if (decision?.mailbox?.userId) {
+		const storageCheck = await checkCanReceiveStorage(env, decision.mailbox.userId, input.raw.byteLength).catch(() => ({ ok: true as const }));
+		if (!storageCheck.ok) {
+			await actions.reject?.(storageCheck.error);
+			return { action: "reject", reason: storageCheck.error };
+		}
 	}
 
 	// A relay retry replays the same bytes, so key the object on a content hash

@@ -18,8 +18,7 @@ import { getManualDomainDns } from "@/lib/domains/manual-dns";
 import { rollbackDomainProvisioning } from "@/lib/domains/rollback";
 import type { DomainProvisioningChanges } from "@/lib/domains/types";
 import { findSendingSubdomain } from "@/lib/domains/sending-status";
-import { getResendKeyStatus } from "@/lib/email/outbound-provider";
-import { ensureResendSendingDomain } from "@/lib/email/resend-domain-setup";
+import { ensureOutboundSendingDomain } from "@/lib/email/resend-domain-setup";
 import { preflightDomain } from "@/lib/domains/preflight";
 import { hasCloudflareCredentials } from "@/lib/runtime";
 
@@ -68,17 +67,16 @@ export async function addDomainForUser(
 	// which its setup in the domain page creates once credentials exist.
 	// A skipped-DNS domain is recorded only: nothing receives or sends until the operator picks providers.
 	const skipDns = options?.skipDns === true;
-	const resendKey = await getResendKeyStatus(env).catch(() => ({ configured: false, source: null, apiKey: null }));
-	const defaultSendingProvider = resendKey.configured ? "resend" : "cloudflare";
+	const outboundSetup = !skipDns && !options?.sendingProvider && (options?.enableSending ?? true)
+		? await ensureOutboundSendingDomain(env, hostname).catch((err) => {
+			console.error("[domains/service] Outbound domain setup failed:", err);
+			return null;
+		})
+		: null;
+	const defaultSendingProvider = outboundSetup?.provider ?? "cloudflare";
 	const receivingProvider = skipDns ? "none" : (options?.receivingProvider ?? "cloudflare");
 	// Cloudflare's sending subdomain is only provisioned when Cloudflare is the sender.
 	const requestedSending = skipDns ? "none" : (options?.sendingProvider ?? (options?.enableSending === false ? "none" : defaultSendingProvider));
-	if (requestedSending === "resend") {
-		await ensureResendSendingDomain(env, hostname).catch((err) => {
-			console.error("[domains/service] Resend domain setup failed:", err);
-			return null;
-		});
-	}
 	const provisioned = await provisionDomainOnCloudflare(env, hostname, {
 		...options,
 		enableSending: requestedSending === "cloudflare",

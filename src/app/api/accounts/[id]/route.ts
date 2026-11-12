@@ -14,13 +14,14 @@ import { hasPasswordHash } from "@/lib/auth/password";
 import { consumeStepUpGrant } from "@/lib/auth/webauthn/grants";
 import { createAuditLog } from "@/lib/mailboxes/audit";
 import { authError } from "@/lib/http/auth-error";
+import { isSameWorkspace } from "@/lib/plans/usage";
 
 export async function GET(request: Request, { params }: AccountRouteParams) {
 	const access = await requireTeamAdmin(request);
 	if (access.error) return access.error;
 	const { id } = await params;
 	const account = await selectAccountById(getDb(access.env), id);
-	if (!account) {
+	if (!account || !isSameWorkspace(access.user!, account)) {
 		return NextResponse.json({ error: "Account not found" }, { status: 404 });
 	}
 	const actor = access.user!;
@@ -54,7 +55,7 @@ export async function PATCH(request: Request, { params }: AccountRouteParams) {
 	const { id } = await params;
 	const db = getDb(access.env);
 	const account = await selectAccountById(db, id);
-	if (!account) {
+	if (!account || !isSameWorkspace(access.user!, account)) {
 		return NextResponse.json({ error: "Account not found" }, { status: 404 });
 	}
 	if (account.deletedAt) {

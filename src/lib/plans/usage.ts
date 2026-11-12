@@ -241,3 +241,38 @@ export async function checkCanSendEmail(
 	return { ok: true, workspace };
 }
 
+export async function checkCanReceiveStorage(
+	env: CloudflareEnv,
+	userId: string,
+	incomingBytes: number,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+	const db = getDb(env);
+	const [owner] = await db
+		.select({ id: users.id, name: users.name, workspaceId: users.workspaceId, isPrimaryAdmin: users.isPrimaryAdmin })
+		.from(users)
+		.where(eq(users.id, userId))
+		.limit(1);
+	if (!owner) return { ok: true };
+
+	const { workspace, usage } = await getWorkspaceWithUsage(env, owner);
+	if (workspace.status === "suspended") {
+		return { ok: false, error: "550 5.7.1 Recipient workspace is suspended" };
+	}
+	if (workspace.trialExpired) {
+		return { ok: false, error: "550 5.7.1 Recipient workspace trial has ended" };
+	}
+	if (usage.storageUsedBytes + incomingBytes > workspace.planDetails.storageLimitBytes) {
+		return { ok: false, error: "552 5.2.2 Recipient workspace storage quota exceeded" };
+	}
+	return { ok: true };
+}
+
+export function isSameWorkspace(
+	actor: { isPrimaryAdmin?: boolean; workspaceId?: string | null; id: string },
+	target: { workspaceId?: string | null; id: string },
+): boolean {
+	if (actor.isPrimaryAdmin) return true;
+	if (target.id === actor.id) return true;
+	return !!actor.workspaceId && target.workspaceId === actor.workspaceId;
+}
+

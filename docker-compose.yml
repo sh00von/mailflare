@@ -1,28 +1,8 @@
 services:
-  postgres:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: replyot
-      POSTGRES_PASSWORD: replyot
-      POSTGRES_DB: replyot
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U replyot -d replyot"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
   replyot:
     build: .
     image: replyot:local
     restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
     ports:
       - "3000:3000"   # web app and JMAP
       - "25:25"       # inbound SMTP (point your domain's MX here)
@@ -32,4 +12,3 @@ services:
 
 volumes:
   replyot-data:
-  postgres-data:

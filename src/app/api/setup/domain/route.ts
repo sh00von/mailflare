@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/db";
 import { domains } from "@/db/schema";
 import { getEnv } from "@/lib/cloudflare";
+import { allowLoginAttempt } from "@/lib/auth/rate-limit";
 import { preflightDomain } from "@/lib/domains/preflight";
 import { setupDomainSchema } from "@/lib/validators";
 import { readJsonBody } from "@/lib/http/request";
@@ -10,6 +11,9 @@ import { RequestBodyTooLargeError } from "@/lib/http/errors";
 
 export async function POST(request: Request) {
 	const env = getEnv();
+	if (!(await allowLoginAttempt(env, request))) {
+		return NextResponse.json({ error: "Too many domain checks. Please wait a minute and try again." }, { status: 429, headers: { "Retry-After": "60" } });
+	}
 
 	let body: unknown;
 	try {
