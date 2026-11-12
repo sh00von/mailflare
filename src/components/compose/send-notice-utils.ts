@@ -33,12 +33,19 @@ export type SendNoticeParts = {
 	ticker?: (secondsLeft: number) => string;
 };
 
+/** Toast texts for a send; {subject} becomes a link and {seconds} ticks down. */
+export const SEND_NOTICE_TEMPLATES = {
+	sendingIn: "Sending “{subject}” in {seconds}s",
+	sending: "Sending “{subject}”...",
+	sent: "Sent “{subject}”",
+} as const;
+
 /**
  * Splits a message template around `{subject}` so the subject can be a link, and
  * around `{seconds}` so only the ticking suffix changes while the toast is live.
  *
- * Pass the catalog entry with its placeholders intact, for example
- * `t("compose.sendingIn", { subject: "{subject}", seconds: "{seconds}" })`.
+ * Pass the template with its placeholders intact, for example
+ * `Sending “{subject}” in {seconds}s`.
  */
 export function splitSendTemplate(template: string, countdown: boolean): SendNoticeParts {
 	const subjectAt = template.indexOf(SUBJECT_TOKEN);

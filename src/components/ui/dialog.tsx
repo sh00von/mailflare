@@ -4,7 +4,6 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "@/components/icons";
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { useLanguage } from "@/components/language-provider";
 
 export const Dialog = DialogPrimitive.Root;
 export const DialogTrigger = DialogPrimitive.Trigger;
@@ -19,7 +18,6 @@ export function DialogContent({
 	showCloseButton = true,
 	...props
 }: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { closeLabel?: string; overlayClassName?: string; closeClassName?: string; showCloseButton?: boolean }) {
-	const { t } = useLanguage();
 	return (
 		<DialogPrimitive.Portal>
 			<DialogPrimitive.Overlay className={cn("dialog-overlay fixed inset-0 z-50 bg-black/35", overlayClassName)} />
@@ -33,7 +31,7 @@ export function DialogContent({
 				{children}
 				{showCloseButton && <DialogPrimitive.Close className={cn("absolute right-4 top-4 rounded-full p-1 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900", closeClassName)}>
 					<X className="h-4 w-4" />
-					<span className="sr-only">{closeLabel ?? t("navigation.close")}</span>
+					<span className="sr-only">{closeLabel ?? "Close"}</span>
 				</DialogPrimitive.Close>}
 			</DialogPrimitive.Content>
 		</DialogPrimitive.Portal>

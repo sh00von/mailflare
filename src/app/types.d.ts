@@ -1,4 +1,3 @@
-import type { TranslationKey } from "@/lib/i18n/types";
 import type { LucideIcon } from "@/components/icons";
 import type { ButtonProps } from "@/components/ui/button";
 import type { MailboxSelectorUser } from "@/components/mailbox-selector-types";
@@ -19,17 +18,17 @@ export type HomeAccountMenuProps = {
 
 export type HomeAction = {
 	href: string;
-	labelKey: TranslationKey;
+	labelKey: string;
 	variant: ButtonProps["variant"];
 };
 
 export type LandingNavItem = {
 	href: string;
-	label: string;
+	labelKey: string;
 };
 
 export type SidebarItem = {
-	labelKey: TranslationKey;
+	labelKey: string;
 	icon: LucideIcon;
 	active?: boolean;
 	count?: string;
@@ -38,12 +37,19 @@ export type SidebarItem = {
 export type MailPreview = {
 	icon: LucideIcon;
 	sender: string;
-	subjectKey: TranslationKey;
-	previewKey: TranslationKey;
-	badgeKey: TranslationKey;
+	subjectKey: string;
+	previewKey: string;
+	badgeKey: string;
 };
 
-export type LandingStat = {
-	value: string;
-	label: string;
+/** A titled card on the landing page: features, security points and steps. */
+export type LandingItem = {
+	icon: LucideIcon;
+	titleKey: string;
+	bodyKey: string;
+};
+
+export type LandingFaq = {
+	questionKey: string;
+	answerKey: string;
 };

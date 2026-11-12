@@ -73,7 +73,7 @@ export function getRequestTimeZone(request: Request, preferredTimeZone?: string 
 	return normalizeTimeZone(preferredTimeZone ?? new URL(request.url).searchParams.get("timeZone") ?? request.headers.get("X-Time-Zone"));
 }
 
-/** The interface language the language provider keeps on `<html lang>`; the browser default when unset or on the server. */
+/** The page language from `<html lang>`; the browser default on the server. */
 export function getDisplayLocale(): string | undefined {
 	if (typeof document === "undefined") return undefined;
 	return document.documentElement.lang || undefined;

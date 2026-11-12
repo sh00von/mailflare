@@ -5,13 +5,11 @@ import { useCallback, useEffect, useState } from "react";
 import { AlertTriangle } from "@/components/icons";
 import { authFetch } from "@/lib/auth/client";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { useLanguage } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
 
 type SkippedDomain = { id: string; hostname: string; dnsSkipped?: boolean };
 
 export function DnsSkippedBanner() {
-	const { t } = useLanguage();
 	const user = useCurrentUser();
 	const [domains, setDomains] = useState<SkippedDomain[]>([]);
 	const [busy, setBusy] = useState(false);
@@ -55,11 +53,11 @@ export function DnsSkippedBanner() {
 	return (
 		<div role="status" className="mx-2 mb-2 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-900">
 			<AlertTriangle className="h-4 w-4 shrink-0" />
-			<p className="min-w-0 flex-1">{t("dnsSkipped.warning", { domains: domains.map((domain) => domain.hostname).join(", ") })}</p>
+			<p className="min-w-0 flex-1">{`DNS isn't configured for ${domains.map((domain) => domain.hostname).join(", ")}. Mail won't arrive until the records are set.`}</p>
 			{canManage && (
 				<>
-					<Link href="/domains" className="font-semibold underline underline-offset-2">{t("dnsSkipped.review")}</Link>
-					<Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => void markDone()}>{t("dnsSkipped.markDone")}</Button>
+					<Link href="/domains" className="font-semibold underline underline-offset-2">Review DNS</Link>
+					<Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => void markDone()}>{"I've set it up"}</Button>
 				</>
 			)}
 		</div>

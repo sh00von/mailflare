@@ -1,14 +1,13 @@
 import { authFetch } from "@/lib/auth/client";
 import type { DueFollowUp, MessageFollowUp } from "@/lib/follow-ups/types";
-import type { TranslationKey } from "@/lib/i18n/types";
 
 /** Fired after a reminder changes so the inbox block and thread view reload. */
 export const FOLLOW_UPS_CHANGED_EVENT = "replyot:follow-ups-changed";
 
-export function followUpOptionKey(days: number): TranslationKey {
-	if (days === 1) return "followUp.in1Day";
-	if (days === 7) return "followUp.in1Week";
-	return "followUp.in3Days";
+export function followUpOptionKey(days: number): string {
+	if (days === 1) return "In 1 day";
+	if (days === 7) return "In 1 week";
+	return "In 3 days";
 }
 
 export async function fetchDueFollowUps(mailboxId?: string | null): Promise<DueFollowUp[]> {

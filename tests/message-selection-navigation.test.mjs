@@ -57,15 +57,6 @@ export default function Link({ href, children, ...props }) {
   return React.createElement("a", { href, ...props }, children);
 }
 `],
-	["@/components/language-provider", `
-export function useLanguage() {
-  return {
-    t(key, vars) {
-      return vars && vars.count !== undefined ? key + ":" + vars.count : key;
-    },
-  };
-}
-`],
 	["@/components/mail-search/mail-search-context", `
 export function useMailSearch() {
   return { query: "", input: "", setQuery() {} };
@@ -260,23 +251,23 @@ test("opening a message keeps the selection made while no message was open", asy
 
 	assert.equal(checkedBoxes(container).length, 1, "the sidebar list keeps the selected row");
 	assert.ok(container.querySelector('[data-testid="message-detail"]'), "the focused message stays visible");
-	assert.match(container.textContent, /common\.selectedCount:1/, "the bulk action bar reports one selected message");
+	assert.match(container.textContent, /1 selected/, "the bulk action bar reports one selected message");
 
-	const clearSelection = container.querySelector('button[aria-label="common.clearSelection"]');
+	const clearSelection = container.querySelector('button[aria-label="Clear selection"]');
 	assert.ok(clearSelection, "the bulk action bar offers a way to clear the selection");
 	await act(async () => {
 		clearSelection.click();
 	});
 	assert.ok(container.querySelector('[data-testid="message-detail"]'), "clearing the selection keeps the message visible");
 	assert.equal(checkedBoxes(container).length, 0, "clearing the selection unchecks the sidebar row");
-	assert.doesNotMatch(container.textContent, /common\.selectedCount:1/, "the bulk action bar disappears");
+	assert.doesNotMatch(container.textContent, /1 selected/, "the bulk action bar disappears");
 });
 
 test("opening a message keeps the selection on a page other than the first", async (t) => {
 	const { container, cleanup } = await renderInbox();
 	t.after(cleanup);
 
-	const nextPage = container.querySelector('button[aria-label="list.nextPage"]');
+	const nextPage = container.querySelector('button[aria-label="Next page"]');
 	assert.ok(nextPage, "the first page has a next-page button");
 	await act(async () => {
 		nextPage.click();

@@ -9,9 +9,9 @@ export default function DraftsPage() {
 			config={{
 				folder: "drafts",
 				title: "Drafts",
-				titleKey: "navigation.drafts",
+				titleKey: "Drafts",
 				emptyText: "No drafts",
-				emptyTextKey: "folder.drafts.empty",
+				emptyTextKey: "No drafts",
 				hrefPrefix: "/drafts",
 				icon: FileText,
 				badgeVariant: "outline",

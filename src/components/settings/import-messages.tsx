@@ -3,7 +3,6 @@
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { Upload } from "@/components/icons";
-import { useLanguage } from "@/components/language-provider";
 import { useSelectedMailbox } from "@/components/mailbox-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +12,6 @@ import type { ImportMessagesProps, ImportMessagesResult } from "./import-message
 import { importMessageFiles } from "./import-messages-utils";
 
 export function ImportMessages({ destination, sourceLabel }: ImportMessagesProps) {
-	const { t } = useLanguage();
 	const { selectedMailbox } = useSelectedMailbox();
 	const [files, setFiles] = useState<File[]>([]);
 	const [loading, setLoading] = useState(false);
@@ -31,7 +29,7 @@ export function ImportMessages({ destination, sourceLabel }: ImportMessagesProps
 			const nextResult = await importMessageFiles(selectedMailbox.id, files, destination);
 			setResult(nextResult);
 		} catch (err) {
-			setError(err instanceof Error ? err.message : t("import.failed"));
+			setError(err instanceof Error ? err.message : "Import failed");
 		} finally {
 			setLoading(false);
 		}
@@ -42,16 +40,16 @@ export function ImportMessages({ destination, sourceLabel }: ImportMessagesProps
 			<CardHeader>
 				<CardTitle className="flex items-center gap-2">
 					<Upload className="h-4 w-4" />
-					{t("import.title")}
+					Import mail
 				</CardTitle>
 				<CardDescription>
-					{t("import.description", { source: sourceLabel })}
+					{`Upload exported .eml or .mbox files from source ${sourceLabel}. They will be saved to the matching section in the selected mailbox.`}
 				</CardDescription>
 			</CardHeader>
 			<CardContent>
 				<form onSubmit={onSubmit} className="space-y-4">
 					<div className="space-y-2">
-						<Label htmlFor="mail-import">{t("import.filesLabel")}</Label>
+						<Label htmlFor="mail-import">Mail export files</Label>
 						<Input
 							id="mail-import"
 							type="file"
@@ -61,17 +59,17 @@ export function ImportMessages({ destination, sourceLabel }: ImportMessagesProps
 							className="block w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm shadow-sm shadow-neutral-200/50 file:mr-3 file:rounded-md file:border-0 file:bg-neutral-100 file:px-3 file:py-1.5 file:text-sm file:font-medium"
 						/>
 						<p className="text-xs leading-5 text-neutral-500">
-							{t("import.limits")}
+							Imports up to 100 messages and 25 MB per upload. Duplicate Message-ID values are skipped.
 						</p>
 					</div>
 
 					<Button type="submit" disabled={!selectedMailbox || files.length === 0 || loading}>
-						{loading ? t("import.importing") : t("import.submit")}
+						{loading ? "Importing..." : "Import messages"}
 					</Button>
 
 					{result?.job && (
 						<p className="rounded-lg border border-green-100 bg-green-50 px-4 py-3 text-sm text-green-700">
-							{t("importJobs.started")}
+							Import started. Follow its progress under Imports.
 						</p>
 					)}
 

@@ -1,13 +1,11 @@
 "use client";
 
 import { useRef } from "react";
-import { useLanguage } from "@/components/language-provider";
 import { ResizeHandle } from "./ui/resize-handle";
 import { useSidebar } from "./sidebar-state";
 import { saveColumnWidth } from "./column-width-preferences";
 
 export function SidebarResizeBoundary() {
-	const { t } = useLanguage();
 	const { minimal, width, userId, setWidth } = useSidebar();
 	const startWidth = useRef(width);
 	const resizedWidth = useRef(width);
@@ -16,7 +14,7 @@ export function SidebarResizeBoundary() {
 	return (
 		<div className="hidden md:block">
 		<ResizeHandle
-			label={t("layout.resizeMenu")}
+			label={"Resize left menu"}
 			onResizeStart={() => { startWidth.current = width; resizedWidth.current = width; }}
 			onResize={(delta) => {
 			if (minimal) return;

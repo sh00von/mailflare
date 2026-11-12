@@ -5,7 +5,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { CalendarDays, Check, HardDrive, ChevronDown, Inbox, LogOut, Settings, ShieldCheck, UserPlus, UserRound, UsersRound } from "@/components/icons";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useDismissible } from "@/components/use-dismissible";
-import { useLanguage } from "@/components/language-provider";
 import { useSelectedMailbox } from "@/components/mailbox-provider";
 import { ProgressiveAvatarImage } from "@/components/progressive-avatar-image";
 import { isIdentityMailbox } from "@/components/mailbox-provider-utils";
@@ -52,7 +51,6 @@ function AccountAvatar({
 	placeholder = false,
 	onAvatarError,
 }: AccountAvatarProps) {
-	const { t } = useLanguage();
 	const sizeClass = size === "large" ? "h-16 w-16 text-xl" : "h-10 w-10 text-sm";
 	const iconClass = size === "large" ? "h-7 w-7" : "h-5 w-5";
 	const [imageFailed, setImageFailed] = useState(false);
@@ -65,7 +63,7 @@ function AccountAvatar({
 		return (
 			<ProgressiveAvatarImage
 				src={avatarUrl}
-				alt={t("account.profilePicture", { name })}
+				alt={`${name} profile picture`}
 				className={`${sizeClass} shrink-0 rounded-full border border-neutral-200 object-cover`}
 				skipPreview={size === "small"}
 				onError={() => {
@@ -101,7 +99,6 @@ function AccountAvatar({
 }
 
 function MailboxAccountRow({ mailbox, unread, avatarUrl, onSelect }: MailboxAccountRowProps) {
-	const { t } = useLanguage();
 	const name = getMailboxName(mailbox);
 
 	return (
@@ -120,8 +117,8 @@ function MailboxAccountRow({ mailbox, unread, avatarUrl, onSelect }: MailboxAcco
 				<div className="flex items-center gap-1.5">
 					<p className="truncate text-sm font-semibold text-neutral-900">{name}</p>
 					{mailbox.type === "shared" && (
-						<Tooltip label={t("account.sharedInbox")}>
-							<span title={t("account.sharedInbox")} aria-label={t("account.sharedInbox")} className="shrink-0 text-blue-600">
+						<Tooltip label={"Shared inbox"}>
+							<span title={"Shared inbox"} aria-label={"Shared inbox"} className="shrink-0 text-blue-600">
 								<UsersRound className="h-3.5 w-3.5" />
 							</span>
 						</Tooltip>
@@ -139,7 +136,6 @@ function MailboxAccountRow({ mailbox, unread, avatarUrl, onSelect }: MailboxAcco
 }
 
 export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
-	const { t } = useLanguage();
 	const { selectedMailbox, setSelectedMailbox, mailboxes, isLoading } = useSelectedMailbox();
 	const pathname = usePathname();
 	const router = useRouter();
@@ -234,7 +230,7 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 		return <Skeleton className="h-10 w-10 rounded-full" />;
 	}
 
-	const selectedName = selectedMailbox ? getMailboxName(selectedMailbox) : user?.name ?? t("account.fallbackName");
+	const selectedName = selectedMailbox ? getMailboxName(selectedMailbox) : user?.name ?? "Account";
 	const selectedEmail = selectedMailbox ? getMailboxAddress(selectedMailbox) : user?.email ?? "";
 	const selectedMailboxAvatarUrl = selectedMailbox
 		? mailboxAvatarUrls[selectedMailbox.id]
@@ -287,7 +283,7 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 					type="button"
 					onClick={() => setOpen((value) => !value)}
 					className="rounded-full p-1 transition-colors hover:bg-neutral-200"
-					aria-label={t("account.openMenu")}
+					aria-label={"Open account menu"}
 					aria-expanded={open}
 				>
 					{triggerAvatar}
@@ -296,7 +292,7 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 				<Link
 					href="/inbox"
 					className="inline-flex rounded-full p-1 transition-colors hover:bg-neutral-200"
-					aria-label={t("navigation.inbox")}
+					aria-label={"Inbox"}
 				>
 					{triggerAvatar}
 				</Link>
@@ -321,8 +317,8 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 								<div className="flex items-center gap-2">
 									<p className="truncate text-lg font-semibold text-neutral-900">{selectedName}</p>
 									{selectedMailbox?.type === "shared" && (
-										<Tooltip label={t("account.sharedInbox")}>
-											<span title={t("account.sharedInbox")} aria-label={t("account.sharedInbox")} className="shrink-0 text-blue-600">
+										<Tooltip label={"Shared inbox"}>
+											<span title={"Shared inbox"} aria-label={"Shared inbox"} className="shrink-0 text-blue-600">
 												<UsersRound className="h-4 w-4" />
 											</span>
 										</Tooltip>
@@ -340,7 +336,7 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 							className="mt-4 flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-[#f2f6fc]"
 						>
 							<Inbox size={18} className="text-neutral-600" />
-							{t("navigation.inbox")}
+							Inbox
 						</Link>
 						<Link
 							href="/settings/account"
@@ -348,7 +344,7 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 							className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-[#f2f6fc]"
 						>
 							<Settings size={18} className="text-neutral-600" />
-							{t("account.settings")}
+							Settings
 						</Link>
 						{otherMailboxes.length > 0 && (
 							<div className="mt-3 border-t border-neutral-100 pt-2">
@@ -358,7 +354,7 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 									aria-expanded={inboxesOpen}
 									className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold uppercase tracking-wide text-neutral-500 hover:bg-[#f2f6fc]"
 								>
-									{t("account.inboxes", { count: otherMailboxes.length })}
+									{`Inboxes (${otherMailboxes.length})`}
 									<ChevronDown size={16} className={`transition-transform ${inboxesOpen ? "rotate-180" : ""}`} />
 								</button>
 								{inboxesOpen && otherMailboxes.map((mailbox) => {
@@ -384,7 +380,7 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 					{otherAccounts.length > 0 && (
 						<div className="mt-2 rounded-[22px] bg-white/55 p-1">
 							<p className="px-4 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">
-								{t("account.otherAccounts")}
+								Other accounts
 							</p>
 							{otherAccounts.map((account) => (
 								<button
@@ -416,7 +412,7 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 								className={`flex items-center gap-3 border-t border-neutral-100 px-5 py-4 text-sm font-medium text-neutral-800 hover:bg-[#f2f6fc] ${adminActive ? "bg-blue-50" : ""}`}
 							>
 								<ShieldCheck size={18} className="text-neutral-600" />
-								{t("account.admin")}
+								Admin
 								{adminActive && <Check className="ml-auto h-4 w-4 text-blue-600" />}
 							</Link>
 						)}
@@ -426,7 +422,7 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 							className="flex items-center gap-3 px-5 py-4 text-sm font-medium text-neutral-800 hover:bg-[#f2f6fc]"
 						>
 							<UserPlus size={18} className="text-neutral-600" />
-							{t("account.addAnother")}
+							Add another account
 						</Link>
 						<button
 							type="button"
@@ -434,7 +430,7 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 							className="flex w-full items-center gap-3 border-t border-neutral-100 px-5 py-4 text-left text-sm font-medium text-neutral-800 hover:bg-[#f2f6fc]"
 						>
 							<LogOut size={18} className="text-neutral-600" />
-							{t("account.signOut")}
+							Sign out
 						</button>
 					</div>
 				</div>

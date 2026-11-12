@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { Bell, Smartphone } from "@/components/icons";
-import { useLanguage } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
 import { formatUserDate } from "@/lib/time/utils";
 import type { MobileDevice } from "./device-settings-types";
@@ -14,30 +13,29 @@ import { loadDevices, signOutDevice } from "./device-settings-utils";
  * its push registration.
  */
 export function DeviceSettings() {
-	const { t } = useLanguage();
 	const [devices, setDevices] = useState<MobileDevice[] | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [busy, setBusy] = useState<string | null>(null);
 
 	useEffect(() => {
-		loadDevices().then(setDevices).catch((err) => setError(err instanceof Error ? err.message : t("devices.loadFailed")));
-	}, [t]);
+		loadDevices().then(setDevices).catch((err) => setError(err instanceof Error ? err.message : "Failed to load devices"));
+	}, []);
 
 	async function remove(device: MobileDevice) {
-		if (!window.confirm(t("devices.signOutConfirm", { name: device.name }))) return;
+		if (!window.confirm(`Sign out ${device.name}? The app will ask for your password again.`)) return;
 		setBusy(device.id);
 		try {
 			await signOutDevice(device.id);
 			setDevices((list) => list?.filter((item) => item.id !== device.id) ?? null);
 		} catch (err) {
-			setError(err instanceof Error ? err.message : t("devices.loadFailed"));
+			setError(err instanceof Error ? err.message : "Failed to load devices");
 		} finally {
 			setBusy(null);
 		}
 	}
 
-	if (!devices) return <p className="text-sm text-neutral-500">{error ?? t("devices.loading")}</p>;
-	if (devices.length === 0) return <p className="text-sm text-neutral-500">{t("devices.empty")}</p>;
+	if (!devices) return <p className="text-sm text-neutral-500">{error ?? "Loading devices..."}</p>;
+	if (devices.length === 0) return <p className="text-sm text-neutral-500">No devices are signed in.</p>;
 
 	return (
 		<div className="space-y-3">
@@ -49,15 +47,15 @@ export function DeviceSettings() {
 						<div className="min-w-0 flex-1">
 							<p className="flex items-center gap-2 truncate text-sm font-medium text-neutral-900">
 								{device.name}
-								{device.pushEnabled ? <Bell className="h-3.5 w-3.5 text-neutral-400" aria-label={t("devices.push")} /> : null}
+								{device.pushEnabled ? <Bell className="h-3.5 w-3.5 text-neutral-400" aria-label={"Notifications on"} /> : null}
 							</p>
 							<p className="truncate text-sm text-neutral-500">
-								{t("devices.signedIn", { date: formatUserDate(device.createdAt, { dateStyle: "short" }) })} ·{" "}
-								{device.lastUsedAt ? t("apiKeys.lastUsed", { date: formatUserDate(device.lastUsedAt, { dateStyle: "short" }) }) : t("apiKeys.neverUsed")}
+								{`Signed in ${formatUserDate(device.createdAt, { dateStyle: "short" })}`} ·{" "}
+								{device.lastUsedAt ? `Last used ${formatUserDate(device.lastUsedAt, { dateStyle: "short" })}` : "Never used"}
 							</p>
 						</div>
 						<Button variant="outline" size="sm" disabled={busy === device.id} onClick={() => remove(device)}>
-							{t("devices.signOut")}
+							Sign out
 						</Button>
 					</li>
 				))}

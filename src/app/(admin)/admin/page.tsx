@@ -2,16 +2,14 @@
 
 import Link from "next/link";
 import { BadgeDollarSign, Bot, Globe2, KeyRound, Mail, Palette, Users } from "@/components/icons";
-import { useLanguage } from "@/components/language-provider";
-import type { TranslationKey } from "@/lib/i18n/types";
 import { AdminUpdateCard } from "@/components/admin-update-card";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useCurrentUser } from "@/hooks/use-current-user";
 
 type AdminSection = {
 	href: string;
-	titleKey: TranslationKey;
-	descriptionKey: TranslationKey;
+	titleKey: string;
+	descriptionKey: string;
 	icon: typeof Bot;
 	permission?: "primary" | "domains" | "users";
 };
@@ -19,15 +17,15 @@ type AdminSection = {
 const sections: AdminSection[] = [
 	{
 		href: "/domains",
-		titleKey: "admin.nav.domains",
-		descriptionKey: "admin.section.domains",
+		titleKey: "Domains",
+		descriptionKey: "Add Cloudflare domains and inspect DNS state.",
 		icon: Globe2,
 		permission: "domains",
 	},
 	{
 		href: "/accounts",
-		titleKey: "admin.nav.accounts",
-		descriptionKey: "admin.section.accounts",
+		titleKey: "Accounts",
+		descriptionKey: "Add and manage user accounts with a Pro or Team license.",
 		icon: Users,
 	},
 	// {
@@ -45,7 +43,6 @@ const sections: AdminSection[] = [
 ];
 
 export default function AdminSettingsPage() {
-	const { t } = useLanguage();
 	const user = useCurrentUser();
 
 	function canSee(section: AdminSection): boolean {
@@ -59,9 +56,9 @@ export default function AdminSettingsPage() {
 	return (
 		<div>
 			<div className="mb-8">
-				<h1 className="text-2xl md:text-3xl font-medium text-neutral-900">{t("admin.title")}</h1>
+				<h1 className="text-2xl md:text-3xl font-medium text-neutral-900">Admin settings</h1>
 				<p className="mt-2 text-sm text-neutral-500">
-					{t("admin.description")}
+					Manage workspace-level mail infrastructure and integrations.
 				</p>
 			</div>
 			<div className="grid lg:grid-cols-2 gap-4">
@@ -75,10 +72,10 @@ export default function AdminSettingsPage() {
 									<div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-700">
 										<Icon className="h-5 w-5" />
 									</div>
-									<h2 className="text-base font-semibold leading-none">{t(section.titleKey)}</h2>
+									<h2 className="text-base font-semibold leading-none">{section.titleKey}</h2>
 								</CardHeader>
 								<CardContent className="pt-4">
-									<p className="text-sm text-neutral-500">{t(section.descriptionKey)}</p>
+									<p className="text-sm text-neutral-500">{section.descriptionKey}</p>
 								</CardContent>
 							</Card>
 						</Link>

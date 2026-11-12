@@ -1,14 +1,13 @@
-import type { TranslationKey } from "@/lib/i18n/types";
 import type { FolderColor } from "./types";
 
 /** Translation keys for the names of the shared folder/event colors. */
 export const folderColorKeys = {
-	"#2563eb": "color.blue",
-	"#7c3aed": "color.purple",
-	"#db2777": "color.pink",
-	"#dc2626": "color.red",
-	"#ea580c": "color.orange",
-	"#d97706": "color.amber",
-	"#16a34a": "color.green",
-	"#0d9488": "color.teal",
-} satisfies Record<FolderColor, TranslationKey>;
+	"#2563eb": "Blue",
+	"#7c3aed": "Purple",
+	"#db2777": "Pink",
+	"#dc2626": "Red",
+	"#ea580c": "Orange",
+	"#d97706": "Amber",
+	"#16a34a": "Green",
+	"#0d9488": "Teal",
+} satisfies Record<FolderColor, string>;

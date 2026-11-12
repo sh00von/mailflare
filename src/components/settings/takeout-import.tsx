@@ -3,13 +3,11 @@
 import type { FormEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import { Upload } from "@/components/icons";
-import { useLanguage } from "@/components/language-provider";
 import { useSelectedMailbox } from "@/components/mailbox-provider";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { TranslationKey } from "@/lib/i18n/types";
 import type { TakeoutImportSummary } from "@/lib/import/gmail-takeout-types";
 import { parseIgnoredLabels, runTakeoutImport, splitMbox } from "@/lib/import/gmail-takeout-utils";
 import { isZipSupported, readStreamChunks } from "@/lib/import/zip-utils";
@@ -26,13 +24,13 @@ import {
 	saveTakeoutProgress,
 } from "./takeout-import-utils";
 
-const SECTION_LABEL_KEYS: Record<string, TranslationKey> = {
-	inbox: "navigation.inbox",
-	sent: "navigation.sent",
-	drafts: "navigation.drafts",
-	archived: "navigation.archived",
-	spam: "navigation.spam",
-	trash: "navigation.trash",
+const SECTION_LABEL_KEYS: Record<string, string> = {
+	inbox: "Inbox",
+	sent: "Sent",
+	drafts: "Drafts",
+	archived: "Archived",
+	spam: "Spam",
+	trash: "Trash",
 };
 
 function cloneSummary(summary: TakeoutImportSummary): TakeoutImportSummary {
@@ -41,7 +39,6 @@ function cloneSummary(summary: TakeoutImportSummary): TakeoutImportSummary {
 
 /** Imports a Google Takeout export: the zip is read in the browser and messages are uploaded in batches. */
 export function TakeoutImport() {
-	const { t } = useLanguage();
 	const { selectedMailbox } = useSelectedMailbox();
 	const [files, setFiles] = useState<File[]>([]);
 	const [folders, setFolders] = useState(true);
@@ -74,8 +71,8 @@ export function TakeoutImport() {
 	function destinationLabel(key: string): string {
 		const [type, ...rest] = key.split(":");
 		const value = rest.join(":");
-		if (type === "folder") return t("importPage.takeoutFolder", { name: value });
-		return SECTION_LABEL_KEYS[value] ? t(SECTION_LABEL_KEYS[value]) : value;
+		if (type === "folder") return `Folder ${value}`;
+		return SECTION_LABEL_KEYS[value] ? SECTION_LABEL_KEYS[value] : value;
 	}
 
 	async function start(mode: TakeoutRunState["mode"]) {
@@ -85,7 +82,7 @@ export function TakeoutImport() {
 		setNotice(null);
 		setResult(null);
 		if (!isZipSupported() && files.some((file) => /\.zip$/i.test(file.name))) {
-			setError(t("importPage.takeoutUnsupported"));
+			setError("This browser cannot unpack zip files. Unzip the archive and choose the .mbox file instead.");
 			return;
 		}
 		const controller = new AbortController();
@@ -96,7 +93,7 @@ export function TakeoutImport() {
 		setRun(initial);
 		try {
 			const { sources, withoutMbox } = await getTakeoutSources(files);
-			if (withoutMbox.length > 0) setNotice(t("importPage.takeoutNoMbox", { files: withoutMbox.join(", ") }));
+			if (withoutMbox.length > 0) setNotice(`No .mbox file found in ${withoutMbox.join(", ")}.`);
 			if (sources.length === 0) return;
 			const upload = createTakeoutUploader(mailboxId);
 			const resolveFolder = createTakeoutFolderResolver(mailboxId);
@@ -159,7 +156,7 @@ export function TakeoutImport() {
 	return (
 		<form onSubmit={onSubmit} className="space-y-4">
 			<div className="space-y-2">
-				<Label htmlFor="takeout-files">{t("importPage.takeoutFiles")}</Label>
+				<Label htmlFor="takeout-files">Takeout files</Label>
 				<Input
 					id="takeout-files"
 					type="file"
@@ -169,25 +166,25 @@ export function TakeoutImport() {
 					onChange={(event) => setFiles(Array.from(event.target.files ?? []))}
 					className="block w-full rounded-md border border-neutral-200 bg-white px-3 py-1 text-sm shadow-sm shadow-neutral-200/50 file:mr-3 file:rounded-md file:border-0 file:bg-neutral-100 file:px-3 file:py-1.5 file:text-sm file:font-medium"
 				/>
-				<p className="text-xs leading-5 text-neutral-500">{t("importPage.takeoutHint")}</p>
+				<p className="text-xs leading-5 text-neutral-500">Choose the .zip files from Google Takeout, or the .mbox inside them. They are read in your browser; only the messages are uploaded.</p>
 			</div>
 			<div className="grid gap-2 sm:grid-cols-3">
 				<label className="flex items-center gap-2 text-sm text-neutral-700">
 					<Checkbox checked={folders} disabled={running} onChange={(event) => setFolders(event.target.checked)} />
-					{t("importPage.takeoutFolders")}
+					Create folders from Gmail labels
 				</label>
 				<label className="flex items-center gap-2 text-sm text-neutral-700">
 					<Checkbox checked={skipSpam} disabled={running} onChange={(event) => setSkipSpam(event.target.checked)} />
-					{t("importPage.takeoutSkipSpam")}
+					Skip spam
 				</label>
 				<label className="flex items-center gap-2 text-sm text-neutral-700">
 					<Checkbox checked={skipTrash} disabled={running} onChange={(event) => setSkipTrash(event.target.checked)} />
-					{t("importPage.takeoutSkipTrash")}
+					Skip trash
 				</label>
 			</div>
 			{folders && (
 				<div className="space-y-2">
-					<Label htmlFor="takeout-ignore">{t("importPage.takeoutIgnoreLabels")}</Label>
+					<Label htmlFor="takeout-ignore">Labels to ignore</Label>
 					<Input
 						id="takeout-ignore"
 						value={ignoreLabels}
@@ -195,23 +192,23 @@ export function TakeoutImport() {
 						onChange={(event) => setIgnoreLabels(event.target.value)}
 						placeholder="[Superhuman]/, Notes"
 					/>
-					<p className="text-xs leading-5 text-neutral-500">{t("importPage.takeoutIgnoreHint")}</p>
+					<p className="text-xs leading-5 text-neutral-500">Comma-separated. End a label with / to also ignore every label below it.</p>
 				</div>
 			)}
 			<p className="rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3 text-xs leading-5 text-neutral-500">
-				{t("importPage.takeoutKeepOpen")}
+				Keep this tab open until the import finishes. If it stops, choose the same files again and it continues where it left off.
 			</p>
 			<div className="flex flex-wrap gap-2">
 				<Button type="submit" disabled={!selectedMailbox || files.length === 0 || running}>
 					<Upload className="h-4 w-4" />
-					{run?.mode === "import" ? t("import.importing") : t("importPage.takeoutStart")}
+					{run?.mode === "import" ? "Importing..." : "Import"}
 				</Button>
 				<Button type="button" variant="outline" disabled={!selectedMailbox || files.length === 0 || running} onClick={() => void start("preview")}>
-					{t("importPage.takeoutPreview")}
+					Preview
 				</Button>
 				{running && (
 					<Button type="button" variant="outline" onClick={() => controllerRef.current?.abort()}>
-						{t("importPage.takeoutStop")}
+						Stop
 					</Button>
 				)}
 			</div>
@@ -220,8 +217,8 @@ export function TakeoutImport() {
 					<div className="flex justify-between gap-4">
 						<span className="truncate">
 							{run.sourceCount > 0
-								? t("importPage.takeoutReading", { source: run.sourceLabel, index: run.sourceIndex, count: run.sourceCount })
-								: t("importPage.preparing")}
+								? `Reading ${run.sourceLabel} (${run.sourceIndex}/${run.sourceCount})`
+								: "Preparing files"}
 						</span>
 						<span className="shrink-0">
 							{formatBytes(run.bytesRead)} / {formatBytes(run.bytesTotal)}
@@ -230,20 +227,20 @@ export function TakeoutImport() {
 					<div className="h-1.5 overflow-hidden rounded-full bg-neutral-100">
 						<div className="h-full bg-blue-600 transition-[width]" style={{ width: `${percent}%` }} />
 					</div>
-					{run.resumedAt > 0 && <p>{t("importPage.takeoutResumed", { count: run.resumedAt })}</p>}
+					{run.resumedAt > 0 && <p>{`Continuing after message ${run.resumedAt}.`}</p>}
 				</div>
 			)}
 			{summary && (run?.mode === "import" || result?.mode === "import") && (
 				<p className="text-sm text-neutral-700">
-					{t("importPage.takeoutCounts", { read: summary.read, imported: summary.imported, skipped: summary.skipped })}
+					{`${summary.read} messages read, ${summary.imported} imported, ${summary.skipped} skipped`}
 				</p>
 			)}
 			{result && (
 				<div className="space-y-2 rounded-lg border border-green-100 bg-green-50 px-4 py-3 text-sm text-green-800">
-					{result.summary.aborted && <p className="font-medium">{t("importPage.takeoutStopped")}</p>}
+					{result.summary.aborted && <p className="font-medium">Import stopped. Choose the same files again to continue.</p>}
 					{result.mode === "preview" && (
 						<>
-							<p className="font-medium">{t("importPage.takeoutPreviewResult", { count: destinationCount })}</p>
+							<p className="font-medium">{`${destinationCount} messages would be imported:`}</p>
 							<ul className="space-y-0.5 text-xs">
 								{destinations.map(([key, count]) => (
 									<li key={key} className="flex justify-between gap-4">
@@ -254,11 +251,11 @@ export function TakeoutImport() {
 							</ul>
 						</>
 					)}
-					{result.summary.tooLarge > 0 && <p className="text-xs">{t("importPage.takeoutTooLarge", { count: result.summary.tooLarge })}</p>}
-					{result.summary.ignored > 0 && <p className="text-xs">{t("importPage.takeoutIgnored", { count: result.summary.ignored })}</p>}
+					{result.summary.tooLarge > 0 && <p className="text-xs">{`${result.summary.tooLarge} messages over 24 MB were skipped.`}</p>}
+					{result.summary.ignored > 0 && <p className="text-xs">{`${result.summary.ignored} spam or trash messages were skipped.`}</p>}
 					{result.summary.failed > 0 && (
 						<div className="text-xs text-red-700">
-							<p>{t("importPage.takeoutFailed", { count: result.summary.failed })}</p>
+							<p>{`${result.summary.failed} messages could not be imported:`}</p>
 							<ul className="mt-1 list-disc space-y-0.5 pl-5">
 								{result.summary.errors.slice(0, 5).map((item) => (
 									<li key={item}>{item}</li>

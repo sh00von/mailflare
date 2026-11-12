@@ -2,7 +2,6 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { LogIn, LogOut } from "@/components/icons";
-import { useLanguage } from "@/components/language-provider";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -13,7 +12,6 @@ import {
 } from "./utils";
 
 export default function ActivityPage() {
-  const { t } = useLanguage();
   const activity = useQuery({
     queryKey: ["activity"],
     queryFn: fetchActivity,
@@ -22,20 +20,20 @@ export default function ActivityPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl md:text-3xl font-medium text-neutral-900">{t("activity.title")}</h1>
+        <h1 className="text-2xl md:text-3xl font-medium text-neutral-900">Activity</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          {t("activity.description")}
+          Login and logout activity across user accounts.
         </p>
       </div>
 
-      <section role="region" tabIndex={0} aria-label={t("activity.title")} className="overflow-x-auto rounded-3xl bg-white">
+      <section role="region" tabIndex={0} aria-label={"Activity"} className="overflow-x-auto rounded-3xl bg-white">
         <table className="w-full min-w-[760px] table-fixed text-left">
           <thead className="border-b border-neutral-100 bg-neutral-50 text-xs font-semibold uppercase tracking-wide text-neutral-500">
             <tr>
-              <th scope="col" className="w-32 px-5 py-3">{t("activity.col.activity")}</th>
-              <th scope="col" className="px-5 py-3">{t("activity.col.user")}</th>
-              <th scope="col" className="w-64 px-5 py-3">{t("activity.col.device")}</th>
-              <th scope="col" className="w-48 px-5 py-3">{t("activity.col.time")}</th>
+              <th scope="col" className="w-32 px-5 py-3">Activity</th>
+              <th scope="col" className="px-5 py-3">User</th>
+              <th scope="col" className="w-64 px-5 py-3">Device</th>
+              <th scope="col" className="w-48 px-5 py-3">Time</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-100">
@@ -59,7 +57,7 @@ export default function ActivityPage() {
             {!activity.isLoading && (activity.data ?? []).length === 0 && (
               <tr>
                 <td colSpan={4} className="px-5 py-4 text-sm text-neutral-500">
-                  {t("activity.none")}
+                  No login or logout activity yet
                 </td>
               </tr>
             )}
@@ -71,26 +69,26 @@ export default function ActivityPage() {
                   <td className="px-5 py-4">
                     <Badge variant="outline" className="gap-1">
                       <Icon className="h-3 w-3" />
-                      {getActivityLabel(log.action, t)}
+                      {getActivityLabel(log.action)}
                     </Badge>
                   </td>
                   <td className="px-5 py-4">
                     <p className="flex flex-col truncate no-font-mono">
-                      <span>{log.actorEmail ?? t("activity.unknownEmail")}</span>
+                      <span>{log.actorEmail ?? "(unknown email)"}</span>
                     </p>
                     <small className="text-neutral-500">
-                      {metadata.city || t("activity.unknownCity")} •{" "}
-                      {metadata.country || t("activity.unknownCountry")}
+                      {metadata.city || "(unknown city)"} •{" "}
+                      {metadata.country || "(unknown country)"}
                     </small>
                   </td>
                   <td className="px-5 py-4">
                     <p className="flex flex-col truncate no-font-mono">
-                      {metadata.device ?? t("activity.unknownDevice")}
+                      {metadata.device ?? "(unknown device)"}
                     </p>
 
                     <small className="text-neutral-500">
-                      {metadata.platform || t("activity.unknownPlatform")} •{" "}
-                      {metadata.ipAddress ?? t("activity.unknownIp")}
+                      {metadata.platform || "(unknown platform)"} •{" "}
+                      {metadata.ipAddress ?? "(unknown IP)"}
                     </small>
                   </td>
                   <td className="px-5 py-4 text-sm text-neutral-500">

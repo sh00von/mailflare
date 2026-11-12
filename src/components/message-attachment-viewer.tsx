@@ -10,7 +10,6 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import { useLanguage } from "@/components/language-provider";
 import { authFetch } from "@/lib/auth/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { AttachmentRisk } from "@/lib/email/attachment-risk";
@@ -26,7 +25,6 @@ export function MessageAttachmentViewer({
 	onOpenChange,
 	open,
 }: MessageAttachmentViewerProps) {
-	const { t } = useLanguage();
 	const [textContent, setTextContent] = useState("");
 	const [textError, setTextError] = useState("");
 
@@ -61,20 +59,20 @@ export function MessageAttachmentViewer({
 
 		authFetch(previewUrl)
 			.then(async (response) => {
-				if (!response.ok) throw new Error(t("attachment.loadFailed"));
+				if (!response.ok) throw new Error("Could not load this attachment");
 				const content = await response.text();
 				if (!cancelled) setTextContent(content);
 			})
 			.catch((error) => {
 				if (!cancelled) {
-					setTextError(error instanceof Error ? error.message : t("attachment.loadFailed"));
+					setTextError(error instanceof Error ? error.message : "Could not load this attachment");
 				}
 			});
 
 		return () => {
 			cancelled = true;
 		};
-	}, [attachment, open, previewKind, previewUrl, t]);
+	}, [attachment, open, previewKind, previewUrl]);
 
 	if (!attachment) return null;
 
@@ -124,7 +122,7 @@ export function MessageAttachmentViewer({
 						<div className="flex flex-col items-center gap-3 px-6 text-center">
 							<FileWarning className="h-10 w-10 text-neutral-400" />
 							<p className="text-sm text-neutral-600">
-								{t("attachment.unsupported")}
+								This file type cannot be previewed safely in the browser.
 							</p>
 						</div>
 					)}
@@ -132,29 +130,29 @@ export function MessageAttachmentViewer({
 
 				{risk && flagged && (
 					<div role="alert" className={`shrink-0 rounded-lg border p-3 text-sm ${risk.level === "blocked" ? "border-red-300 bg-red-50 text-red-900" : "border-amber-300 bg-amber-50 text-amber-900"}`}>
-						<p className="font-medium">{risk.level === "blocked" ? t("attachment.risk.blocked") : t("attachment.risk.warning")}</p>
+						<p className="font-medium">{risk.level === "blocked" ? "This file can run code or hide its real type." : "This file may not be what it seems."}</p>
 						<ul className="mt-1 list-disc pl-5">
 							{risk.reasons.map((reason) => <li key={reason}>{reason}</li>)}
 						</ul>
 						<label className="mt-2 flex items-center gap-2">
 							<input type="checkbox" checked={acknowledged} onChange={(event) => setAcknowledged(event.target.checked)} />
-							{t("attachment.risk.acknowledge")}
+							I understand the risk and still want to download it
 						</label>
 					</div>
 				)}
 
 				<div className="flex shrink-0 items-center justify-end gap-3">
-					{risk && !flagged && <span className="text-xs text-neutral-500">{t("attachment.risk.ok")}</span>}
+					{risk && !flagged && <span className="text-xs text-neutral-500">No known risky file type</span>}
 					{flagged && !acknowledged ? (
 						<Button disabled>
 							<ArrowDownToLine className="h-4 w-4" />
-							{t("attachment.download")}
+							Download
 						</Button>
 					) : (
 						<Button asChild>
 							<a href={downloadUrl} download={attachment.filename}>
 								<ArrowDownToLine className="h-4 w-4" />
-								{t("attachment.download")}
+								Download
 							</a>
 						</Button>
 					)}

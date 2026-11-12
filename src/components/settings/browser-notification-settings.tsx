@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useLanguage } from "@/components/language-provider";
 import { Switch } from "@/components/ui/switch";
 import {
 	areBrowserNotificationsEnabled,
@@ -9,7 +8,6 @@ import {
 } from "@/hooks/message-realtime-utils";
 
 export function BrowserNotificationSettings() {
-	const { t } = useLanguage();
 	const [permission, setPermission] = useState<NotificationPermission | "unsupported">("unsupported");
 	const [enabled, setEnabled] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -32,9 +30,9 @@ export function BrowserNotificationSettings() {
 		<div>
 			<label className="flex items-start gap-3 rounded-xl bg-neutral-50 p-4">
 				<span className="flex-1">
-					<span className="block text-sm font-medium text-neutral-900">{t("settings.notifications.title")}</span>
+					<span className="block text-sm font-medium text-neutral-900">Browser notifications</span>
 					<span className="mt-1 block text-sm text-neutral-500">
-						{t("settings.notifications.description")}
+						Show a notification for new email while Replyot is open in a background tab.
 					</span>
 				</span>
 				<Switch
@@ -47,7 +45,7 @@ export function BrowserNotificationSettings() {
 								setBrowserNotificationsEnabled(false);
 								setEnabled(false);
 							} catch {
-								setError(t("settings.notifications.saveFailed"));
+								setError("Could not save the notification preference in this browser.");
 							}
 							return;
 						}
@@ -59,18 +57,18 @@ export function BrowserNotificationSettings() {
 								setBrowserNotificationsEnabled(true);
 								setEnabled(true);
 							} catch {
-								setError(t("settings.notifications.enableFailed"));
+								setError("Could not enable browser notifications.");
 							}
 						})();
 					}}
-					aria-label={t("settings.notifications.enable")}
+					aria-label={"Enable browser notifications"}
 				/>
 			</label>
 			{permission === "denied" && (
-				<p className="mt-2 px-4 text-sm text-neutral-500">{t("settings.notifications.blocked")}</p>
+				<p className="mt-2 px-4 text-sm text-neutral-500">{"Notifications are blocked. Allow them in your browser's site settings to enable this option."}</p>
 			)}
 			{permission === "unsupported" && (
-				<p className="mt-2 px-4 text-sm text-neutral-500">{t("settings.notifications.unavailable")}</p>
+				<p className="mt-2 px-4 text-sm text-neutral-500">Browser notifications are unavailable here.</p>
 			)}
 			{error && <p role="alert" className="mt-2 px-4 text-sm text-red-600">{error}</p>}
 		</div>

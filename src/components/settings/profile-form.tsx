@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useLanguage } from "@/components/language-provider";
 import { useSelectedMailbox } from "@/components/mailbox-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +16,6 @@ export function ProfileForm({
   accountName,
   initialResetEmail,
 }: ProfileFormProps) {
-  const { t } = useLanguage();
   const { selectedMailbox, setSelectedMailbox, isLoading } = useSelectedMailbox();
   const [name, setName] = useState("");
   const [savedName, setSavedName] = useState("");
@@ -52,7 +50,7 @@ export function ProfileForm({
         throw new Error(
           typeof data.error === "string"
             ? data.error
-            : t("settings.profile.updateFailed"),
+            : "Failed to update account",
         );
       }
 
@@ -62,7 +60,7 @@ export function ProfileForm({
     } catch (error) {
       throw error instanceof Error
         ? error
-        : new Error(t("settings.profile.updateFailed"));
+        : new Error("Failed to update account");
     }
   }
 
@@ -78,10 +76,10 @@ export function ProfileForm({
       setSavedName(updated.displayName ?? "");
       // The primary inbox is the account, so its name is the profile name.
       if (isPrimary) dispatchProfileNameChanged(updated.displayName ?? "");
-      setProfileStatus(t("common.saved"));
+      setProfileStatus("Saved");
     } catch (error) {
       setProfileStatus(
-        error instanceof Error ? error.message : t("settings.profile.updateFailed"),
+        error instanceof Error ? error.message : "Failed to update account",
       );
     } finally {
       setSavingProfile(false);
@@ -94,12 +92,12 @@ export function ProfileForm({
     setRecoveryStatus(null);
     try {
       await saveProfile(accountName, resetEmail);
-      setRecoveryStatus(t("common.saved"));
+      setRecoveryStatus("Saved");
     } catch (error) {
       setRecoveryStatus(
         error instanceof Error
           ? error.message
-          : t("settings.profile.recoveryFailed"),
+          : "Failed to update recovery email",
       );
     } finally {
       setSavingRecovery(false);
@@ -107,10 +105,10 @@ export function ProfileForm({
   }
 
   if (isLoading) {
-    return <p className="rounded-t-3xl rounded-b-lg bg-white p-6 text-sm text-neutral-500">{t("settings.signature.loadingInbox")}</p>;
+    return <p className="rounded-t-3xl rounded-b-lg bg-white p-6 text-sm text-neutral-500">Loading inbox…</p>;
   }
   if (!selectedMailbox) {
-    return <p className="rounded-t-3xl rounded-b-lg bg-white p-6 text-sm text-neutral-500">{t("settings.signature.selectInbox")}</p>;
+    return <p className="rounded-t-3xl rounded-b-lg bg-white p-6 text-sm text-neutral-500">Select an inbox to configure its signature.</p>;
   }
 
   const address = getMailboxAddress(selectedMailbox);
@@ -132,16 +130,16 @@ export function ProfileForm({
           />
           <div>
             <p className="text-sm font-medium text-neutral-900">
-              {t("settings.profile.pictureTitle")}
+              Profile picture
             </p>
             <p className="mt-1 text-sm text-neutral-500">
-              {t("settings.profile.pictureDescription")}
+              Choose a picture to show across your account.
             </p>
           </div>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="name">{t("common.name")}</Label>
+          <Label htmlFor="name">Name</Label>
           <Input
             id="name"
             autoComplete="name"
@@ -153,7 +151,7 @@ export function ProfileForm({
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="accountEmail">{t("settings.profile.currentEmail")}</Label>
+          <Label htmlFor="accountEmail">Current email</Label>
           <Input
             id="accountEmail"
             autoComplete="email"
@@ -170,7 +168,7 @@ export function ProfileForm({
             type="submit"
             disabled={!canManage || savingProfile || name.trim() === savedName}
           >
-            {savingProfile ? t("common.saving") : t("settings.profile.save")}
+            {savingProfile ? "Saving..." : "Save profile"}
           </Button>
           {profileStatus && (
             <p className="text-sm text-neutral-500">{profileStatus}</p>
@@ -184,14 +182,14 @@ export function ProfileForm({
       >
         <div>
           <h3 className="text-lg font-semibold text-neutral-900">
-            {t("settings.profile.recoveryTitle")}
+            Recovery email
           </h3>
           <p className="mt-1 text-sm text-neutral-500">
-            {t("settings.profile.recoveryDescription")}
+            Used to recover access if you cannot sign in.
           </p>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="resetEmail">{t("settings.profile.emailAddress")}</Label>
+          <Label htmlFor="resetEmail">Email address</Label>
           <Input
             id="resetEmail"
             autoComplete="email"
@@ -206,7 +204,7 @@ export function ProfileForm({
             type="submit"
             disabled={savingRecovery || resetEmail.trim() === savedResetEmail}
           >
-            {savingRecovery ? t("common.saving") : t("settings.profile.saveRecovery")}
+            {savingRecovery ? "Saving..." : "Save recovery email"}
           </Button>
           {recoveryStatus && (
             <p className="text-sm text-neutral-500">{recoveryStatus}</p>

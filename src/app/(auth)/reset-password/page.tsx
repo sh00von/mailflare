@@ -5,7 +5,7 @@ import { ResetPasswordClient } from "./reset-password-client";
 
 export const dynamic = "force-dynamic";
 
-export const generateMetadata = () => authPageMetadata("auth.reset.chooseNew");
+export const generateMetadata = () => authPageMetadata("Choose a new password");
 
 export default function ResetPasswordPage() {
 	return (

@@ -2,7 +2,6 @@
 
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { useState } from "react";
-import { useLanguage } from "@/components/language-provider";
 import { useIsMobile } from "@/components/sidebar-mobile-utils";
 import { ScheduleSendSheet } from "@/components/compose/schedule-send-sheet";
 import { formatDateTimeLocal, formatScheduledSend, getScheduleSendOptions, isPastSchedule, parseDateTimeLocal } from "@/components/compose/schedule-send-utils";
@@ -13,7 +12,6 @@ const buttonClass = "shrink-0 font-medium text-blue-600 hover:underline disabled
 /** Reschedule control on a scheduled message: the bottom sheet on phones, a
  * dropdown with preset times and a date picker on desktop. */
 export function ScheduledSendReschedule({ scheduledAt, disabled, onPick }: { scheduledAt: string; disabled?: boolean; onPick: (date: Date) => void }) {
-	const { t } = useLanguage();
 	const isPhone = useIsMobile();
 	const [sheetOpen, setSheetOpen] = useState(false);
 	const [menuOpen, setMenuOpen] = useState(false);
@@ -36,7 +34,7 @@ export function ScheduledSendReschedule({ scheduledAt, disabled, onPick }: { sch
 		return (
 			<>
 				<button type="button" onClick={() => setSheetOpen(true)} disabled={disabled} className={buttonClass}>
-					{t("schedule.reschedule")}
+					Reschedule
 				</button>
 				<ScheduleSendSheet
 					open={sheetOpen}
@@ -52,7 +50,7 @@ export function ScheduledSendReschedule({ scheduledAt, disabled, onPick }: { sch
 	return (
 		<DropdownMenu.Root open={menuOpen} onOpenChange={(next) => { setMenuOpen(next); setPickedText(null); }}>
 			<DropdownMenu.Trigger type="button" disabled={disabled} className={buttonClass}>
-				{t("schedule.reschedule")}
+				Reschedule
 			</DropdownMenu.Trigger>
 			<DropdownMenu.Portal>
 				<DropdownMenu.Content align="end" sideOffset={6} className="z-50 min-w-56 rounded-lg border border-neutral-200 bg-white p-1 text-sm shadow-lg">
@@ -62,13 +60,13 @@ export function ScheduledSendReschedule({ scheduledAt, disabled, onPick }: { sch
 							onSelect={() => { if (option.value) onPick(option.value); }}
 							className="cursor-pointer rounded-md px-3 py-2 outline-none hover:bg-neutral-100 focus:bg-neutral-100"
 						>
-							{t(option.labelKey)}
+							{option.labelKey}
 							<span className="ml-2 text-xs text-neutral-500">{option.value && formatScheduledSend(option.value)}</span>
 						</DropdownMenu.Item>
 					))}
 					<DropdownMenu.Separator className="my-1 h-px bg-neutral-100" />
 					<DropdownMenu.Label className="px-3 pb-1 pt-2 text-xs font-medium text-neutral-500">
-						{t("schedule.pick", { timeZone: getUserTimeZone() })}
+						{`Pick date & time (${getUserTimeZone()})`}
 					</DropdownMenu.Label>
 					<input
 						type="datetime-local"
@@ -84,7 +82,7 @@ export function ScheduledSendReschedule({ scheduledAt, disabled, onPick }: { sch
 						aria-describedby={pastPicked ? "schedule-past-time" : undefined}
 						className="mx-2 mb-2 h-9 rounded-md border border-neutral-200 px-2 text-sm outline-none focus:border-blue-400"
 					/>
-					{pastPicked && <p id="schedule-past-time" role="alert" className="mx-2 mb-2 text-xs text-red-600">{t("schedule.pastTime")}</p>}
+					{pastPicked && <p id="schedule-past-time" role="alert" className="mx-2 mb-2 text-xs text-red-600">Pick a time that has not passed yet.</p>}
 				</DropdownMenu.Content>
 			</DropdownMenu.Portal>
 		</DropdownMenu.Root>

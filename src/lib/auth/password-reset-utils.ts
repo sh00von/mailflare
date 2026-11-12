@@ -1,24 +1,22 @@
-import type { Translator } from "@/lib/i18n/utils";
 
 export function escapeHtml(value: string): string {
 	return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 export function buildPasswordResetEmail(
-	t: Translator,
 	{ email, appName, link, minutes }: { email: string; appName: string; link: string; minutes: number },
 ): { subject: string; text: string; html: string } {
-	const ignore = t("auth.resetMail.ignore");
+	const ignore = "If that was not you, you can ignore this message; the password stays as it is.";
 	return {
-		subject: t("auth.resetMail.subject", { appName }),
+		subject: `Reset your ${appName} password`,
 		text: [
-			t("auth.resetMail.intro", { email, appName }),
+			`Someone asked to reset the password for ${email} on ${appName}.`,
 			"",
-			t("auth.resetMail.instructions", { minutes }),
+			`Open this link within ${minutes} minutes to choose a new password:`,
 			link,
 			"",
 			ignore,
 		].join("\n"),
-		html: `<p>${t("auth.resetMail.intro", { email: `<b>${escapeHtml(email)}</b>`, appName: escapeHtml(appName) })}</p><p>${escapeHtml(t("auth.resetMail.instructions", { minutes }))}</p><p><a href="${escapeHtml(link)}">${escapeHtml(link)}</a></p><p>${escapeHtml(ignore)}</p>`,
+		html: `<p>${`Someone asked to reset the password for ${`<b>${escapeHtml(email)}</b>`} on ${escapeHtml(appName)}.`}</p><p>${escapeHtml(`Open this link within ${minutes} minutes to choose a new password:`)}</p><p><a href="${escapeHtml(link)}">${escapeHtml(link)}</a></p><p>${escapeHtml(ignore)}</p>`,
 	};
 }

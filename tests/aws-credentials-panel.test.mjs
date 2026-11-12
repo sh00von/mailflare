@@ -30,7 +30,6 @@ await build({
 			import { createElement } from "react";
 			import { createRoot } from "react-dom/client";
 			import { act } from "react";
-			import { LanguageProvider } from "./src/components/language-provider";
 			import Panel from "./src/app/(admin)/domains/AwsCredentialsPanel";
 			import { ApiError, requestJson } from "./src/app/(admin)/domains/api";
 			export { ApiError, requestJson };
@@ -42,7 +41,7 @@ await build({
 				document.body.appendChild(container);
 				const root = createRoot(container);
 				await act(async () => {
-					root.render(createElement(LanguageProvider, { initialLocale: "en" }, createElement(Panel, { need: "sending" })));
+					root.render(createElement(Panel, { need: "sending" }));
 				});
 				return async function fillAndSave() {
 					const inputs = container.querySelectorAll("input");
@@ -85,7 +84,6 @@ await build({
 });
 
 const { renderPanel, requestJson, ApiError } = await import(pathToFileURL(outfile).href);
-const en = JSON.parse(readFileSync(join(root, "src/lib/i18n/en.json"), "utf8"));
 const AWS_IAM_POLICY_SOURCE = readFileSync(join(root, "src/lib/aws/validate.ts"), "utf8");
 
 /** Answers the panel's calls from a queue of canned responses, recording what it was asked. */
@@ -174,5 +172,4 @@ test("requestJson keeps the parsed body on a rejected response", async () => {
 	assert.ok(error instanceof ApiError);
 	assert.equal(error.message, "nope");
 	assert.deepEqual(error.data.report, REFUSAL.report);
-	assert.equal(typeof en["aws.missingSummary"], "string");
 });

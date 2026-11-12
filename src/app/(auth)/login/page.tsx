@@ -8,7 +8,7 @@ import { LoginClient } from "./login-client";
 
 export const dynamic = "force-dynamic";
 
-export const generateMetadata = () => authPageMetadata("auth.signIn");
+export const generateMetadata = () => authPageMetadata("Sign in");
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ add?: string }> }) {
 	const adding = (await searchParams).add === "1";

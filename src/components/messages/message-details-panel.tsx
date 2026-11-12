@@ -2,7 +2,6 @@
 
 import { useId, useState, type ReactNode } from "react";
 import { AlertTriangle, CheckCircle2, ExternalLink, LoaderCircle, ShieldAlert, ShieldCheck, X } from "@/components/icons";
-import { useLanguage } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
 import { splitEmailAddressList } from "@/lib/email/address";
 import { formatRecipientAddressList } from "@/lib/email/recipient-display";
@@ -75,7 +74,6 @@ function AuthenticationRow({
 }
 
 export function MessageDetailsPanel({ message, onClose, className }: MessageDetailsPanelProps) {
-	const { t } = useLanguage();
 	const messageSectionId = useId();
 	const [sourceOpen, setSourceOpen] = useState(false);
 	const { authentication, failed: authenticationFailed, loading } = useMessageAuthentication(message.id, message.direction);
@@ -96,18 +94,18 @@ export function MessageDetailsPanel({ message, onClose, className }: MessageDeta
 
 	return (
 		<section
-			aria-label={t("message.detailsTitle")}
+			aria-label={"Message details"}
 			className={cn("overflow-hidden rounded-xl border border-neutral-200 bg-white text-xs", className)}
 		>
 			<header className="flex items-center justify-between gap-2 border-b border-neutral-100 bg-neutral-50/80 px-3 py-2">
 				<h2 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-500">
-					{t("message.detailsTitle")}
+					Message details
 				</h2>
 				{onClose && (
 					<button
 						type="button"
 						onClick={onClose}
-						aria-label={t("navigation.close")}
+						aria-label={"Close"}
 						className="rounded p-0.5 text-neutral-400 transition-colors hover:bg-neutral-200/60 hover:text-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
 					>
 						<X className="h-3.5 w-3.5" aria-hidden="true" />
@@ -123,12 +121,12 @@ export function MessageDetailsPanel({ message, onClose, className }: MessageDeta
 			>
 				<section aria-labelledby={messageSectionId}>
 					<h3 id={messageSectionId} className="text-[10px] font-semibold uppercase tracking-[0.08em] text-neutral-400">
-						{t("message.detailsMessageSection")}
+						Message
 					</h3>
 					<dl className="mt-2 space-y-2">
 						<DetailRow
-							label={t("message.detailsFrom")}
-							warning={senderNameWarning ? t("message.detailsSenderWarning") : null}
+							label={"Original sender"}
+							warning={senderNameWarning ? "The sender name contains a different email address." : null}
 						>
 							{original.name ? (
 								<>
@@ -137,26 +135,26 @@ export function MessageDetailsPanel({ message, onClose, className }: MessageDeta
 								</>
 							) : original.address}
 						</DetailRow>
-						{showContactName && <DetailRow label={t("message.detailsContact")}>{contactName}</DetailRow>}
+						{showContactName && <DetailRow label={"Saved contact"}>{contactName}</DetailRow>}
 						{replyToEntries.length > 0 && (
 							<DetailRow
-								label={t("message.detailsReplyTo")}
-								warning={replyToWarning ? t("message.detailsReplyToWarning") : null}
+								label={"Reply-To"}
+								warning={replyToWarning ? "Replies to this message go to a different address." : null}
 							>
 								{formatRecipientAddressList(message.replyTo, "full")}
 							</DetailRow>
 						)}
-						<DetailRow label={t("source.to")}>{formatRecipientAddressList(message.toAddr, "full") || "—"}</DetailRow>
+						<DetailRow label={"To"}>{formatRecipientAddressList(message.toAddr, "full") || "—"}</DetailRow>
 						{splitEmailAddressList(message.ccAddr).length > 0 && (
-							<DetailRow label={t("message.cc")}>{formatRecipientAddressList(message.ccAddr, "full")}</DetailRow>
+							<DetailRow label={"cc"}>{formatRecipientAddressList(message.ccAddr, "full")}</DetailRow>
 						)}
 						{splitEmailAddressList(message.bccAddr).length > 0 && (
-							<DetailRow label={t("message.bcc")}>{formatRecipientAddressList(message.bccAddr, "full")}</DetailRow>
+							<DetailRow label={"bcc"}>{formatRecipientAddressList(message.bccAddr, "full")}</DetailRow>
 						)}
-						<DetailRow label={t("message.date")}>
+						<DetailRow label={"Date"}>
 							{formatUserDate(message.createdAt, { weekday: "short", month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}
 						</DetailRow>
-						<DetailRow label={t("source.subject")}>{message.subject?.trim() || t("list.noSubject")}</DetailRow>
+						<DetailRow label={"Subject"}>{message.subject?.trim() || "(no subject)"}</DetailRow>
 					</dl>
 				</section>
 
@@ -164,43 +162,43 @@ export function MessageDetailsPanel({ message, onClose, className }: MessageDeta
 					<section>
 						<h3 className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-neutral-400">
 							<ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
-							{t("message.detailsAuthentication")}
+							Authentication
 						</h3>
 						{authenticationFailed ? (
-							<p className="mt-2 text-neutral-500">{t("message.detailsAuthenticationError")}</p>
+							<p className="mt-2 text-neutral-500">Could not check authentication.</p>
 						) : loading ? (
 							<p className="mt-2 flex items-center gap-1.5 text-neutral-500">
 								<LoaderCircle className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-								{t("message.detailsChecking")}
+								Checking authentication…
 							</p>
 						) : !authentication || !authentication.available ? (
-							<p className="mt-2 text-neutral-500">{t("message.detailsAuthenticationUnavailable")}</p>
+							<p className="mt-2 text-neutral-500">Provider-verified authentication results are not available for this message.</p>
 						) : (
 							<>
 								<ul className="mt-2 space-y-1">
-									<AuthenticationRow method="SPF" result={authentication.spf} detail={spfDetail} noResult={t("source.noResult")} />
-									<AuthenticationRow method="DKIM" result={authentication.dkim} detail={authentication.dkim?.detail ?? null} noResult={t("source.noResult")} />
-									<AuthenticationRow method="DMARC" result={authentication.dmarc} detail={authentication.dmarc?.detail ?? null} noResult={t("source.noResult")} />
+									<AuthenticationRow method="SPF" result={authentication.spf} detail={spfDetail} noResult={"No result in message headers"} />
+									<AuthenticationRow method="DKIM" result={authentication.dkim} detail={authentication.dkim?.detail ?? null} noResult={"No result in message headers"} />
+									<AuthenticationRow method="DMARC" result={authentication.dmarc} detail={authentication.dmarc?.detail ?? null} noResult={"No result in message headers"} />
 								</ul>
 								{authentication.encryption && (
 									<p className="mt-2 text-neutral-500">
-										{t("message.detailsEncryption")} <span className="text-neutral-900">{authentication.encryption}</span>
+										Encryption <span className="text-neutral-900">{authentication.encryption}</span>
 									</p>
 								)}
 								{hasDomainMismatchWarning(authentication) && (
 									<p className="mt-2 flex items-start gap-1.5 text-amber-800">
 										<ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-										<span>{t("message.detailsDomainMismatch")}</span>
+										<span>{"The signing domain differs from the sender's domain."}</span>
 									</p>
 								)}
 								{(hasPassingCheck || hasFailingCheck) && (
 									<div className="mt-3 rounded-lg bg-neutral-100/70 px-2.5 py-2">
 										<h4 className="text-[10px] font-semibold uppercase tracking-[0.08em] text-neutral-500">
-											{t("message.detailsExplanationTitle")}
+											What these results mean
 										</h4>
 										<div className="mt-1 space-y-1 text-[11px] leading-snug text-neutral-600">
-											{hasPassingCheck && <p>{t("message.detailsAuthenticationNote")}</p>}
-											{hasFailingCheck && <p>{t("message.detailsAuthenticationFailureNote")}</p>}
+											{hasPassingCheck && <p>A pass confirms the sending domain, not the person or company.</p>}
+											{hasFailingCheck && <p>A failed check means the sending domain could not be verified; it does not prove the message is malicious.</p>}
 										</div>
 									</div>
 								)}
@@ -213,7 +211,7 @@ export function MessageDetailsPanel({ message, onClose, className }: MessageDeta
 			<footer className="flex justify-end border-t border-neutral-100 px-3 py-2">
 				<Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-blue-600 hover:text-blue-700" onClick={() => setSourceOpen(true)}>
 					<ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-					{t("message.showOriginal")}
+					Show original
 				</Button>
 			</footer>
 			<MessageSourceDialog messageId={message.id} open={sourceOpen} onOpenChange={setSourceOpen} />

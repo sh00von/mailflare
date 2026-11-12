@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Providers } from "@/components/providers";
-import { LanguageProvider } from "@/components/language-provider";
-import { DEFAULT_LOCALE, getDirection } from "@/lib/i18n/utils";
-import { getRequestLocale, loadServerMessages } from "@/lib/i18n/server";
 import { sidebarBootstrapScript } from "@/components/sidebar-state-utils";
 import { themeBootstrapScript } from "@/components/theme-utils";
 import { getHomeBranding } from "./home-server-utils";
@@ -23,7 +20,7 @@ export async function generateMetadata(): Promise<Metadata> {
 	const { appName } = await getHomeBranding();
 	return {
 		title: appName,
-		description: "Self-hosted email, calendar, and drive",
+		description: "Business email on your own domain",
 		icons: { icon: "/api/branding/icon", apple: "/icon-192.png" },
 		appleWebApp: {
 			capable: true,
@@ -48,16 +45,15 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-	const locale = DEFAULT_LOCALE;
 	const branding = await getHomeBranding();
 	return (
-		<html lang={locale} dir="ltr" data-remote-image-proxy="enabled" suppressHydrationWarning>
+		<html lang="en" dir="ltr" data-remote-image-proxy="enabled" suppressHydrationWarning>
 			<head>
 				<script dangerouslySetInnerHTML={{ __html: sidebarBootstrapScript }} />
 				<script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
 			</head>
 			<body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-				<LanguageProvider initialLocale={locale}><Providers initialBranding={branding}>{children}</Providers></LanguageProvider>
+				<Providers initialBranding={branding}>{children}</Providers>
 			</body>
 		</html>
 	);

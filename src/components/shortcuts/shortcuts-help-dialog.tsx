@@ -2,8 +2,6 @@
 
 import React, { useId, useRef } from "react";
 import { X, Keyboard } from "@/components/icons";
-import { useLanguage } from "@/components/language-provider";
-import type { TranslationKey } from "@/lib/i18n/types";
 import type { ShortcutDefinition } from "./types";
 import { useDialogFocus } from "@/components/use-dialog-focus";
 
@@ -34,7 +32,6 @@ function ShortcutsHelpDialogContent({
   onClose,
   shortcuts,
 }: Omit<ShortcutsHelpDialogProps, "isOpen">) {
-  const { t } = useLanguage();
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const titleId = useId();
@@ -50,7 +47,7 @@ function ShortcutsHelpDialogContent({
     const parts: string[] = [];
     if (shortcut.modifiers) {
       shortcut.modifiers.forEach((m) => {
-        if (m === "ctrl") parts.push(t("shortcutsHelp.ctrl"));
+        if (m === "ctrl") parts.push("Ctrl");
         if (m === "meta") parts.push("⌘");
         if (m === "alt") parts.push("Alt");
         if (m === "shift") parts.push("Shift");
@@ -87,10 +84,10 @@ function ShortcutsHelpDialogContent({
             </div>
             <div>
               <h2 id={titleId} className="text-base font-semibold text-neutral-900">
-                {t("shortcutsHelp.title")}
+                Keyboard Shortcuts
               </h2>
               <p className="text-xs text-neutral-500">
-                {t("shortcutsHelp.subtitle")}
+                {"Superhuman & Gmail style quick keys"}
               </p>
             </div>
           </div>
@@ -98,7 +95,7 @@ function ShortcutsHelpDialogContent({
             ref={closeRef}
             type="button"
             onClick={onClose}
-            aria-label={t("shortcutsHelp.close")}
+            aria-label={"Close"}
             className="text-neutral-400 hover:text-neutral-700 p-1.5 rounded-lg hover:bg-neutral-100 transition-colors"
           >
             <X className="w-5 h-5" />
@@ -110,7 +107,7 @@ function ShortcutsHelpDialogContent({
           {Object.entries(grouped).map(([category, items]) => (
             <div key={category} className="space-y-3">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-500 border-b border-neutral-100 pb-1.5">
-                {t(`shortcut.category.${category}` as TranslationKey)}
+                {category}
               </h3>
               <div className="space-y-2">
                 {items.map((item, idx) => (
@@ -133,8 +130,8 @@ function ShortcutsHelpDialogContent({
 
         {/* Footer */}
         <div className="px-6 py-3 bg-neutral-50 border-t border-neutral-100 flex items-center justify-between text-xs text-neutral-500">
-          <span>{withKey(t("shortcutsHelp.pressToToggle", { key: "{key}" }), "?")}</span>
-          <span>{withKey(t("shortcutsHelp.pressToClose", { key: "{key}" }), "ESC")}</span>
+          <span>{withKey(`Press ${"{key}"} to toggle`, "?")}</span>
+          <span>{withKey(`Press ${"{key}"} to close`, "ESC")}</span>
         </div>
       </div>
     </div>

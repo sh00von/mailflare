@@ -1,7 +1,6 @@
-import type { TranslationKey } from "@/lib/i18n/types";
 
 export type ScheduleSendOption = {
-	labelKey: TranslationKey;
+	labelKey: string;
 	value: Date | null;
 };
 

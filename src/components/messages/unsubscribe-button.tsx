@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { MailCheck } from "@/components/icons";
 import { useCompose } from "@/components/compose/compose-context";
-import { useLanguage } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { openUnsubscribeUrl } from "@/components/message-actions/utils";
@@ -15,7 +14,6 @@ import { requestUnsubscribe } from "./unsubscribe-button-utils";
  * outcome and keeps an "Unsubscribed" state instead of offering it twice.
  */
 export function MessageUnsubscribeButton({ messageId, variant = "header" }: { messageId: string; variant?: "header" | "row" }) {
-	const { t } = useLanguage();
 	const { showNotice } = useCompose();
 	const [pending, setPending] = useState(false);
 	const [done, setDone] = useState(false);
@@ -25,20 +23,20 @@ export function MessageUnsubscribeButton({ messageId, variant = "header" }: { me
 	async function onUnsubscribe() {
 		setConfirmOpen(false);
 		setPending(true);
-		showNotice(t("actions.unsubscribing"), { tone: "loading" });
+		showNotice("Unsubscribing…", { tone: "loading" });
 		try {
 			const result = await requestUnsubscribe(messageId);
 			setDone(true);
 			if (result.method === "link") {
 				openUnsubscribeUrl(result.url);
-				showNotice(t("actions.unsubscribeLinkOpened"));
+				showNotice("Unsubscribe page opened in a new tab");
 			} else if (result.method === "mailto") {
-				showNotice(t("actions.unsubscribeEmailSent"));
+				showNotice("Unsubscribe email sent");
 			} else {
-				showNotice(t("actions.unsubscribed"));
+				showNotice("Unsubscribed");
 			}
 		} catch {
-			showNotice(t("actions.unsubscribeFailed"), { tone: "error" });
+			showNotice("Could not unsubscribe", { tone: "error" });
 		} finally {
 			setPending(false);
 		}
@@ -49,7 +47,7 @@ export function MessageUnsubscribeButton({ messageId, variant = "header" }: { me
 		return (
 			<span role="status" className="flex items-center gap-1 px-1 text-xs font-medium text-green-700">
 				<MailCheck className="h-3.5 w-3.5" aria-hidden="true" />
-				{t("actions.unsubscribed")}
+				Unsubscribed
 			</span>
 		);
 	}
@@ -67,21 +65,21 @@ export function MessageUnsubscribeButton({ messageId, variant = "header" }: { me
 					setConfirmOpen(true);
 				}}
 			>
-				{t("actions.unsubscribe")}
+				Unsubscribe
 			</Button>
 			<Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
 				{/* React events bubble through the portal; keep clicks from reaching the list row. */}
 				<DialogContent onClick={(event) => event.stopPropagation()}>
 					<DialogHeader>
-						<DialogTitle>{t("actions.unsubscribeConfirmTitle")}</DialogTitle>
-						<DialogDescription>{t("actions.unsubscribeConfirmDescription")}</DialogDescription>
+						<DialogTitle>Unsubscribe from this sender?</DialogTitle>
+						<DialogDescription>{"We'll ask the sender to remove you from their mailing list. If they don't support one-click unsubscribe, we'll send an unsubscribe email or open their page."}</DialogDescription>
 					</DialogHeader>
 					<div className="flex justify-end gap-2">
 						<Button type="button" variant="outline" size="sm" onClick={() => setConfirmOpen(false)}>
-							{t("common.cancel")}
+							Cancel
 						</Button>
 						<Button type="button" size="sm" onClick={() => void onUnsubscribe()}>
-							{t("actions.unsubscribe")}
+							Unsubscribe
 						</Button>
 					</div>
 				</DialogContent>

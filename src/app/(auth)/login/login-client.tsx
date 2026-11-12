@@ -10,7 +10,6 @@ import {
 	WebAuthnAbortService,
 } from "@simplewebauthn/browser";
 import { KeyRound, Mail, ShieldCheck } from "@/components/icons";
-import { useLanguage } from "@/components/language-provider";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,7 +27,6 @@ import {
 } from "./utils";
 
 export function LoginClient({ adding = false }: { adding?: boolean }) {
-  const { t } = useLanguage();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -78,7 +76,7 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
 
   async function onPasskey() {
     if (!browserSupportsWebAuthn()) {
-      setError(t("passkey.browserUnsupported"));
+      setError("This browser does not support passkeys");
       return;
     }
     setLoading(true);
@@ -86,12 +84,12 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
     try {
       const { ok, data } = await submitPasskeyLogin();
       if (!ok) {
-        setError(authErrorText(data.code, t, "passkey.loginFailed"));
+        setError(authErrorText(data.code, "Passkey sign-in failed"));
         return;
       }
       finish(data.redirect);
     } catch (err) {
-      setError(isPasskeyCancellation(err) ? t("authError.passkeyCancelled") : t("authError.passkeyUnavailable"));
+      setError(isPasskeyCancellation(err) ? "The passkey prompt was cancelled or timed out." : "Passkey sign-in is unavailable.");
     } finally {
       setLoading(false);
     }
@@ -108,12 +106,12 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
           setChallengeToken(null);
           setMethods([]);
         }
-        setError(authErrorText(data.code, t, "passkey.loginFailed"));
+        setError(authErrorText(data.code, "Passkey sign-in failed"));
         return;
       }
       finish(data.redirect);
     } catch (err) {
-      setError(isPasskeyCancellation(err) ? t("authError.passkeyCancelled") : t("authError.passkeyUnavailable"));
+      setError(isPasskeyCancellation(err) ? "The passkey prompt was cancelled or timed out." : "Passkey sign-in is unavailable.");
     } finally {
       setLoading(false);
     }
@@ -127,7 +125,7 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
     try {
       const { ok, data } = await submitLogin(new FormData(e.currentTarget));
       if (!ok) {
-        setError(authErrorText(data.code, t, "auth.loginFailed"));
+        setError(authErrorText(data.code, "Login failed"));
         setTurnstileReset((value) => value + 1);
         return;
       }
@@ -140,8 +138,8 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
     } catch (error) {
       setError(
         error instanceof DOMException && error.name === "TimeoutError"
-          ? t("auth.loginTimeout")
-          : t("auth.loginUnreachable"),
+          ? "Login timed out. Please try again."
+          : "Unable to reach the login service. Please try again.",
       );
       setTurnstileReset((value) => value + 1);
     } finally {
@@ -162,12 +160,12 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
           setMethods([]);
           setCode("");
         }
-        setError(authErrorText(data.code, t, "auth.codeMismatch"));
+        setError(authErrorText(data.code, "That code did not match"));
         return;
       }
       finish(data.redirect);
     } catch {
-      setError(t("auth.loginUnreachable"));
+      setError("Unable to reach the login service. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -180,16 +178,16 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
     const canUsePasskey = methods.includes("passkey");
     const description = canUsePasskey
       ? hasCodeMethods
-        ? t("auth.mfaPasskeyOrCodeDescription")
-        : t("auth.mfaPasskeyDescription")
+        ? "Confirm with your passkey, or enter a code from your authenticator app."
+        : "Use your passkey to finish signing in."
       : methods.length === 0 || methods.includes("recovery")
-        ? t("auth.mfaDescription")
-        : t("auth.mfaCodeDescription");
-    const codeLabel = methods.includes("recovery") ? t("auth.codeOrRecovery") : t("auth.codeLabel");
+        ? "Enter the code from your authenticator app, or one of its recovery codes."
+        : "Enter the code from your authenticator app.";
+    const codeLabel = methods.includes("recovery") ? "Authenticator code or recovery code" : "Authenticator code";
     return (
       <AuthShell
         icon={ShieldCheck}
-        title={t("auth.mfaTitle")}
+        title={"Two-factor authentication"}
         description={description}
       >
         <form onSubmit={onSubmitCode} className="space-y-5">
@@ -202,10 +200,10 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
                 onClick={() => void onPasskeyMfa()}
               >
                 <KeyRound className="h-4 w-4" />
-                {t("passkey.usePasskey")}
+                Use a passkey
               </Button>
               {hasCodeMethods && (
-                <p className="text-center text-xs uppercase tracking-wide text-neutral-400">{t("passkey.orCode")}</p>
+                <p className="text-center text-xs uppercase tracking-wide text-neutral-400">Or use a code</p>
               )}
             </div>
           )}
@@ -224,14 +222,14 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
                   autoCorrect="off"
                   spellCheck={false}
                   autoFocus
-                  placeholder={t("auth.codePlaceholder")}
+                  placeholder={"123 456 or abcde-fghjk"}
                   aria-invalid={error ? true : undefined}
                   aria-describedby={error ? "mfa-error" : undefined}
                   required={hasCodeMethods}
                 />
               </div>
               <Button type="submit" className="h-11 w-full rounded-full px-6 active:scale-[0.98]" disabled={loading}>
-                {loading ? t("auth.verifying") : t("auth.verify")}
+                {loading ? "Verifying..." : "Verify"}
               </Button>
             </>
           )}
@@ -241,7 +239,7 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
             </p>
           )}
           {!hasCodeMethods && (
-            <p className="text-xs leading-5 text-neutral-500">{t("passkey.lostAllHint")}</p>
+            <p className="text-xs leading-5 text-neutral-500">Lost every passkey? Ask an administrator for a recovery link. If you are the only administrator, use the server recovery procedure.</p>
           )}
           <button
             type="button"
@@ -253,7 +251,7 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
               setError(null);
             }}
           >
-            {t("auth.backToSignIn")}
+            Back to sign in
           </button>
         </form>
       </AuthShell>
@@ -263,16 +261,16 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
   return (
     <AuthShell
       icon={Mail}
-      title={adding ? t("auth.addAnother") : t("auth.signIn")}
+      title={adding ? "Add another account" : "Sign in"}
       description={
         adding
-          ? t("auth.addDescription")
-          : t("auth.signInDescription")
+          ? "Sign in to another account. You can switch between accounts from the account menu."
+          : "Open your mailbox and continue from the same inbox workspace."
       }
     >
       <form method="post" onSubmit={onSubmit} className="space-y-5">
         <div className="space-y-2">
-          <Label htmlFor="email">{t("auth.email")}</Label>
+          <Label htmlFor="email">Email</Label>
           <Input
             id="email"
             name="email"
@@ -285,9 +283,9 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
         </div>
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <Label htmlFor="password">{t("auth.password")}</Label>
+            <Label htmlFor="password">Password</Label>
             <Link href="/forgot-password" className="text-xs font-medium text-blue-600 hover:underline">
-              {t("auth.forgotPassword")}
+              Forgot password?
             </Link>
           </div>
           <Input
@@ -311,7 +309,7 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
           className="h-11 w-full rounded-full px-6 active:scale-[0.98]"
           disabled={loading}
         >
-          {loading ? t("auth.signingIn") : t("auth.signIn")}
+          {loading ? "Signing in..." : "Sign in"}
         </Button>
         {!adding && (
           <p className="text-center text-sm text-neutral-600">
@@ -321,7 +319,7 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
             </Link>
           </p>
         )}
-        <p className="text-center text-xs uppercase tracking-wide text-neutral-400">{t("passkey.or")}</p>
+        <p className="text-center text-xs uppercase tracking-wide text-neutral-400">or</p>
         <Button
           type="button"
           variant="outline"
@@ -330,7 +328,7 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
           onClick={() => void onPasskey()}
         >
           <KeyRound className="h-4 w-4" />
-          {t("passkey.signIn")}
+          Sign in with a passkey
         </Button>
       </form>
     </AuthShell>

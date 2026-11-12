@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Check, Copy, RefreshCw } from "@/components/icons";
-import { useLanguage } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
 import { dnsAuthDescriptions, getDnsAuthItemClass } from "./utils";
 import { ROW_GRID, StatusBadge } from "./status-row";
@@ -36,7 +35,6 @@ export default function DomainDnsDetails({
 	setupMessage,
 	onDnsChanged,
 }: DomainDnsDetailsProps) {
-	const { t } = useLanguage();
 	const [checking, setChecking] = useState(false);
 	const audit = dns.audit;
 	const mailHost = `mail.${domain.hostname}`;
@@ -129,8 +127,8 @@ export default function DomainDnsDetails({
 								<li key={record} className={`${ROW_GRID} ${dkimManaged ? "border-neutral-200 bg-neutral-50/70" : getDnsAuthItemClass(item.status)}`}>
 									<StatusBadge ok={ok || dkimManaged} tone={item.status === "missing" && !dkimManaged ? "red" : "neutral"} />
 									<span className="min-w-0">
-										<span className="block font-medium text-neutral-900">{t("domains.recordLabel", { label: item.label })}</span>
-										<span className="block text-xs text-neutral-500">{t(dnsAuthDescriptions[record])}</span>
+										<span className="block font-medium text-neutral-900">{`${item.label} record`}</span>
+										<span className="block text-xs text-neutral-500">{dnsAuthDescriptions[record]}</span>
 									</span>
 									{ok ? (
 										<span className="min-w-0 break-all font-mono text-xs text-neutral-600">

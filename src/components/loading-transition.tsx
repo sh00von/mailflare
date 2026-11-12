@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useIsFetching } from "@tanstack/react-query";
 import { useBranding } from "@/components/branding-provider";
-import { useLanguage } from "@/components/language-provider";
 import { PageLoadingContext } from "@/components/page-loading";
 import { RouteLoadingBar } from "@/components/route-loading-bar";
 import type { LoadingTransitionProps } from "./loading-transition-types";
@@ -14,7 +13,6 @@ const MAXIMUM_DATA_WAIT = 10_000;
 let hasShownInitialLoadingTransition = false;
 
 export function LoadingTransition({ children, ready }: LoadingTransitionProps) {
-	const { t } = useLanguage();
 	const branding = useBranding();
 	const showInitialLoader = useRef(!hasShownInitialLoadingTransition).current;
 	const startedAt = useRef(Date.now());
@@ -105,7 +103,7 @@ export function LoadingTransition({ children, ready }: LoadingTransitionProps) {
 						loaderVisible ? "opacity-100" : "pointer-events-none opacity-0"
 					}`}
 				>
-					<span className="sr-only">{loaderVisible ? t("nav.loading") : ""}</span>
+					<span className="sr-only">{loaderVisible ? "Loading" : ""}</span>
 					<div aria-hidden="true" className="flex w-64 flex-col items-center gap-6">
 						<img
 							src={iconUrl}

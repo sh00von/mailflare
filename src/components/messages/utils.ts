@@ -8,7 +8,6 @@ import type { MailboxOption } from "@/components/mailbox-provider";
 import type { EmailPageTitleInput } from "./types";
 import type { MessageFolderConfig } from "./types";
 import type { PageRange } from "./types";
-import { defaultTranslator, type Translator } from "@/lib/i18n/utils";
 import type { PermanentDeleteFolder } from "@/app/api/messages/bulk/types";
 import { throwIfDeleteSkipped } from "@/lib/messages/permanent-delete-utils";
 import type { EmptyFolderResponse } from "@/app/api/messages/empty/types";
@@ -17,18 +16,17 @@ export function getMessageParty(
 	message: Message,
 	folder: MessageFolderConfig["folder"],
 	currentAccountName?: string,
-	t: Translator = defaultTranslator,
 ) {
-	if (folder === "drafts") return t("list.draft");
-	if (folder === "sent" || folder === "scheduled") return formatRecipientSummary(message.toAddr, message.toContactName, t);
+	if (folder === "drafts") return "Draft";
+	if (folder === "sent" || folder === "scheduled") return formatRecipientSummary(message.toAddr, message.toContactName);
 	if (message.direction === "outbound" && currentAccountName) return currentAccountName;
-	return message.fromContactName ?? (message.fromAddr ? getEmailDisplayName(message.fromAddr) : t("list.unknownSender"));
+	return message.fromContactName ?? (message.fromAddr ? getEmailDisplayName(message.fromAddr) : "Unknown sender");
 }
 
 /** "Maya Chen, +2" for a multi-recipient message, or just the one name. */
-export function formatRecipientSummary(toAddr: string, firstContactName?: string | null, t: Translator = defaultTranslator): string {
+export function formatRecipientSummary(toAddr: string, firstContactName?: string | null): string {
 	const entries = splitEmailAddressList(toAddr);
-	if (entries.length === 0) return t("list.noRecipient");
+	if (entries.length === 0) return "No recipient";
 	const first = firstContactName ?? getEmailDisplayName(entries[0]);
 	return entries.length > 1 ? `${first}, +${entries.length - 1}` : first;
 }
@@ -56,9 +54,9 @@ export function getUnreadFlipCount(message: Message, readValue: boolean): number
 	return message.read === readValue ? 0 : 1;
 }
 
-export function getMessagePreview(message: Message, folder: MessageFolderConfig["folder"], t: Translator = defaultTranslator) {
-	if (folder === "drafts") return message.snippet || message.toAddr || t("list.noContent");
-	return message.snippet || t("thread.noPreview");
+export function getMessagePreview(message: Message, folder: MessageFolderConfig["folder"]) {
+	if (folder === "drafts") return message.snippet || message.toAddr || "No content";
+	return message.snippet || "No preview";
 }
 
 export function formatMessageListTimestamp(createdAt: string): string {
@@ -103,7 +101,7 @@ export async function runBulkMessageAction(messageIds: string[], action: string,
 		body: JSON.stringify({ messageIds, action, folderId }),
 	});
 
-	if (!response.ok) throw new Error(defaultTranslator("error.updateSelected"));
+	if (!response.ok) throw new Error("Unable to update selected messages");
 	await throwIfDeleteSkipped(response, action);
 	const readChanged = action === "read" || action === "unread";
 	if (readChanged) markMessagesReadInCaches(messageIds, action === "read");
@@ -126,7 +124,7 @@ export async function emptyMessageFolder(mailboxId: string, folder: PermanentDel
 			body: JSON.stringify({ mailboxId, folder }),
 		});
 		const data = (await response.json().catch(() => ({}))) as EmptyFolderResponse;
-		if (!response.ok) throw new Error(data.error ?? defaultTranslator("error.emptyFolder"));
+		if (!response.ok) throw new Error(data.error ?? "Unable to empty folder");
 		deletedTotal += data.deleted ?? 0;
 		if (!data.remaining || !data.deleted) break;
 	}

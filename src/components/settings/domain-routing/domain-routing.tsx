@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ban, Forward, Inbox, Info, Pencil, Plus, Trash2 } from "@/components/icons";
-import { useLanguage } from "@/components/language-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -45,7 +44,6 @@ const ACTION_ICONS = {
 } as const;
 
 export function DomainRouting({ domain }: DomainRoutingProps = {}) {
-	const { t } = useLanguage();
 	const qc = useQueryClient();
 	const { selectedMailbox, isLoading: isMailboxLoading } = useSelectedMailbox();
 	const currentUser = useCurrentUser();
@@ -118,18 +116,18 @@ export function DomainRouting({ domain }: DomainRoutingProps = {}) {
 			<div className="flex flex-wrap items-end justify-between gap-4">
 				<div>
 					<div className="flex items-center gap-2">
-						<h2 className="text-2xl font-semibold">{t("routing.title")}</h2>
-						<Tooltip label={t("routing.about")}>
-							<button type="button" aria-label={t("routing.aboutLabel")} className="text-neutral-400 hover:text-neutral-700">
+						<h2 className="text-2xl font-semibold">Domain routing</h2>
+						<Tooltip label={"Block, forward, or deliver mail arriving at this domain."}>
+							<button type="button" aria-label={"About domain routing"} className="text-neutral-400 hover:text-neutral-700">
 								<Info className="h-4 w-4" />
 							</button>
 						</Tooltip>
 					</div>
-					<p className="mt-1 text-sm text-neutral-500">{t("routing.rulesFor", { host: hostname || t("routing.selectInbox") })}</p>
+					<p className="mt-1 text-sm text-neutral-500">{`Rules for ${hostname || "Select an inbox"}`}</p>
 				</div>
 				<div className="flex items-end gap-2">
 					<Button onClick={openCreate} disabled={!domainId}>
-						<Plus className="h-4 w-4" /> {t("routing.addRoute")}
+						<Plus className="h-4 w-4" /> Add route
 					</Button>
 				</div>
 			</div>
@@ -139,15 +137,15 @@ export function DomainRouting({ domain }: DomainRoutingProps = {}) {
 			) : !domain && !mailboxId ? (
 				<Card>
 					<CardContent className="pt-6 text-sm text-neutral-500">
-						{t("routing.selectInboxFirst")}
+						Select an inbox before creating routing rules.
 					</CardContent>
 				</Card>
 			) : (
 				<div className="space-y-1 overflow-hidden rounded-3xl">
 					<RuleSection
 						className="rounded-b-lg rounded-t-3xl"
-						title={t("routing.blockRules")}
-						description={t("routing.blockRulesDescription")}
+						title={"Block rules"}
+						description={"Evaluated before delivery. Matching mail is rejected at the edge."}
 						rules={blockRules}
 						hostname={hostname}
 						mailboxes={mailboxes}
@@ -157,8 +155,8 @@ export function DomainRouting({ domain }: DomainRoutingProps = {}) {
 					/>
 					<RuleSection
 						className="rounded-b-3xl rounded-t-lg"
-						title={t("routing.catchAll")}
-						description={t("routing.catchAllDescription")}
+						title={"Catch-all and forwarding"}
+						description={"Evaluated only when no mailbox on the domain matched the recipient."}
 						rules={fallbackRules}
 						hostname={hostname}
 						mailboxes={mailboxes}
@@ -173,8 +171,8 @@ export function DomainRouting({ domain }: DomainRoutingProps = {}) {
 				{/* The form grows when the action changes, so the dialog must scroll rather than overflow the viewport. */}
 				<DialogContent className="max-h-[calc(100vh-4rem)] overflow-y-auto sm:max-w-[560px]">
 					<DialogHeader>
-						<DialogTitle>{editing ? t("routing.editRule") : t("routing.addRule")}</DialogTitle>
-						<DialogDescription>{t("routing.dialogDescription")}</DialogDescription>
+						<DialogTitle>{editing ? "Edit rule" : "Add routing rule"}</DialogTitle>
+						<DialogDescription>Choose what happens to matching mail.</DialogDescription>
 					</DialogHeader>
 
 					<form
@@ -186,17 +184,17 @@ export function DomainRouting({ domain }: DomainRoutingProps = {}) {
 					>
 						<div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-2">
 						<div className="grid min-w-0 gap-2">
-							<Label htmlFor="rule-name">{t("common.name")}</Label>
+							<Label htmlFor="rule-name">Name</Label>
 							<Input
 								id="rule-name"
 								value={form.name ?? ""}
-								placeholder={t("routing.optionalLabel")}
+								placeholder={"Optional label"}
 								onChange={(e) => setForm({ ...form, name: e.target.value })}
 							/>
 						</div>
 
 						<div className="grid min-w-0 gap-2">
-							<Label htmlFor="rule-action">{t("routing.action")}</Label>
+							<Label htmlFor="rule-action">Action</Label>
 							<RoutingRuleSelect
 								id="rule-action"
 								value={form.action}
@@ -206,7 +204,7 @@ export function DomainRouting({ domain }: DomainRoutingProps = {}) {
 							>
 								{Object.entries(ACTION_LABELS).map(([value, label]) => (
 									<option key={value} value={value}>
-										{t(label)}
+										{label}
 									</option>
 								))}
 							</RoutingRuleSelect>
@@ -215,7 +213,7 @@ export function DomainRouting({ domain }: DomainRoutingProps = {}) {
 
 						<div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-2">
 							<div className="grid min-w-0 gap-2">
-								<Label htmlFor="rule-field">{t("routing.matchOn")}</Label>
+								<Label htmlFor="rule-field">Match on</Label>
 								<RoutingRuleSelect
 									id="rule-field"
 									value={form.matchField}
@@ -225,13 +223,13 @@ export function DomainRouting({ domain }: DomainRoutingProps = {}) {
 								>
 									{Object.entries(MATCH_FIELD_LABELS).map(([value, label]) => (
 										<option key={value} value={value}>
-											{t(label)}
+											{label}
 										</option>
 									))}
 								</RoutingRuleSelect>
 							</div>
 							<div className="grid min-w-0 gap-2">
-								<Label htmlFor="rule-operator">{t("routing.condition")}</Label>
+								<Label htmlFor="rule-operator">Condition</Label>
 								<RoutingRuleSelect
 									id="rule-operator"
 									value={form.matchOperator}
@@ -244,7 +242,7 @@ export function DomainRouting({ domain }: DomainRoutingProps = {}) {
 								>
 									{Object.entries(MATCH_OPERATOR_LABELS).map(([value, label]) => (
 										<option key={value} value={value}>
-											{t(label)}
+											{label}
 										</option>
 									))}
 								</RoutingRuleSelect>
@@ -254,24 +252,24 @@ export function DomainRouting({ domain }: DomainRoutingProps = {}) {
 						<div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-2">
 							<div className="grid min-w-0 gap-2">
 								<div className="flex items-center gap-2">
-									<Label htmlFor="rule-value">{t("routing.matchValue")}</Label>
-									<Tooltip label={t("routing.matchAllHint")}>
-										<button type="button" aria-label={t("routing.matchAllHint")} className="text-neutral-500"><Info className="h-4 w-4" /></button>
+									<Label htmlFor="rule-value">Match value</Label>
+									<Tooltip label={"Use * to match every message."}>
+										<button type="button" aria-label={"Use * to match every message."} className="text-neutral-500"><Info className="h-4 w-4" /></button>
 									</Tooltip>
 								</div>
 								<Input
 									id="rule-value"
 									required
 									value={form.matchValue}
-									placeholder={t("routing.matchAllPlaceholder")}
+									placeholder={"* to match everything"}
 									onChange={(e) => setForm({ ...form, matchValue: e.target.value })}
 								/>
 							</div>
 							<div className="grid min-w-0 gap-2">
 								<div className="flex items-center gap-2">
-									<Label htmlFor="rule-priority">{t("routing.priority")}</Label>
-									<Tooltip label={t("routing.priorityHint")}>
-										<button type="button" aria-label={t("routing.priorityHint")} className="text-neutral-500"><Info className="h-4 w-4" /></button>
+									<Label htmlFor="rule-priority">Priority</Label>
+									<Tooltip label={"Higher numbers run first."}>
+										<button type="button" aria-label={"Higher numbers run first."} className="text-neutral-500"><Info className="h-4 w-4" /></button>
 									</Tooltip>
 								</div>
 								<Input
@@ -289,25 +287,25 @@ export function DomainRouting({ domain }: DomainRoutingProps = {}) {
 							<div className={form.action === "forward" ? "grid grid-cols-1 items-end gap-4 sm:grid-cols-2" : "grid min-w-0 gap-2"}>
 							<div className="grid min-w-0 gap-2">
 								<Label htmlFor="rule-mailbox">
-									{form.action === "forward" ? t("routing.keptCopyMailbox") : t("routing.destinationMailbox")}
+									{form.action === "forward" ? "Mailbox for the kept copy" : "Destination mailbox"}
 								</Label>
 								<RoutingRuleSelect
 									id="rule-mailbox"
 									value={form.mailboxId ?? ""}
 									onChange={(e) => setForm({ ...form, mailboxId: e.target.value || null })}
 								>
-									<option value="">{t("routing.selectMailbox")}</option>
+									<option value="">Select a mailbox</option>
 									{mailboxes.map((mailbox) => (
 										<option key={mailbox.id} value={mailbox.id}>
 											{mailbox.localPart}@{hostname}
-											{mailbox.disabled ? t("routing.disabledSuffix") : ""}
+											{mailbox.disabled ? " (disabled)" : ""}
 										</option>
 									))}
 								</RoutingRuleSelect>
 							</div>
 							{form.action === "forward" && (
 								<div className="grid min-w-0 gap-2">
-									<Label htmlFor="rule-forward">{t("routing.forwardTo")}</Label>
+									<Label htmlFor="rule-forward">Forward to</Label>
 									<Input
 										id="rule-forward"
 										type="email"
@@ -324,27 +322,27 @@ export function DomainRouting({ domain }: DomainRoutingProps = {}) {
 							<div className="flex items-center justify-between rounded-lg border border-neutral-200 px-3 py-2">
 								<div>
 									<div className="flex items-center gap-2">
-										<p className="text-sm font-medium">{t("routing.keepCopy")}</p>
-										<Tooltip label={t("routing.keepCopyHint")}>
-											<button type="button" aria-label={t("routing.keepCopyHint")} className="text-neutral-500"><Info className="h-4 w-4" /></button>
+										<p className="text-sm font-medium">Keep a copy</p>
+										<Tooltip label={"Also store the message in the selected inbox."}>
+											<button type="button" aria-label={"Also store the message in the selected inbox."} className="text-neutral-500"><Info className="h-4 w-4" /></button>
 										</Tooltip>
 									</div>
 								</div>
 								<Switch
 									checked={form.keepCopy}
 									onCheckedChange={(keepCopy) => setForm({ ...form, keepCopy })}
-									aria-label={t("routing.keepCopy")}
+									aria-label={"Keep a copy"}
 								/>
 							</div>
 						)}
 
 						{form.action === "reject" && (
 							<div className="grid min-w-0 gap-2">
-								<Label htmlFor="rule-reason">{t("routing.rejectReason")}</Label>
+								<Label htmlFor="rule-reason">Rejection reason</Label>
 								<Input
 									id="rule-reason"
 									value={form.rejectReason ?? ""}
-									placeholder={t("routing.rejectPlaceholder")}
+									placeholder={"Message rejected by routing rule"}
 									onChange={(e) => setForm({ ...form, rejectReason: e.target.value })}
 								/>
 							</div>
@@ -354,10 +352,10 @@ export function DomainRouting({ domain }: DomainRoutingProps = {}) {
 
 						<div className="flex justify-end gap-2 border-t border-neutral-200 pt-4">
 							<Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-								{t("common.cancel")}
+								Cancel
 							</Button>
 							<Button type="submit" disabled={save.isPending}>
-								{editing ? t("rules.saveChanges") : t("rules.create")}
+								{editing ? "Save changes" : "Create rule"}
 							</Button>
 						</div>
 					</form>
@@ -388,7 +386,6 @@ function RuleSection({
 	onDelete: (id: string) => void;
 	onToggle: (rule: DomainRule) => void;
 }) {
-	const { t } = useLanguage();
 	return (
 		<Card className={`${className} border-0 bg-white px-6`}>
 			<CardHeader>
@@ -401,11 +398,11 @@ function RuleSection({
 			</CardHeader>
 			<CardContent className="space-y-2 pb-5">
 				{rules.length === 0 ? (
-					<p className="text-sm text-neutral-500">{t("routing.noRules")}</p>
+					<p className="text-sm text-neutral-500">No rules yet.</p>
 				) : (
 					rules.map((rule) => {
 						const Icon = ACTION_ICONS[rule.action];
-						const ruleName = rule.name || describeRule(rule, mailboxes, hostname, t);
+						const ruleName = rule.name || describeRule(rule, mailboxes, hostname);
 						return (
 							<div
 								key={rule.id}
@@ -417,22 +414,22 @@ function RuleSection({
 										<p className="truncate text-sm font-medium">
 											{ruleName}
 										</p>
-										{!rule.enabled && <Badge variant="secondary">{t("routing.disabled")}</Badge>}
+										{!rule.enabled && <Badge variant="secondary">Disabled</Badge>}
 									</div>
 									{rule.name && (
 										<p className="truncate text-xs text-neutral-500">
-											{describeRule(rule, mailboxes, hostname, t)}
+											{describeRule(rule, mailboxes, hostname)}
 										</p>
 									)}
 									<p className="text-xs text-neutral-500">
-										{t("routing.stats", { priority: rule.priority, count: rule.matchCount, last: formatLastMatched(rule.lastMatchedAt, t) })}
+										{`Priority ${rule.priority} · matched ${rule.matchCount}× · last ${formatLastMatched(rule.lastMatchedAt)}`}
 									</p>
 								</div>
-								<Switch checked={rule.enabled} onCheckedChange={() => onToggle(rule)} aria-label={`${t("routing.enableRule")}: ${ruleName}`} />
-								<Button variant="ghost" size="sm" onClick={() => onEdit(rule)} aria-label={`${t("routing.editRule")}: ${ruleName}`}>
+								<Switch checked={rule.enabled} onCheckedChange={() => onToggle(rule)} aria-label={`${"Enable rule"}: ${ruleName}`} />
+								<Button variant="ghost" size="sm" onClick={() => onEdit(rule)} aria-label={`${"Edit rule"}: ${ruleName}`}>
 									<Pencil className="h-4 w-4" />
 								</Button>
-								<Button variant="ghost" size="sm" onClick={() => onDelete(rule.id)} aria-label={`${t("rules.delete")}: ${ruleName}`}>
+								<Button variant="ghost" size="sm" onClick={() => onDelete(rule.id)} aria-label={`${"Delete rule"}: ${ruleName}`}>
 									<Trash2 className="h-4 w-4 text-red-600" />
 								</Button>
 							</div>

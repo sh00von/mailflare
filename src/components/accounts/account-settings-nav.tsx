@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
-import { useLanguage } from "@/components/language-provider";
 import { cn } from "@/lib/utils";
 import { SectionNavSheet } from "../section-nav-sheet";
 import {
@@ -12,17 +11,16 @@ import {
 } from "./account-settings-nav-utils";
 
 export function AccountSettingsNav() {
-	const { t } = useLanguage();
 	const { id } = useParams<{ id: string }>();
 	const pathname = usePathname();
 	const currentItem = accountSettingsNavItems.find((item) => isActiveAccountSettingsPath(pathname, getAccountSettingsHref(id, item.segment)));
-	const currentLabel = t(currentItem?.labelKey ?? "accountSettings.title");
+	const currentLabel = currentItem?.labelKey ?? "Account settings";
 
 	return (
-		<SectionNavSheet title={t("accountSettings.menu")} label={currentLabel} className="w-full shrink-0 px-4 py-4 md:w-48 md:px-0 md:py-0">
+		<SectionNavSheet title={"Account settings menu"} label={currentLabel} className="w-full shrink-0 px-4 py-4 md:w-48 md:px-0 md:py-0">
 			<div className="sticky top-6 space-y-3">
 				<h2 className="px-4 text-xs font-semibold uppercase tracking-wide text-neutral-500">
-					{t("accountSettings.title")}
+					Account settings
 				</h2>
 				<nav className="space-y-1">
 					{accountSettingsNavItems.map((item) => {
@@ -38,7 +36,7 @@ export function AccountSettingsNav() {
 										: "text-neutral-600 hover:bg-white/70 hover:text-neutral-900",
 								)}
 							>
-								{t(item.labelKey)}
+								{item.labelKey}
 							</Link>
 						);
 					})}

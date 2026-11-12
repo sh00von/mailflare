@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { DragEvent } from "react";
 import { BellRing, ChevronUp, Eye, EyeOff, FileText, Forward, Maximize2, Minimize2, Minus, Paperclip, Reply, Trash2, X } from "@/components/icons";
 import { useRouter } from "next/navigation";
-import { useLanguage } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,7 +26,7 @@ import { RecipientInput } from "./recipient-input";
 import { RichTextEditor } from "./rich-text-editor";
 import { ScheduleSendMenu } from "./schedule-send-menu";
 import { isPastSchedule } from "./schedule-send-utils";
-import { DELIVERY_WAIT_MS, SCHEDULED_NOTICE_MS, SENT_NOTICE_MS, resolveSendNotice, splitSendTemplate } from "./send-notice-utils";
+import { DELIVERY_WAIT_MS, SCHEDULED_NOTICE_MS, SEND_NOTICE_TEMPLATES, SENT_NOTICE_MS, resolveSendNotice, splitSendTemplate } from "./send-notice-utils";
 import type { SendNoticeParts, SendResult } from "./send-notice-utils";
 import {
 	applyMailboxSignatureHtml,
@@ -52,7 +51,6 @@ export function ComposeForm({
 	draftIdToLoad?: string | null;
 	onClose?: () => void;
 }) {
-	const { t } = useLanguage();
 	const router = useRouter();
 	const { showNotice, openDraftComposer, isCurrentNotice } = useCompose();
 	const { selectedMailbox, setSelectedMailbox, mailboxes } = useSelectedMailbox();
@@ -205,7 +203,7 @@ export function ComposeForm({
 			})
 			.catch((err) => {
 				if (cancelled) return;
-				const message = err instanceof Error ? err.message : t("compose.error.loadDraft");
+				const message = err instanceof Error ? err.message : "Failed to load draft";
 				setToast({ type: "error", message });
 			})
 			.finally(() => {
@@ -289,7 +287,7 @@ export function ComposeForm({
 				const result = (await uploaded.json()) as { attachments?: ComposeStoredAttachment[]; error?: string };
 				if (!uploaded.ok) {
 					for (const attachment of pending) rejectedFiles.current.add(attachment.file);
-					setToast({ type: "error", message: result.error || t("compose.error.draftAttachments") });
+					setToast({ type: "error", message: result.error || "Could not add attachments to the draft" });
 					return;
 				}
 				for (const attachment of pending) uploadedFiles.current.add(attachment.file);
@@ -318,20 +316,20 @@ export function ComposeForm({
 	async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
 		event.preventDefault();
 		if (to.length === 0) {
-			setToast({ type: "error", message: t("compose.error.noRecipient") });
+			setToast({ type: "error", message: "Add at least one recipient" });
 			return;
 		}
 		const invalid = [...to, ...cc, ...bcc].find((entry) => !isValidRecipient(entry));
 		if (invalid) {
-			setToast({ type: "error", message: t("compose.error.invalidAddress", { address: invalid }) });
+			setToast({ type: "error", message: `"${invalid}" is not a valid email address` });
 			return;
 		}
 		if (!hasMeaningfulHtml(html) && !quotedHtml) {
-			setToast({ type: "error", message: t("compose.error.emptyBody") });
+			setToast({ type: "error", message: "Write a message before sending" });
 			return;
 		}
 		if (scheduledAt && isPastSchedule(scheduledAt)) {
-			setToast({ type: "error", message: t("schedule.pastTime") });
+			setToast({ type: "error", message: "Pick a time that has not passed yet." });
 			return;
 		}
 		if (saveTimer.current) clearTimeout(saveTimer.current);
@@ -367,13 +365,13 @@ export function ComposeForm({
 			data = (await res.json()) as SendResult & { error?: string };
 		} catch {
 			setLoading(false);
-			setToast({ type: "error", message: t("compose.error.sendFailed") });
+			setToast({ type: "error", message: "Send failed" });
 			return;
 		}
 		setLoading(false);
 
 		if (!res.ok) {
-			setToast({ type: "error", message: data.error ?? t("compose.error.sendFailed") });
+			setToast({ type: "error", message: data.error ?? "Send failed" });
 			return;
 		}
 
@@ -396,9 +394,9 @@ export function ComposeForm({
 		setAttachments([]);
 		setScheduledAt(null);
 		const notice = resolveSendNotice(data);
-		const subjectLabel = subject.trim() || t("list.noSubject");
+		const subjectLabel = subject.trim() || "(no subject)";
 		if (notice.kind === "undo") {
-			const content = buildSubjectNotice("compose.sendingIn", subjectLabel, notice.messageId, true);
+			const content = buildSubjectNotice("sendingIn", subjectLabel, notice.messageId, true);
 			let undoNoticeId = 0;
 			// The send is queued for the undo window; Undo returns it to Drafts and Send now skips the wait.
 			undoNoticeId = showNotice(content.message, {
@@ -411,23 +409,23 @@ export function ComposeForm({
 					showSendingNotice(notice.messageId, subjectLabel);
 				},
 				actions: [
-					{ label: t("compose.undoSend"), onClick: () => cancelSend(notice.messageId, "undo", undoNoticeId) },
-					{ label: t("compose.sendNow"), onClick: () => sendNow(notice.messageId, subjectLabel, undoNoticeId) },
+					{ label: "Undo", onClick: () => cancelSend(notice.messageId, "undo", undoNoticeId) },
+					{ label: "Send now", onClick: () => sendNow(notice.messageId, subjectLabel, undoNoticeId) },
 				],
 			}) ?? 0;
 		} else if (notice.kind === "sending") {
 			showSendingNotice(notice.messageId, subjectLabel);
 		} else if (notice.kind === "scheduled") {
 			const message = notice.scheduledAt
-				? t("schedule.sendScheduledFor", { when: formatScheduledSendTime(notice.scheduledAt, t) })
-				: t("compose.scheduled");
+				? `Send scheduled for ${formatScheduledSendTime(notice.scheduledAt)}`
+				: "Message scheduled";
 			let scheduledNoticeId = 0;
 			scheduledNoticeId = showNotice(message, {
 				durationMs: SCHEDULED_NOTICE_MS,
-				actions: [{ label: t("schedule.cancelSend"), onClick: () => cancelSend(notice.messageId, "scheduled", scheduledNoticeId) }],
+				actions: [{ label: "Cancel send", onClick: () => cancelSend(notice.messageId, "scheduled", scheduledNoticeId) }],
 			}) ?? 0;
 		} else {
-			showNotice(t("compose.sent"));
+			showNotice("Message sent");
 		}
 		if (!currentDraftId) refreshLists();
 
@@ -439,7 +437,7 @@ export function ComposeForm({
 	}
 
 	/**
-	 * Splits a translated template around {subject} so the subject can link to the
+	 * Splits a message template around {subject} so the subject can link to the
 	 * message, and around {seconds} so only the ticking suffix changes. Passing the
 	 * placeholders back as values leaves them intact for the split.
 	 *
@@ -447,23 +445,24 @@ export function ComposeForm({
 	 * lives in Sent, so the link follows the message's state.
 	 */
 	function buildSubjectNotice(
-		key: "compose.sendingIn" | "compose.sendingSubject" | "compose.sentSubject",
+		kind: keyof typeof SEND_NOTICE_TEMPLATES,
 		subjectLabel: string,
 		messageId: string,
 		countdown: boolean,
 	): { message: string; parts: SendNoticeParts } {
-		const template = t(key, { subject: "{subject}", seconds: "{seconds}" });
-		const href = key === "compose.sentSubject" ? `/sent/${messageId}` : `/scheduled/${messageId}`;
+		const template = SEND_NOTICE_TEMPLATES[kind];
+		const href = kind === "sent" ? `/sent/${messageId}` : `/scheduled/${messageId}`;
 		const parts: SendNoticeParts = {
 			...splitSendTemplate(template, countdown),
 			link: { label: subjectLabel, href },
 		};
-		return { message: t(key, { subject: subjectLabel, seconds: 1 }), parts };
+		const message = template.replace("{subject}", subjectLabel).replace("{seconds}", "1");
+		return { message, parts };
 	}
 
 	/** Shows the message while the queue delivers it and watches for the final status. */
 	function showSendingNotice(messageId: string, subjectLabel: string): number {
-		const content = buildSubjectNotice("compose.sendingSubject", subjectLabel, messageId, false);
+		const content = buildSubjectNotice("sending", subjectLabel, messageId, false);
 		let noticeId = 0;
 		noticeId = showNotice(content.message, {
 			parts: content.parts,
@@ -477,7 +476,7 @@ export function ComposeForm({
 						return;
 					}
 					if (!isCurrentNotice(noticeId)) return;
-					if (status === "failed") showNotice(t("compose.error.sendFailed"), { tone: "error" });
+					if (status === "failed") showNotice("Send failed", { tone: "error" });
 					else showNotice(null);
 				},
 			},
@@ -491,7 +490,7 @@ export function ComposeForm({
 		clearMessageDetailCache();
 		window.dispatchEvent(new Event("replyot:messages-changed"));
 		if (!isCurrentNotice(sourceNoticeId)) return;
-		const content = buildSubjectNotice("compose.sentSubject", subjectLabel, messageId, false);
+		const content = buildSubjectNotice("sent", subjectLabel, messageId, false);
 		showNotice(content.message, { parts: content.parts, durationMs: SENT_NOTICE_MS });
 	}
 
@@ -519,7 +518,7 @@ export function ComposeForm({
 			}
 			const result = await response.json().catch(() => ({})) as { error?: string };
 			if (!isCurrentNotice(sourceNoticeId)) return;
-			showNotice(result.error ?? t("compose.error.sendFailed"), { tone: "error" });
+			showNotice(result.error ?? "Send failed", { tone: "error" });
 		} catch {
 			// A dropped response is ambiguous: the message may still be on its way.
 			if (isCurrentNotice(sourceNoticeId)) showSendingNotice(messageId, subjectLabel);
@@ -536,7 +535,7 @@ export function ComposeForm({
 			if (!res.ok) {
 				if (!isCurrentNotice(sourceNoticeId)) return;
 				// A 409 on the undo toast means the queue claimed it; a scheduled send can also fail for other reasons.
-				showNotice(source === "undo" && res.status === 409 ? t("compose.cancelTooLate") : t("schedule.cancelFailed"), {
+				showNotice(source === "undo" && res.status === 409 ? "Too late to cancel: the message is already being sent." : "Unable to cancel the scheduled send.", {
 					tone: "error",
 				});
 				return;
@@ -546,10 +545,10 @@ export function ComposeForm({
 			clearMessageDetailCache();
 			window.dispatchEvent(new Event("replyot:messages-changed"));
 			if (!isCurrentNotice(sourceNoticeId)) return;
-			showNotice(t("compose.sendCancelled"));
+			showNotice("Sending cancelled. Message moved to Drafts.");
 			openDraftComposer(messageId);
 		} catch {
-			if (isCurrentNotice(sourceNoticeId)) showNotice(t("schedule.cancelFailed"), { tone: "error" });
+			if (isCurrentNotice(sourceNoticeId)) showNotice("Unable to cancel the scheduled send.", { tone: "error" });
 		} finally {
 			noticeActionInFlight.current = false;
 		}
@@ -572,7 +571,7 @@ export function ComposeForm({
 			}
 			if (!deleted) {
 				setDeletingDraft(false);
-				setToast({ type: "error", message: t("compose.error.deleteDraft") });
+				setToast({ type: "error", message: "Could not delete draft" });
 				return;
 			}
 		}
@@ -606,7 +605,7 @@ export function ComposeForm({
 		if (!currentDraftId) return;
 		const res = await authFetch(`/api/drafts/${currentDraftId}/attachments/${attachmentId}`, { method: "DELETE" });
 		if (!res.ok) {
-			setToast({ type: "error", message: t("compose.error.removeAttachment") });
+			setToast({ type: "error", message: "Could not remove attachment" });
 			return;
 		}
 		setStoredAttachments((current) => current.filter((item) => item.id !== attachmentId));
@@ -624,15 +623,15 @@ export function ComposeForm({
 			);
 
 		if (nextCount > 10) {
-			setToast({ type: "error", message: t("compose.error.maxAttachments") });
+			setToast({ type: "error", message: "A message can include at most 10 attachments" });
 			return;
 		}
 		if (nextFiles.some((file) => file.size > attachmentPolicy.maxMb * 1_000_000)) {
-			setToast({ type: "error", message: t("compose.error.attachmentSize", { max: attachmentPolicy.maxMb }) });
+			setToast({ type: "error", message: `Each attachment must be ${attachmentPolicy.maxMb} MB or smaller` });
 			return;
 		}
 		if (totalSize > attachmentPolicy.maxMb * 1_000_000) {
-			setToast({ type: "error", message: t("compose.error.totalSize", { max: attachmentPolicy.maxMb }) });
+			setToast({ type: "error", message: `Attachments must total ${attachmentPolicy.maxMb} MB or less` });
 			return;
 		}
 
@@ -683,7 +682,7 @@ export function ComposeForm({
 				<div
 					key={attachment.id}
 					className="flex max-w-full shrink-0 items-center gap-2 rounded-lg bg-neutral-100 px-2 py-1 text-xs"
-					title={t("compose.carriedOver")}
+					title={"Carried over from the forwarded message"}
 				>
 					<FileText className="h-4 w-4 shrink-0 text-neutral-500" />
 					<span className="max-w-48 truncate">{attachment.filename}</span>
@@ -694,7 +693,7 @@ export function ComposeForm({
 						className="rounded-full p-1 text-neutral-500 hover:bg-neutral-200 hover:text-neutral-700"
 					>
 						<X className="h-3.5 w-3.5" />
-						<span className="sr-only">{t("compose.removeAttachment")}</span>
+						<span className="sr-only">Remove attachment</span>
 					</button>
 				</div>
 			))}
@@ -718,12 +717,12 @@ export function ComposeForm({
 						className="rounded-full p-1 text-neutral-500 hover:bg-neutral-200 hover:text-neutral-700"
 					>
 						<X className="h-3.5 w-3.5" />
-						<span className="sr-only">{t("compose.removeAttachment")}</span>
+						<span className="sr-only">Remove attachment</span>
 					</button>
 				</div>
 			))}
 		</div>
-		<p className="px-3 pb-2 text-xs text-amber-700">{[...attachments.map((item) => item.file.size), ...storedAttachments.map((item) => item.size)].some((size) => size > attachmentPolicy.cloudThresholdBytes) ? t("compose.cloudWarning.will") : t("compose.cloudWarning.may")}</p>
+		<p className="px-3 pb-2 text-xs text-amber-700">{[...attachments.map((item) => item.file.size), ...storedAttachments.map((item) => item.size)].some((size) => size > attachmentPolicy.cloudThresholdBytes) ? "Cloudflare limits general email messages to 5 MiB including encoding. Files over 3 MB here will be sent as 30-day download links." : "Cloudflare limits general email messages to 5 MiB including encoding. Files over 3 MB or files that exceed the message budget may be sent as 30-day download links."}</p>
 		</div>
 	);
 
@@ -752,10 +751,10 @@ export function ComposeForm({
 					{toast.message}
 				</div>
 			)}
-			<form onSubmit={onSubmit} className={cn(frameClass, closing && "compose-sheet-closing")} style={dragY ? { transform: `translateY(${dragY}px)`, transition: "none" } : undefined} ref={formRef} role={modalMode && !minimized ? "dialog" : mode === "popup" ? "region" : undefined} aria-modal={modalMode && !minimized || undefined} aria-label={mode === "popup" ? t("compose.dialogLabel") : undefined} onKeyDown={(event) => { if (modalMode && !minimized && event.key === "Escape") { event.preventDefault(); setModalMode(false); } }} onDragEnterCapture={minimized ? undefined : onFileDragEnter} onDragOverCapture={minimized ? undefined : onFileDragOver} onDragLeaveCapture={minimized ? undefined : onFileDragLeave} onDropCapture={minimized ? undefined : onFileDrop}>
+			<form onSubmit={onSubmit} className={cn(frameClass, closing && "compose-sheet-closing")} style={dragY ? { transform: `translateY(${dragY}px)`, transition: "none" } : undefined} ref={formRef} role={modalMode && !minimized ? "dialog" : mode === "popup" ? "region" : undefined} aria-modal={modalMode && !minimized || undefined} aria-label={mode === "popup" ? "Compose message" : undefined} onKeyDown={(event) => { if (modalMode && !minimized && event.key === "Escape") { event.preventDefault(); setModalMode(false); } }} onDragEnterCapture={minimized ? undefined : onFileDragEnter} onDragOverCapture={minimized ? undefined : onFileDragOver} onDragLeaveCapture={minimized ? undefined : onFileDragLeave} onDropCapture={minimized ? undefined : onFileDrop}>
 				{draggingFiles && !minimized && (
 					<div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center border-2 border-dashed border-blue-400 bg-blue-50/90 text-sm font-medium text-blue-700" aria-hidden="true">
-						{t("compose.dropFiles")}
+						Drop files to attach
 					</div>
 				)}
 				<div {...sheetDrag} className="flex h-9 shrink-0 items-center justify-between max-md:h-12 max-md:touch-none bg-neutral-800 text-white dark:bg-neutral-100 px-4 text-sm font-medium">
@@ -763,24 +762,24 @@ export function ComposeForm({
 						{threading?.inReplyTo && <Reply className="h-3.5 w-3.5 text-neutral-300" />}
 						{!threading?.inReplyTo && /^fwd?:/i.test(subject) && <Forward className="h-3.5 w-3.5 text-neutral-300" />}
 						{loadingDraft
-							? t("compose.title.loading")
+							? "Loading draft"
 							: threading?.inReplyTo
-								? t("compose.title.reply")
+								? "Reply"
 								: /^fwd?:/i.test(subject)
-									? t("compose.title.forward")
+									? "Forward"
 									: draftId
-										? t("compose.title.saved")
-										: t("compose.title.new")}
+										? "Draft saved"
+										: "New Message"}
 					</span>
 					{mode === "popup" && (
 						<div className="flex shrink-0 items-center gap-3 text-neutral-300">
-							<button type="button" onClick={() => { setMinimized((current) => !current); setDraggingFiles(false); }} aria-label={minimized ? t("compose.restore") : t("compose.minimize")} title={minimized ? t("compose.restore") : t("compose.minimize")} className="max-md:hidden rounded p-1 hover:bg-neutral-700 dark:hover:bg-neutral-200 hover:text-white">
+							<button type="button" onClick={() => { setMinimized((current) => !current); setDraggingFiles(false); }} aria-label={minimized ? "Restore composer" : "Minimize composer"} title={minimized ? "Restore composer" : "Minimize composer"} className="max-md:hidden rounded p-1 hover:bg-neutral-700 dark:hover:bg-neutral-200 hover:text-white">
 								{minimized ? <ChevronUp className="h-4 w-4" /> : <Minus className="h-4 w-4" />}
 							</button>
-							<button type="button" onClick={() => { if (minimized) setMinimized(false); setModalMode((current) => !current); }} aria-label={modalMode ? t("compose.restoreFloating") : t("compose.openModal")} title={modalMode ? t("compose.restoreFloating") : t("compose.openModal")} className="max-md:hidden rounded p-1 dark:hover:bg-neutral-200 hover:bg-neutral-700 hover:text-white">
+							<button type="button" onClick={() => { if (minimized) setMinimized(false); setModalMode((current) => !current); }} aria-label={modalMode ? "Restore floating composer" : "Open composer as modal"} title={modalMode ? "Restore floating composer" : "Open composer as modal"} className="max-md:hidden rounded p-1 dark:hover:bg-neutral-200 hover:bg-neutral-700 hover:text-white">
 								{modalMode ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
 							</button>
-							<button type="button" onClick={dismiss} aria-label={t("compose.close")} className="rounded p-1 max-md:-m-2 max-md:p-3 hover:bg-neutral-700 dark:hover:bg-neutral-200 hover:text-white">
+							<button type="button" onClick={dismiss} aria-label={"Close composer"} className="rounded p-1 max-md:-m-2 max-md:p-3 hover:bg-neutral-700 dark:hover:bg-neutral-200 hover:text-white">
 								<X className="h-4 w-4" />
 							</button>
 						</div>
@@ -788,7 +787,7 @@ export function ComposeForm({
 				</div>
 				<div className={cn("flex min-h-0 flex-1 flex-col", minimized && "hidden")}>
 				<div className="border-b border-neutral-100 px-4 py-1 flex flex-row items-center">
-					<Label htmlFor={`${mode}-from`} className="text-sm text-neutral-500">{t("compose.from")}</Label>
+					<Label htmlFor={`${mode}-from`} className="text-sm text-neutral-500">From</Label>
 					<Select
 						id={`${mode}-from`}
 						value={selectedMailbox && selectedFrom ? `${selectedMailbox.id}|${selectedFrom}` : ""}
@@ -799,7 +798,7 @@ export function ComposeForm({
 						className="h-8 px-0 py-1 text-sm shadow-none focus-visible:ring-0"
 						containerClassName="border-0 flex-1"
 					>
-						{senderOptions.length === 0 && <option value="">{t("compose.selectMailboxFirst")}</option>}
+						{senderOptions.length === 0 && <option value="">Select a mailbox first</option>}
 						{senderOptions.map(({ mailbox, address }) => (
 							<option key={`${mailbox.id}|${address}`} value={`${mailbox.id}|${address}`}>{address}</option>
 						))}
@@ -807,10 +806,10 @@ export function ComposeForm({
 				</div>
 				<RecipientInput
 					id={`${mode}-to`}
-					label={t("compose.to")}
+					label={"To"}
 					value={to}
 					onChange={setTo}
-					placeholder={t("compose.toPlaceholder")}
+					placeholder={"Recipients, or \"Maya Chen\" <maya@example.com>"}
 					required
 					autoFocus={!draftIdToLoad}
 					disabled={loadingDraft}
@@ -818,12 +817,12 @@ export function ComposeForm({
 						<>
 							{!showCc && (
 								<button type="button" className="rounded px-1 hover:text-neutral-800" onClick={() => setShowCc(true)}>
-									{t("compose.cc")}
+									Cc
 								</button>
 							)}
 							{!showBcc && (
 								<button type="button" className="rounded px-1 hover:text-neutral-800" onClick={() => setShowBcc(true)}>
-									{t("compose.bcc")}
+									Bcc
 								</button>
 							)}
 						</>
@@ -832,10 +831,10 @@ export function ComposeForm({
 				{showCc && (
 					<RecipientInput
 						id={`${mode}-cc`}
-						label={t("compose.cc")}
+						label={"Cc"}
 						value={cc}
 						onChange={setCc}
-						placeholder={t("compose.ccPlaceholder")}
+						placeholder={"Carbon copy"}
 						disabled={loadingDraft}
 						autoFocus={!loadingDraft && cc.length === 0}
 					/>
@@ -843,39 +842,39 @@ export function ComposeForm({
 				{showBcc && (
 					<RecipientInput
 						id={`${mode}-bcc`}
-						label={t("compose.bcc")}
+						label={"Bcc"}
 						value={bcc}
 						onChange={setBcc}
-						placeholder={t("compose.bccPlaceholder")}
+						placeholder={"Blind carbon copy, hidden from other recipients"}
 						disabled={loadingDraft}
 						autoFocus={!loadingDraft && bcc.length === 0}
 					/>
 				)}
 				<div className="border-b border-neutral-100 px-4 py-1">
-					<Label htmlFor={`${mode}-subject`} className="sr-only">{t("compose.subject")}</Label>
+					<Label htmlFor={`${mode}-subject`} className="sr-only">Subject</Label>
 					<Input
 						id={`${mode}-subject`}
 						value={subject}
 						onChange={(event) => setSubject(event.target.value)}
-						placeholder={t("compose.subject")}
+						placeholder={"Subject"}
 						required
 						disabled={loadingDraft}
 						className="h-8 border-0 px-0 py-1 shadow-none focus-visible:ring-0"
 					/>
 				</div>
-				<Label htmlFor={`${mode}-text`} className="sr-only">{t("compose.body")}</Label>
+				<Label htmlFor={`${mode}-text`} className="sr-only">Body</Label>
 				<RichTextEditor
 					id={`${mode}-text`}
 					value={html}
 					onChange={setHtml}
 					quotedHtml={quotedHtml}
 					disabled={loadingDraft}
-					placeholder={t("compose.bodyPlaceholder")}
+					placeholder={"Write your message"}
 					footerContent={attachmentContent}
 					toolbarStart={
 						<div className="flex items-center max-md:contents">
 							<Button type="button" variant="secondary" size="sm" onClick={dismiss} className="md:hidden max-md:h-10 max-md:px-3.5 max-md:text-[15px]">
-								{t("common.cancel")}
+								Cancel
 							</Button>
 							<div className="flex items-center max-md:order-last max-md:ml-auto">
 								<Button
@@ -884,7 +883,7 @@ export function ComposeForm({
 									disabled={loading || loadingDraft || !fromAddr}
 									className="rounded-r-none px-4 max-md:h-10 max-md:px-5 max-md:text-[15px]"
 								>
-									{loading ? t("compose.preparing") : scheduledAt ? t("compose.schedule") : t("compose.send")}
+									{loading ? "Preparing…" : scheduledAt ? "Schedule" : "Send"}
 								</Button>
 								<ScheduleSendMenu
 									disabled={loading || loadingDraft || !fromAddr}
@@ -910,10 +909,10 @@ export function ComposeForm({
 								className="hidden"
 								onChange={(event) => addAttachments(event.target.files)}
 							/>
-							<Tooltip label={t("compose.attachTooltip", { max: attachmentPolicy.maxMb })}>
+							<Tooltip label={`Attach files (up to ${attachmentPolicy.maxMb} MB total). Files over 3 MB are sent as 30-day download links.`}>
 								<button
 									type="button"
-									aria-label={t("compose.attachFiles")}
+									aria-label={"Attach files"}
 									onClick={() => attachmentInput.current?.click()}
 									disabled={loading || loadingDraft}
 									className="rounded-md p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 disabled:pointer-events-none disabled:opacity-50 max-md:px-2"
@@ -921,10 +920,10 @@ export function ComposeForm({
 									<Paperclip className="h-4 w-4" />
 								</button>
 							</Tooltip>
-							<Tooltip label={trackOpens ? t("compose.trackOpensOn") : t("compose.trackOpensOff")}>
+							<Tooltip label={trackOpens ? "Read receipt on: you'll see when the message is opened" : "Read receipt off"}>
 								<button
 									type="button"
-									aria-label={t("compose.trackOpens")}
+									aria-label={"Read receipt"}
 									aria-pressed={trackOpens}
 									onClick={() => setTrackOpens(!trackOpens)}
 									disabled={loading || loadingDraft}
@@ -936,7 +935,7 @@ export function ComposeForm({
 									{trackOpens ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
 								</button>
 							</Tooltip>
-							<Tooltip label={followUpDays ? t("followUp.remindOn", { when: t(followUpOptionKey(followUpDays)) }) : t("followUp.remindMe")}>
+							<Tooltip label={followUpDays ? `Reminder if no reply: ${followUpOptionKey(followUpDays)}` : "Remind me if no reply"}>
 								<FollowUpMenu
 									disabled={loading || loadingDraft}
 									onPick={setFollowUpDays}
@@ -944,7 +943,7 @@ export function ComposeForm({
 									trigger={
 										<button
 											type="button"
-											aria-label={t("followUp.remindMe")}
+											aria-label={"Remind me if no reply"}
 											className={cn(
 												"rounded-md p-1.5 hover:bg-neutral-100 disabled:pointer-events-none disabled:opacity-50 max-md:px-2",
 												followUpDays ? "text-amber-600 hover:text-amber-700" : "text-neutral-500 hover:text-neutral-900",
@@ -956,10 +955,10 @@ export function ComposeForm({
 								/>
 							</Tooltip>
 							<span className="flex-1 max-md:hidden" />
-							<Tooltip label={t("compose.deleteDraft")}>
+							<Tooltip label={"Delete draft"}>
 								<button
 									type="button"
-									aria-label={t("compose.deleteDraft")}
+									aria-label={"Delete draft"}
 									onClick={() => void deleteDraftAndClose()}
 									disabled={loading || loadingDraft || deletingDraft}
 									className="rounded-md p-1.5 text-neutral-500 hover:bg-red-50 hover:text-red-600 disabled:pointer-events-none disabled:opacity-50 max-md:px-2"

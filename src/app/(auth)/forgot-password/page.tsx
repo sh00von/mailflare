@@ -4,7 +4,7 @@ import { ForgotPasswordClient } from "./forgot-password-client";
 
 export const dynamic = "force-dynamic";
 
-export const generateMetadata = () => authPageMetadata("auth.forgot.title");
+export const generateMetadata = () => authPageMetadata("Reset your password");
 
 export default function ForgotPasswordPage() {
 	return (

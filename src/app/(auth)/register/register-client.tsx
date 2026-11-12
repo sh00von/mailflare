@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { AlertTriangle, CheckCircle2, LoaderCircle, MailPlus } from "@/components/icons";
 import { useEffect, useState } from "react";
-import { useLanguage } from "@/components/language-provider";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -19,7 +18,6 @@ import {
 import type { DnsRecordChecklistItem, DomainSetupResult } from "./types";
 
 export function RegisterClient() {
-	const { t } = useLanguage();
 	const [ready, setReady] = useState(false);
 	const [step, setStep] = useState<1 | 2 | 3>(1);
 	const [orgName, setOrgName] = useState("");
@@ -101,17 +99,17 @@ export function RegisterClient() {
 			if (!ok) {
 				setError(
 					data.code === "passkey_unavailable"
-						? t("authError.passkeyUnavailable")
+						? "Passkey sign-in is unavailable."
 						: typeof data.error === "string"
 							? data.error
-							: t("setup.registrationFailed"),
+							: "Registration failed",
 				);
 				setTurnstileReset((v) => v + 1);
 				return;
 			}
 			window.location.assign(data.redirect ?? "/domains");
 		} catch (err) {
-			setError(err instanceof Error ? err.message : t("setup.registrationFailed"));
+			setError(err instanceof Error ? err.message : "Registration failed");
 			setTurnstileReset((v) => v + 1);
 		} finally {
 			setLoading(false);
@@ -280,13 +278,13 @@ export function RegisterClient() {
 							className="mt-1"
 						/>
 						<span>
-							<span className="block text-sm font-medium text-neutral-800">{t("auth.usePasskeyInstead")}</span>
-							<span className="mt-1 block text-xs leading-5 text-neutral-500">{t("auth.usePasskeyInsteadHint")}</span>
+							<span className="block text-sm font-medium text-neutral-800">Use a passkey instead of a password</span>
+							<span className="mt-1 block text-xs leading-5 text-neutral-500">You will create the passkey on the next step. Passkeys use your fingerprint, face, or device PIN and never leave your devices.</span>
 						</span>
 					</label>
 					{!usePasskey && (
 						<div className="space-y-2">
-							<Label htmlFor="password">{t("auth.password")}</Label>
+							<Label htmlFor="password">Password</Label>
 							<Input
 								id="password"
 								name="password"
@@ -298,7 +296,7 @@ export function RegisterClient() {
 						</div>
 					)}
 					<div className="space-y-2">
-						<Label htmlFor="resetEmail">{t("setup.recoveryEmail")}</Label>
+						<Label htmlFor="resetEmail">Recovery email</Label>
 						<Input
 							id="resetEmail"
 							name="resetEmail"

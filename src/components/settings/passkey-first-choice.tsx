@@ -1,7 +1,6 @@
 "use client";
 
 import { AlertTriangle, Info, KeyRound, ShieldCheck } from "@/components/icons";
-import { useLanguage } from "@/components/language-provider";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export type PasskeyPolicyChoice = "passkey-only" | "password-and-passkey" | "keep";
@@ -34,23 +33,22 @@ export function PasskeyFirstChoice({
 	context?: "first-passkey" | "add-password";
 	busy?: boolean;
 }) {
-	const { t } = useLanguage();
 	const addingPassword = context === "add-password";
 
 	const options: Option[] = totpEnabled && !addingPassword
 		? [
 			{
 				id: "passkey-only",
-				title: t("passkey.choicePasskeyOnly"),
-				hint: t("passkey.choiceRemovesPasswordAndCodes"),
-				notes: [t("passkey.choiceTwoSteps")],
+				title: "Use only passkeys",
+				hint: "Removes your password, your authenticator codes and their recovery codes.",
+				notes: ["The authenticator app and your password are removed one at a time."],
 				icon: KeyRound,
 				iconClass: "text-neutral-500",
 			},
 			{
 				id: "keep",
-				title: t("passkey.choiceKeepCurrent"),
-				hint: t("passkey.choiceKeepCurrentHint"),
+				title: "Keep my current sign-in",
+				hint: "Your password and authenticator codes keep working. The passkey is another way in.",
 				icon: ShieldCheck,
 				iconClass: "text-green-600",
 			},
@@ -58,22 +56,22 @@ export function PasskeyFirstChoice({
 		: [
 			{
 				id: "passkey-only",
-				title: t(addingPassword ? "passkey.choiceKeepPasskeysOnly" : "passkey.choicePasskeyOnly"),
-				hint: t(addingPassword ? "passkey.choiceDiscardPassword" : "passkey.choiceRemovesPassword"),
+				title: (addingPassword ? "Keep using only passkeys" : "Use only passkeys"),
+				hint: (addingPassword ? "Do not save this password. Your sign-in settings stay unchanged." : "Removes your password. Your passkeys become the only way in."),
 				icon: KeyRound,
 				iconClass: "text-neutral-500",
 			},
 			{
 				id: "password-and-passkey",
-				title: t("passkey.choicePasswordAndPasskey"),
-				hint: t(totpEnabled ? "twoStep.requireDescription" : "passkey.choicePasswordAndPasskeyHint"),
+				title: "Use a passkey as your second factor",
+				hint: (totpEnabled ? "After entering a password, confirm with a passkey or an authenticator code." : "After entering your password, confirm with a passkey. You can still sign in directly with a passkey."),
 				icon: ShieldCheck,
 				iconClass: "text-green-600",
 			},
 			{
 				id: "keep",
-				title: t("passkey.choiceKeepPasswordOnly"),
-				hint: t("passkey.choiceKeepPasswordOnlyHint"),
+				title: "Keep my password without a second step",
+				hint: "Your password signs you in on its own. Anyone with the password can sign in.",
 				icon: AlertTriangle,
 				iconClass: "text-amber-500",
 			},
@@ -89,12 +87,12 @@ export function PasskeyFirstChoice({
 				aria-busy={busy}
 			>
 				<DialogHeader>
-					<DialogTitle>{t("passkey.firstChoiceTitle")}</DialogTitle>
-					<DialogDescription>{t(addingPassword ? "passkey.passwordChoiceDescription" : "passkey.firstChoiceDescription")}</DialogDescription>
+					<DialogTitle>How would you like to sign in?</DialogTitle>
+					<DialogDescription>{(addingPassword ? "Choose how your new password works with your passkeys." : "Your passkey is ready. Choose what happens to your password.")}</DialogDescription>
 				</DialogHeader>
 				<p className="mb-4 flex items-start gap-2 text-xs leading-5 text-neutral-500">
 					<Info className="mt-0.5 h-4 w-4 shrink-0" />
-					<span>{t("passkey.choiceRecoveryNote")}</span>
+					<span>If your chosen option requires a passkey and you lose them all, an administrator will need to help you recover access.</span>
 				</p>
 				<div className="space-y-2">
 					{options.map((option) => (

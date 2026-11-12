@@ -1,5 +1,3 @@
-import type { TranslationKey } from "@/lib/i18n/types";
-import { defaultTranslator } from "@/lib/i18n/utils";
 import { authFetch } from "@/lib/auth/client";
 import { formatUserDate } from "@/lib/time/utils";
 import type {
@@ -10,24 +8,24 @@ import type {
 	WebhookEvent,
 } from "./types";
 
-export const WEBHOOK_EVENTS: { value: WebhookEvent; labelKey: TranslationKey; hintKey: TranslationKey }[] = [
-	{ value: "message.inbound", labelKey: "webhooks.event.inbound", hintKey: "webhooks.event.inboundHint" },
-	{ value: "message.outbound", labelKey: "webhooks.event.outbound", hintKey: "webhooks.event.outboundHint" },
-	{ value: "message.failed", labelKey: "webhooks.event.failed", hintKey: "webhooks.event.failedHint" },
+export const WEBHOOK_EVENTS: { value: WebhookEvent; labelKey: string; hintKey: string }[] = [
+	{ value: "message.inbound", labelKey: "Inbound message", hintKey: "A message was received and stored" },
+	{ value: "message.outbound", labelKey: "Outbound message", hintKey: "A message was sent" },
+	{ value: "message.failed", labelKey: "Delivery failure", hintKey: "An outbound message failed" },
 ];
 
 export const DELIVERY_STATUS_LABELS = {
-	pending: "webhooks.status.pending",
-	delivered: "webhooks.status.delivered",
-	failed: "webhooks.status.failed",
-	retrying: "webhooks.status.retrying",
-	exhausted: "webhooks.status.exhausted",
-} as const satisfies Record<string, TranslationKey>;
+	pending: "Pending",
+	delivered: "Delivered",
+	failed: "Failed",
+	retrying: "Retrying",
+	exhausted: "Gave up",
+} as const satisfies Record<string, string>;
 
 async function readJson<T>(res: Response): Promise<T> {
 	const json = (await res.json()) as T & { error?: unknown };
 	if (!res.ok) {
-		throw new Error(typeof json.error === "string" ? json.error : defaultTranslator("domains.requestFailed"));
+		throw new Error(typeof json.error === "string" ? json.error : "Request failed");
 	}
 	return json;
 }

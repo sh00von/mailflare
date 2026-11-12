@@ -5,7 +5,6 @@ import { Camera, LoaderCircle } from "@/components/icons";
 import { dispatchContactAvatarChanged } from "@/lib/contacts/avatar-client";
 import { normalizeEmailAddress } from "@/lib/email/address";
 import { Input } from "@/components/ui/input";
-import { useLanguage } from "@/components/language-provider";
 import { ContactAvatar } from "./contact-avatar";
 import type { ContactAvatarFormProps } from "./contact-avatar-form-types";
 import {
@@ -22,7 +21,6 @@ export function ContactAvatarForm({
 	hasAvatar,
 	onAvatarChange,
 }: ContactAvatarFormProps) {
-	const { t } = useLanguage();
 	const inputRef = useRef<HTMLInputElement>(null);
 	const [busy, setBusy] = useState(false);
 	const [status, setStatus] = useState<string | null>(null);
@@ -44,7 +42,7 @@ export function ContactAvatarForm({
 			onAvatarChange(true);
 			dispatchContactAvatarChanged({ email: normalizeEmailAddress(address), hasAvatar: true });
 		} catch (error) {
-			setStatus(error instanceof Error ? error.message : t("avatar.uploadFailed"));
+			setStatus(error instanceof Error ? error.message : "Upload failed");
 		} finally {
 			setBusy(false);
 		}
@@ -58,7 +56,7 @@ export function ContactAvatarForm({
 			onAvatarChange(false);
 			dispatchContactAvatarChanged({ email: normalizeEmailAddress(address), hasAvatar: false });
 		} catch (error) {
-			setStatus(error instanceof Error ? error.message : t("avatar.removeFailed"));
+			setStatus(error instanceof Error ? error.message : "Unable to remove profile picture");
 		} finally {
 			setBusy(false);
 		}
@@ -73,7 +71,7 @@ export function ContactAvatarForm({
 					onClick={() => inputRef.current?.click()}
 					disabled={busy}
 					className="group relative h-14 w-14 overflow-hidden rounded-full outline-none ring-blue-500 focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-wait"
-					aria-label={hasAvatar ? t("avatar.change", { name }) : t("avatar.upload", { name })}
+					aria-label={hasAvatar ? `Change ${name} profile picture` : `Upload ${name} profile picture`}
 				>
 					<ContactAvatar
 						mailboxId={mailboxId}
@@ -87,11 +85,11 @@ export function ContactAvatarForm({
 					</span>
 				</button>
 				<div>
-					<p className="text-sm font-medium text-neutral-900">{t("avatar.title")}</p>
-					<p className="text-xs text-neutral-500">{t("avatar.contactHint")}</p>
+					<p className="text-sm font-medium text-neutral-900">Profile picture</p>
+					<p className="text-xs text-neutral-500">Upload a custom contact photo.</p>
 					{hasAvatar && (
 						<button type="button" onClick={() => void onRemove()} disabled={busy} className="mt-1 text-xs font-medium text-blue-600 hover:underline disabled:text-neutral-400">
-							{t("avatar.remove")}
+							Remove photo
 						</button>
 					)}
 				</div>

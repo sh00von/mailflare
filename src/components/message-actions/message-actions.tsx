@@ -4,7 +4,6 @@ import { createElement, Fragment, useCallback, useLayoutEffect, useMemo, useRef,
 import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Archive, ArchiveRestore, Ban, BellOff, Clock, FileCode2, Forward, Mail, MailOpen, MoreVertical, Reply, ReplyAll, ShieldAlert, ShieldCheck, Trash2 } from "@/components/icons";
-import { useLanguage } from "@/components/language-provider";
 import { useCompose } from "@/components/compose/compose-context";
 import { MessageSourceDialog } from "@/components/messages/message-source-dialog";
 import { useMessageListVisibility } from "@/components/messages/message-list-visibility";
@@ -51,7 +50,6 @@ export function MessageActions({
 	messageMeta,
 	bodyHtml,
 }: MessageActionsProps) {
-	const { t } = useLanguage();
 	const router = useRouter();
 	const { openDraftComposer, showNotice } = useCompose();
 	const { backHref: listHref } = useMessageListVisibility();
@@ -74,17 +72,17 @@ export function MessageActions({
 			if (redirect) router.push(redirect);
 			router.refresh();
 		} catch {
-			setError(t("actions.error.update"));
+			setError("Could not update message");
 		} finally {
 			setPendingAction(null);
 		}
-	}, [messageId, listHref, router, t]);
+	}, [messageId, listHref, router]);
 
 	// In Trash and Spam the delete button removes the message for good instead of
 	// being a no-op, after the user confirms.
 	const canDeleteForever = supportsPermanentDelete(status);
 	const deleteForever = useCallback(async () => {
-		if (!window.confirm(getPermanentDeleteConfirmText(1, t))) return;
+		if (!window.confirm(getPermanentDeleteConfirmText(1))) return;
 		setPendingAction("delete");
 		setError(null);
 		try {
@@ -92,12 +90,12 @@ export function MessageActions({
 			router.push(getMessageBackHref(direction, status));
 			router.refresh();
 		} catch (deleteError) {
-			setError(deleteError instanceof PartialDeleteError ? t("actions.error.deleteSkipped") : t("actions.error.delete"));
+			setError(deleteError instanceof PartialDeleteError ? "Some messages could not be deleted because they are no longer in Trash or Spam." : "Could not delete message");
 			setPendingAction(null);
 		}
-	}, [messageId, direction, status, router, t]);
+	}, [messageId, direction, status, router]);
 	const onTrashClick = () => (canDeleteForever ? void deleteForever() : void runAction("trash"));
-	const trashLabel = canDeleteForever ? t("common.deleteForever") : t("actions.moveToTrash");
+	const trashLabel = canDeleteForever ? "Delete forever" : "Move to trash";
 
 	const replyable = useMemo(() => message ?? {
 		direction,
@@ -128,17 +126,17 @@ export function MessageActions({
 			});
 			openDraftComposer(draftId);
 		} catch (replyError) {
-			setError(replyError instanceof Error ? replyError.message : t("message.error.reply"));
+			setError(replyError instanceof Error ? replyError.message : "Could not start reply");
 		} finally {
 			setPendingAction(null);
 		}
-	}, [mailboxId, senderAddress, ownAddress, subject, bodyText, bodyHtml, messageMeta?.createdAt, replyable, ownAddresses, openDraftComposer, t]);
+	}, [mailboxId, senderAddress, ownAddress, subject, bodyText, bodyHtml, messageMeta?.createdAt, replyable, ownAddresses, openDraftComposer]);
 
 	const shortcuts = useMemo(
 		() => [
 			{
 				key: "e",
-				label: t("shortcut.archiveMessage"),
+				label: "Archive Message",
 				category: "Actions" as const,
 				action: () => {
 					if (status !== "archived") void runAction("archive");
@@ -146,7 +144,7 @@ export function MessageActions({
 			},
 			{
 				key: "y",
-				label: t("shortcut.archiveMessage"),
+				label: "Archive Message",
 				category: "Actions" as const,
 				action: () => {
 					if (status !== "archived") void runAction("archive");
@@ -154,7 +152,7 @@ export function MessageActions({
 			},
 			{
 				key: "#",
-				label: t("shortcut.moveToTrash"),
+				label: "Move to Trash",
 				category: "Actions" as const,
 				action: () => {
 					if (status !== "trash") void runAction("trash");
@@ -162,13 +160,13 @@ export function MessageActions({
 			},
 			{
 				key: "r",
-				label: t("shortcut.replyToMessage"),
+				label: "Reply to Message",
 				category: "Composing" as const,
 				action: () => void handleReply("reply"),
 			},
 			{
 				key: "!",
-				label: t("shortcut.reportSpam"),
+				label: "Report Spam",
 				category: "Actions" as const,
 				action: () => {
 					if (status !== "spam" && direction === "inbound") void runAction("spam");
@@ -176,12 +174,12 @@ export function MessageActions({
 			},
 			{
 				key: "u",
-				label: t("shortcut.backToList"),
+				label: "Back to List",
 				category: "Navigation" as const,
 				action: () => router.back(),
 			},
 		],
-		[status, direction, runAction, handleReply, router, t]
+		[status, direction, runAction, handleReply, router]
 	);
 
 	useHotkeys(shortcuts, { enabled: shortcutsEnabled });
@@ -194,11 +192,11 @@ export function MessageActions({
 				const result = await requestUnsubscribe(messageId);
 				if (result.method === "link") {
 					openUnsubscribeUrl(result.url);
-					showNotice(t("actions.unsubscribeLinkOpened"));
+					showNotice("Unsubscribe page opened in a new tab");
 				} else if (result.method === "mailto") {
-					showNotice(t("actions.unsubscribeEmailSent"));
+					showNotice("Unsubscribe email sent");
 				} else {
-					showNotice(t("actions.unsubscribed"));
+					showNotice("Unsubscribed");
 				}
 			} catch {
 				openUnsubscribeUrl(unsubscribeUrl);
@@ -211,7 +209,7 @@ export function MessageActions({
 		if (!confirmTrashWithoutUnsubscribe()) return;
 		setPendingAction("unsubscribe");
 		if (!mailboxId) {
-			setError(t("actions.error.trashRule"));
+			setError("Could not create trash rule");
 			setPendingAction(null);
 			return;
 		}
@@ -220,7 +218,7 @@ export function MessageActions({
 			await createTrashSenderRule({ mailboxId, senderAddress });
 			await runAction("trash");
 		} catch {
-			setError(t("actions.error.trashRule"));
+			setError("Could not create trash rule");
 			setPendingAction(null);
 		}
 	}
@@ -239,7 +237,7 @@ export function MessageActions({
 			});
 			openDraftComposer(draftId);
 		} catch (forwardError) {
-			setError(forwardError instanceof Error ? forwardError.message : t("message.error.forward"));
+			setError(forwardError instanceof Error ? forwardError.message : "Could not start forward");
 		} finally {
 			setPendingAction(null);
 		}
@@ -247,7 +245,7 @@ export function MessageActions({
 	async function onBlockContact() {
 		setError(null);
 		if (!mailboxId) {
-			setError(t("message.error.block"));
+			setError("Could not block contact");
 			return;
 		}
 
@@ -258,7 +256,7 @@ export function MessageActions({
 			router.push(listHref);
 			router.refresh();
 		} catch (blockError) {
-			setError(blockError instanceof Error ? blockError.message : t("message.error.block"));
+			setError(blockError instanceof Error ? blockError.message : "Could not block contact");
 		} finally {
 			setPendingAction(null);
 		}
@@ -270,13 +268,13 @@ export function MessageActions({
 		try {
 			const preview = await requestUnsubscribe(messageId, { action: "unsubscribe_and_trash", previewOnly: true });
 			const count = "preview" in preview ? preview.preview.count : 0;
-			if (!window.confirm(t("actions.unsubscribeDeleteConfirm", { count }))) return;
+			if (!window.confirm(`Move ${count} past emails from this sender to Trash?`)) return;
 			const result = await requestUnsubscribe(messageId, { action: "unsubscribe_and_trash" });
 			if (result.method === "link") openUnsubscribeUrl(result.url);
-			showNotice(t("actions.unsubscribeTrashDone", { count: result.trashedCount ?? 0 }));
+			showNotice(`Unsubscribed and moved ${result.trashedCount ?? 0} emails to Trash`);
 			router.refresh();
 		} catch {
-			setError(t("actions.unsubscribeFailed"));
+			setError("Could not unsubscribe");
 		} finally {
 			setPendingAction(null);
 		}
@@ -291,14 +289,14 @@ export function MessageActions({
 	const inlineActions: InlineMessageAction[] = [];
 	const archiveAction = status === "archived"
 		? direction === "inbound"
-			? { action: "inbox" as const, label: t("common.unarchive"), Icon: ArchiveRestore }
+			? { action: "inbox" as const, label: "Unarchive", Icon: ArchiveRestore }
 			: null
-		: { action: "archive" as const, label: t("common.archive"), Icon: Archive };
+		: { action: "archive" as const, label: "Archive", Icon: Archive };
 	if (archiveAction) {
 		inlineActions.push({
 			id: archiveAction.action === "inbox" ? "unarchive" : "archive",
 			label: archiveAction.label,
-			hint: archiveAction.action === "archive" ? t("actions.archiveHint") : undefined,
+			hint: archiveAction.action === "archive" ? "Archive (e)" : undefined,
 			icon: <archiveAction.Icon size={iconSize} />,
 			onSelect: () => void runAction(archiveAction.action),
 			group: "primary",
@@ -307,7 +305,7 @@ export function MessageActions({
 	inlineActions.push({
 		id: canDeleteForever ? "deleteForever" : "trash",
 		label: trashLabel,
-		hint: canDeleteForever ? undefined : t("actions.moveToTrashHint"),
+		hint: canDeleteForever ? undefined : "Move to trash (#)",
 		icon: <Trash2 size={iconSize} />,
 		onSelect: onTrashClick,
 		group: "primary",
@@ -315,15 +313,15 @@ export function MessageActions({
 	});
 	inlineActions.push({
 		id: markAction,
-		label: read ? t("common.markUnread") : t("common.markRead"),
+		label: read ? "Mark as unread" : "Mark as read",
 		icon: read ? <Mail size={iconSize} /> : <MailOpen size={iconSize} />,
 		onSelect: () => void runAction(markAction),
 		group: "primary",
 	});
 	inlineActions.push({
 		id: "reply",
-		label: t("message.reply"),
-		hint: t("actions.replyHint"),
+		label: "Reply",
+		hint: "Reply (r)",
 		icon: <Reply size={iconSize} />,
 		onSelect: () => void handleReply("reply"),
 		group: "secondary",
@@ -332,15 +330,15 @@ export function MessageActions({
 		inlineActions.push(status === "spam"
 			? {
 				id: "notSpam",
-				label: t("common.notSpam"),
+				label: "Not spam",
 				icon: <ShieldCheck size={iconSize} />,
 				onSelect: () => void runAction("inbox"),
 				group: "secondary",
 			}
 			: {
 				id: "spam",
-				label: t("common.reportSpam"),
-				hint: t("actions.reportSpamHint"),
+				label: "Report spam",
+				hint: "Report spam (!)",
 				icon: <ShieldAlert size={iconSize} />,
 				onSelect: () => void runAction("spam"),
 				group: "secondary",
@@ -349,7 +347,7 @@ export function MessageActions({
 	if (canReplyAll) {
 		inlineActions.push({
 			id: "replyAll",
-			label: t("message.replyAll"),
+			label: "Reply all",
 			icon: <ReplyAll size={iconSize} />,
 			onSelect: () => void handleReply("replyAll"),
 			group: "secondary",
@@ -358,7 +356,7 @@ export function MessageActions({
 	if (message && messageMeta) {
 		inlineActions.push({
 			id: "forward",
-			label: t("message.forward"),
+			label: "Forward",
 			icon: <Forward size={iconSize} />,
 			onSelect: () => void handleForward(),
 			group: "secondary",
@@ -416,14 +414,14 @@ export function MessageActions({
 				})}
 
 				<MessageActionMenu
-					label={t("common.moreActions")}
+					label={"More actions"}
 					trigger={
 						<Button
 							type="button"
 							variant="ghost"
 							size="roundedSM"
 							className="h-8 w-8 shrink-0 p-0"
-							aria-label={t("common.moreActions")}
+							aria-label={"More actions"}
 							disabled={disabled}
 						>
 							<MoreVertical size={iconSize} />
@@ -443,7 +441,7 @@ export function MessageActions({
 					{overflowActions.length > 0 && <MessageActionMenuSeparator />}
 					{direction === "inbound" && status === "received" && (
 						<MessageActionMenuItem icon={<Clock size={iconSize} />} onSelect={() => setSnoozeOpen(true)}>
-							{t("common.snooze")}
+							Snooze
 						</MessageActionMenuItem>
 					)}
 					{direction === "inbound" && (
@@ -453,7 +451,7 @@ export function MessageActions({
 								disabled={!unsubscribeUrl && status === "trash"}
 								onSelect={() => void onUnsubscribe()}
 							>
-								{t("actions.unsubscribe")}
+								Unsubscribe
 							</MessageActionMenuItem>
 							{unsubscribeUrl && (
 								<MessageActionMenuItem
@@ -461,27 +459,27 @@ export function MessageActions({
 									disabled={status === "trash" || status === "spam"}
 									onSelect={() => void onUnsubscribeDeleteAll()}
 								>
-									{t("actions.unsubscribeDeleteAll")}
+									{"Unsubscribe & delete all"}
 								</MessageActionMenuItem>
 							)}
 							<MessageActionMenuItem icon={<Ban size={iconSize} />} onSelect={() => void onBlockContact()}>
-								{t("message.blockContact")}
+								Block contact
 							</MessageActionMenuItem>
 							<MessageActionMenuSeparator />
 						</>
 					)}
 					<MessageActionMenuItem icon={<FileCode2 size={iconSize} />} onSelect={() => setSourceOpen(true)}>
-						{t("message.showOriginal")}
+						Show original
 					</MessageActionMenuItem>
 					<MessageActionMenuSeparator />
-					<MessageActionMenuLabel>{t("common.moveTo")}</MessageActionMenuLabel>
+					<MessageActionMenuLabel>Move to</MessageActionMenuLabel>
 					{moveActions.map((item) => (
 						<MessageActionMenuItem
 							key={item.action}
 							icon={createElement(item.icon, { size: iconSize })}
 							onSelect={() => void runAction(item.action)}
 						>
-							{t(item.labelKey)}
+							{item.labelKey}
 						</MessageActionMenuItem>
 					))}
 				</MessageActionMenu>

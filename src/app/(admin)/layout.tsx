@@ -3,7 +3,6 @@
 import { SkipToContent } from "@/components/skip-to-content";
 import Link from "next/link";
 import { HelpCircle, Search } from "@/components/icons";
-import { useLanguage } from "@/components/language-provider";
 import { AuthGuard } from "@/components/auth/auth-guard";
 import { ComposeProvider } from "@/components/compose/compose-context";
 import { FloatingComposer } from "@/components/compose/floating-composer";
@@ -40,14 +39,13 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { t } = useLanguage();
   const pathname = usePathname();
   const requirePrimary = primaryOnlyPrefixes.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
 
   const mobileTitleKey = adminPageTitles[pathname];
-  const mobileTitle = mobileTitleKey ? t(mobileTitleKey) : undefined;
+  const mobileTitle = mobileTitleKey ? mobileTitleKey : undefined;
 
   return (
     <AuthGuard requireMailbox requireRole="admin" requirePrimary={requirePrimary}>

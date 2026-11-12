@@ -1,25 +1,23 @@
-import type { TranslationKey } from "@/lib/i18n/types";
-import { defaultTranslator, type Translator } from "@/lib/i18n/utils";
 import { authFetch } from "@/lib/auth/client";
 import type { DnsAuthRecord, DnsAuthStatus, DomainPreflightResponse } from "./types";
 
 export const dnsAuthRecords: DnsAuthRecord[] = ["mx", "spf", "dkim", "dmarc"];
 
 export const dnsAuthDescriptions = {
-	mx: "dns.mx",
-	spf: "dns.spf",
-	dkim: "dns.dkim",
-	dmarc: "dns.dmarc",
-} satisfies Record<DnsAuthRecord, TranslationKey>;
+	mx: "Routes incoming email to Replyot",
+	spf: "Authorizes Replyot to send email",
+	dkim: "Signs outgoing email for deliverability",
+	dmarc: "Helps prevent email spoofing",
+} satisfies Record<DnsAuthRecord, string>;
 
-export function getDnsAuthStatusLabel(status: DnsAuthStatus, t: Translator = defaultTranslator): string {
+export function getDnsAuthStatusLabel(status: DnsAuthStatus): string {
 	switch (status) {
 		case "ok":
-			return t("dns.found");
+			return "found";
 		case "missing":
-			return t("dns.missing");
+			return "missing";
 		default:
-			return t("dns.notVerified");
+			return "not verified";
 	}
 }
 

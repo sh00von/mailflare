@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useLanguage } from "@/components/language-provider";
 import {
 	loadRemoteContentPolicy,
 	updateRemoteContentMode,
@@ -9,13 +8,12 @@ import {
 } from "@/components/messages/use-remote-content-utils";
 
 const OPTIONS = [
-	{ mode: "ask", title: "settings.remoteContent.ask" },
-	{ mode: "new_sender", title: "settings.remoteContent.newSender" },
-	{ mode: "allow", title: "settings.remoteContent.allow" },
+	{ mode: "ask", title: "Always ask for permission" },
+	{ mode: "new_sender", title: "Ask permission for new senders" },
+	{ mode: "allow", title: "Allow content" },
 ] as const;
 
 export function RemoteContentSettings() {
-	const { t } = useLanguage();
 	const [mode, setMode] = useState<RemoteContentMode>("allow");
 	const [loading, setLoading] = useState(true);
 	const [saving, setSaving] = useState(false);
@@ -25,7 +23,7 @@ export function RemoteContentSettings() {
 		let cancelled = false;
 		loadRemoteContentPolicy()
 			.then((policy) => { if (!cancelled) setMode(policy.mode); })
-			.catch((loadError) => { if (!cancelled) setError(loadError instanceof Error ? loadError.message : t("settings.remoteContent.failed")); })
+			.catch((loadError) => { if (!cancelled) setError(loadError instanceof Error ? loadError.message : "Failed to update remote content settings"); })
 			.finally(() => { if (!cancelled) setLoading(false); });
 		return () => { cancelled = true; };
 		// eslint-disable-next-line react-hooks/exhaustive-deps
@@ -40,14 +38,14 @@ export function RemoteContentSettings() {
 			.then(setMode)
 			.catch((updateError) => {
 				setMode(previous);
-				setError(updateError instanceof Error ? updateError.message : t("settings.remoteContent.failed"));
+				setError(updateError instanceof Error ? updateError.message : "Failed to update remote content settings");
 			})
 			.finally(() => setSaving(false));
 	};
 
 	return (
 		<div>
-			<div role="radiogroup" aria-label={t("settingsPage.inbox.remoteContent")} className="space-y-3">
+			<div role="radiogroup" aria-label={"Remote content"} className="space-y-3">
 				{OPTIONS.map((option) => (
 					<label key={option.mode} className="flex cursor-pointer items-center gap-3 rounded-xl bg-neutral-50 p-4">
 						<input
@@ -57,7 +55,7 @@ export function RemoteContentSettings() {
 							disabled={loading || saving}
 							onChange={() => choose(option.mode)}
 						/>
-						<span className="flex-1 text-sm font-medium text-neutral-900">{t(option.title)}</span>
+						<span className="flex-1 text-sm font-medium text-neutral-900">{option.title}</span>
 					</label>
 				))}
 			</div>

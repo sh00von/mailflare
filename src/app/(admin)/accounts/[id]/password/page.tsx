@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { Copy, KeyRound } from "@/components/icons";
-import { useLanguage } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -18,7 +17,6 @@ import { fetchManagedAccount } from "../utils";
 import { saveAccountPassword } from "./utils";
 
 export default function AccountPasswordPage() {
-	const { t } = useLanguage();
 	const { id } = useParams<{ id: string }>();
 	const [account, setAccount] = useState<ManagedAccount | null>(null);
 	const [password, setPassword] = useState("");
@@ -34,9 +32,9 @@ export default function AccountPasswordPage() {
 	useEffect(() => {
 		void fetchManagedAccount(id)
 			.then(setAccount)
-			.catch((error) => setMessage(error instanceof Error ? error.message : t("account.loadFailed")));
+			.catch((error) => setMessage(error instanceof Error ? error.message : "Unable to load account"));
 		void loadSecurityStatus().then(setAdminSecurity).catch(() => undefined);
-	}, [id, t]);
+	}, [id]);
 
 	async function createRecoveryLink(stepUpToken: string) {
 		const res = await authFetch(`/api/accounts/${id}/recovery`, {
@@ -45,15 +43,15 @@ export default function AccountPasswordPage() {
 			body: JSON.stringify({ stepUpToken }),
 		});
 		const data = (await res.json()) as { link?: string; error?: string; code?: string };
-		if (!res.ok || !data.link) throw requestError(data, t("account.recovery.failed"));
+		if (!res.ok || !data.link) throw requestError(data, "Could not create the recovery link");
 		setRecoveryLink(data.link);
 	}
 
 	return (
 		<div className="space-y-6">
 			<div>
-				<h1 className="text-2xl md:text-3xl font-medium text-neutral-900">{t("account.password.title")}</h1>
-				<p className="mt-2 text-sm text-neutral-500">{t("account.password.resetFor", { name: account?.name ?? t("account.password.thisAccount") })}</p>
+				<h1 className="text-2xl md:text-3xl font-medium text-neutral-900">Password</h1>
+				<p className="mt-2 text-sm text-neutral-500">{`Reset the password for ${account?.name ?? "this account"}.`}</p>
 			</div>
 			<form
 				onSubmit={(event) => {
@@ -63,13 +61,13 @@ export default function AccountPasswordPage() {
 				className="space-y-5 rounded-3xl bg-white p-6"
 			>
 				{account && !account.editable ? (
-					<p className="text-sm text-neutral-500">{t("account.password.onlyPrimary")}</p>
+					<p className="text-sm text-neutral-500">Only the primary admin can reset an admin account password.</p>
 				) : account && !account.passwordSet ? (
-					<p className="text-sm text-neutral-500">{t("account.recovery.usesPasskeys")}</p>
+					<p className="text-sm text-neutral-500">This account signs in with passkeys only. Use a recovery link to help its owner regain access.</p>
 				) : (
 					<>
 						<div className="space-y-2">
-							<Label htmlFor="account-new-password">{t("account.password.new")}</Label>
+							<Label htmlFor="account-new-password">New password</Label>
 							<Input
 								id="account-new-password"
 								type="password"
@@ -80,14 +78,14 @@ export default function AccountPasswordPage() {
 								value={password}
 								disabled={!account || saving}
 								onChange={(event) => setPassword(event.target.value)}
-								placeholder={t("account.password.placeholder")}
+								placeholder={"Enter at least 8 characters"}
 							/>
 							<p className="text-xs leading-5 text-neutral-500">
-								{t("account.password.hint")}
+								Setting a password signs this account out everywhere. Share it with the user through another channel.
 							</p>
 						</div>
 						<Button type="submit" disabled={!account || saving || password.trim().length < 8}>
-							{saving ? t("account.password.resetting") : t("account.password.reset")}
+							{saving ? "Resetting..." : "Reset password"}
 						</Button>
 					</>
 				)}
@@ -97,12 +95,12 @@ export default function AccountPasswordPage() {
 			{account?.editable && (
 				<div className="space-y-3 rounded-3xl border border-neutral-100 bg-white p-6">
 					<div>
-						<h2 className="text-lg font-semibold text-neutral-900">{t("account.recovery.title")}</h2>
-						<p className="mt-1 text-sm text-neutral-500">{t("account.recovery.description")}</p>
+						<h2 className="text-lg font-semibold text-neutral-900">Recovery link</h2>
+						<p className="mt-1 text-sm text-neutral-500">Create a one-time link that lets this person enrol a new passkey and replace their old sign-in methods.</p>
 					</div>
 					<Button type="button" variant="outline" onClick={() => setRecoveryOpen(true)}>
 						<KeyRound className="h-4 w-4" />
-						{t("account.recovery.create")}
+						Create recovery link
 					</Button>
 				</div>
 			)}
@@ -110,8 +108,8 @@ export default function AccountPasswordPage() {
 			<Dialog open={recoveryOpen} onOpenChange={setRecoveryOpen}>
 				<DialogContent className="sm:max-w-[440px]">
 					<DialogHeader>
-						<DialogTitle>{t("account.recovery.createTitle")}</DialogTitle>
-						<DialogDescription>{t("account.recovery.createDescription")}</DialogDescription>
+						<DialogTitle>Create a recovery link?</DialogTitle>
+						<DialogDescription>You will confirm your own password or passkey first. The link expires after 30 minutes and works once.</DialogDescription>
 					</DialogHeader>
 					<Button
 						onClick={() => {
@@ -119,7 +117,7 @@ export default function AccountPasswordPage() {
 							setPendingRecovery(true);
 						}}
 					>
-						{t("common.continue")}
+						Continue
 					</Button>
 				</DialogContent>
 			</Dialog>
@@ -149,7 +147,7 @@ export default function AccountPasswordPage() {
 				targetUserId={id}
 				onOpenChange={(open) => !open && setPendingReset(false)}
 				onAuthorized={async (token) => {
-					await saveAccountPassword({ account, password, stepUpToken: token, setPassword, setSaving, setMessage, t });
+					await saveAccountPassword({ account, password, stepUpToken: token, setPassword, setSaving, setMessage });
 					setPendingReset(false);
 				}}
 			/>
@@ -157,8 +155,8 @@ export default function AccountPasswordPage() {
 			<Dialog open={!!recoveryLink} onOpenChange={(open) => !open && setRecoveryLink(null)}>
 				<DialogContent className="sm:max-w-[520px]">
 					<DialogHeader>
-						<DialogTitle>{t("account.recovery.createdTitle")}</DialogTitle>
-						<DialogDescription>{t("account.recovery.createdDescription")}</DialogDescription>
+						<DialogTitle>Recovery link ready</DialogTitle>
+						<DialogDescription>Send this link to the account owner through a trusted channel. It cannot read mail.</DialogDescription>
 					</DialogHeader>
 					<code className="block break-all rounded-xl bg-neutral-50 p-3 font-mono text-xs text-neutral-800">{recoveryLink}</code>
 					<div className="flex items-center gap-3">
@@ -171,9 +169,9 @@ export default function AccountPasswordPage() {
 							}}
 						>
 							<Copy className="h-4 w-4" />
-							{copied ? t("common.copied") : t("account.recovery.copy")}
+							{copied ? "Copied" : "Copy link"}
 						</Button>
-						<Button type="button" onClick={() => setRecoveryLink(null)}>{t("common.done")}</Button>
+						<Button type="button" onClick={() => setRecoveryLink(null)}>Done</Button>
 					</div>
 				</DialogContent>
 			</Dialog>

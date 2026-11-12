@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { Upload } from "@/components/icons";
-import { useLanguage } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
@@ -18,7 +17,6 @@ import {
 } from "./utils";
 
 export default function AccountDetailsPage() {
-	const { t } = useLanguage();
 	const { id } = useParams<{ id: string }>();
 	const [account, setAccount] = useState<ManagedAccount | null>(null);
 	const [saving, setSaving] = useState(false);
@@ -28,8 +26,8 @@ export default function AccountDetailsPage() {
 	useEffect(() => {
 		void fetchManagedAccount(id)
 			.then(setAccount)
-			.catch((error) => setMessage(error instanceof Error ? error.message : t("account.loadFailed")));
-	}, [id, t]);
+			.catch((error) => setMessage(error instanceof Error ? error.message : "Unable to load account"));
+	}, [id]);
 
 	async function saveDetails() {
 		if (!account) return;
@@ -37,9 +35,9 @@ export default function AccountDetailsPage() {
 		setMessage(null);
 		try {
 			await saveManagedAccount(account);
-			setMessage(t("account.updated"));
+			setMessage("Account details updated");
 		} catch (error) {
-			setMessage(error instanceof Error ? error.message : t("account.updateFailed"));
+			setMessage(error instanceof Error ? error.message : "Unable to update account");
 		} finally {
 			setSaving(false);
 		}
@@ -52,22 +50,22 @@ export default function AccountDetailsPage() {
 			setAccount({ ...account, hasAvatar: true });
 			setAvatarVersion(Date.now());
 		} catch (error) {
-			setMessage(error instanceof Error ? error.message : t("account.avatarFailed"));
+			setMessage(error instanceof Error ? error.message : "Unable to update avatar");
 		}
 	}
 
-	if (!account) return <p className="text-sm text-neutral-500">{message ?? t("account.loadingAccount")}</p>;
+	if (!account) return <p className="text-sm text-neutral-500">{message ?? "Loading account..."}</p>;
 
 	return (
 		<div className="space-y-6">
 			<div>
-				<h1 className="text-2xl md:text-3xl font-medium text-neutral-900">{t("account.detailsTitle")}</h1>
-				<p className="mt-2 text-sm text-neutral-500">{t("account.detailsDescription")}</p>
+				<h1 className="text-2xl md:text-3xl font-medium text-neutral-900">Details</h1>
+				<p className="mt-2 text-sm text-neutral-500">{"Update this account's profile and status."}</p>
 			</div>
 			<section className="space-y-5 rounded-3xl bg-white p-6">
 				{!account.editable && (
 					<p className="rounded-2xl bg-neutral-50 p-4 text-sm text-neutral-500">
-						{t("account.noPermission")}
+						You do not have permission to edit this account. Only the primary admin can manage admin accounts.
 					</p>
 				)}
 				<div className="flex items-center gap-4">
@@ -81,22 +79,22 @@ export default function AccountDetailsPage() {
 						<Label className="cursor-pointer">
 							<span className="inline-flex h-9 items-center gap-2 rounded-md border border-neutral-200 px-3 text-sm">
 								<Upload className="h-4 w-4" />
-								{t("account.changeAvatar")}
+								Change avatar
 							</span>
 							<Input type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="sr-only" onChange={(event) => void uploadAvatar(event.target.files?.[0])} />
 						</Label>
 					)}
 				</div>
 				<div className="space-y-2">
-					<Label htmlFor="account-email">{t("auth.email")}</Label>
+					<Label htmlFor="account-email">Email</Label>
 					<Input id="account-email" value={account.email} readOnly className="bg-neutral-50 text-neutral-500" />
 				</div>
 				<div className="space-y-2">
-					<Label htmlFor="account-name">{t("common.name")}</Label>
+					<Label htmlFor="account-name">Name</Label>
 					<Input id="account-name" value={account.name} disabled={!account.editable} onChange={(event) => setAccount({ ...account, name: event.target.value })} />
 				</div>
 				{account.canForwardEmail && <div className="space-y-2">
-					<Label htmlFor="forwarding-email">{t("account.forwardingOptional")}</Label>
+					<Label htmlFor="forwarding-email">Forwarding email (optional)</Label>
 					<Input
 						id="forwarding-email"
 						type="email"
@@ -106,14 +104,14 @@ export default function AccountDetailsPage() {
 						placeholder="destination@example.com"
 					/>
 					<p className="text-xs leading-5 text-neutral-500">
-						{t("settings.forwarding.hint")}
+						Incoming mail will also be sent to this verified Cloudflare Email Routing destination.
 					</p>
 				</div>}
 				<div className="flex items-center justify-between gap-4 rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
 					<div className="space-y-1">
-						<Label htmlFor="account-enabled" className="font-semibold text-neutral-900">{t("account.enabled")}</Label>
+						<Label htmlFor="account-enabled" className="font-semibold text-neutral-900">Account enabled</Label>
 						<p id="account-enabled-description" className="text-xs leading-5 text-neutral-500">
-							{account.isPrimaryAdmin ? t("account.primaryAlwaysEnabled") : t("account.allowSignIn")}
+							{account.isPrimaryAdmin ? "The primary admin account always stays enabled." : "Allow this account to sign in and access its inboxes."}
 						</p>
 					</div>
 					<Switch
@@ -126,7 +124,7 @@ export default function AccountDetailsPage() {
 				</div>
 				{account.editable && (
 					<Button onClick={() => void saveDetails()} disabled={saving || !account.name.trim()}>
-						{saving ? t("common.saving") : t("account.saveDetails")}
+						{saving ? "Saving..." : "Save details"}
 					</Button>
 				)}
 			</section>

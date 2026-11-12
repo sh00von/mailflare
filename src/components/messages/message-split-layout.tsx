@@ -2,7 +2,6 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { useLanguage } from "@/components/language-provider";
 import { useSidebar } from "@/components/sidebar-state";
 import { useMailSearch } from "@/components/mail-search/mail-search-context";
 import { useSelectedMailbox } from "@/components/mailbox-provider";
@@ -38,7 +37,6 @@ export function MessageSplitLayout({
 	const containerRef = useRef<HTMLDivElement>(null);
 	const startWidth = useRef(listWidth);
 	const resizedWidth = useRef(listWidth);
-	const { t } = useLanguage();
 	const { userId, setForcedMinimal } = useSidebar();
 	const isDesktop = useIsDesktop();
 	const listVisible = twoColumnReading && manualListVisible;
@@ -129,7 +127,7 @@ export function MessageSplitLayout({
 					/>
 					</div>
 					<ResizeHandle
-						label={t("list.resize")}
+						label={"Resize message list"}
 						onResizeStart={() => { startWidth.current = listWidth; resizedWidth.current = listWidth; }}
 						onResize={(delta) => {
 							const requestedWidth = startWidth.current + delta;
@@ -141,7 +139,7 @@ export function MessageSplitLayout({
 					/>
 				</aside>
 				)}
-				<MessageListVisibilityContext.Provider value={{ visible: listVisible, toggle: () => { const visible = !manualListVisible; setManualListVisible(visible); saveMessageListVisible(visible); }, singleColumn: !twoColumnReading, backHref: config.hrefPrefix, backLabel: config.titleKey ? t(config.titleKey) : config.title }}>
+				<MessageListVisibilityContext.Provider value={{ visible: listVisible, toggle: () => { const visible = !manualListVisible; setManualListVisible(visible); saveMessageListVisible(visible); }, singleColumn: !twoColumnReading, backHref: config.hrefPrefix, backLabel: config.titleKey ? config.titleKey : config.title }}>
 				<MessageDetailNavigationProvider config={config} currentMessageId={selectedMessageId}>
 				<section className="min-h-0 min-w-0 overflow-hidden bg-white flex flex-col h-full">
 					{showBulkBar && (

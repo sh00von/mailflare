@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { browserSupportsWebAuthn } from "@simplewebauthn/browser";
 import { AlertTriangle, CheckCircle2, KeyRound, Pencil, Plus, ShieldCheck, ShieldOff, Trash2 } from "@/components/icons";
-import { useLanguage } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -28,7 +27,6 @@ type PendingAction =
 	| { type: "policy"; steps: PolicyStep[]; index: number };
 
 export function PasskeySettings() {
-	const { t } = useLanguage();
 	const { status, error: loadFailed } = useSecurityStatus();
 	const [addOpen, setAddOpen] = useState(false);
 	const [name, setName] = useState("");
@@ -55,12 +53,12 @@ export function PasskeySettings() {
 
 	function displayName(passkey: PasskeySummary) {
 		if (passkey.name.trim()) return passkey.name;
-		return passkeyProvider(passkey.aaguid) ?? t("passkey.defaultName", { date: new Date(passkey.createdAt).toLocaleDateString() });
+		return passkeyProvider(passkey.aaguid) ?? `Passkey · ${new Date(passkey.createdAt).toLocaleDateString()}`;
 	}
 
 	async function onCheck() {
 		if (!browserSupportsWebAuthn()) {
-			setCheckError(t("passkey.browserUnsupported"));
+			setCheckError("This browser does not support passkeys");
 			return;
 		}
 		setChecking(true);
@@ -72,8 +70,8 @@ export function PasskeySettings() {
 			await refreshSecurityStatus(true);
 		} catch (error) {
 			if (isPasskeyCancellation(error)) return;
-			if (isPasskeyUnsupported(error)) setCheckError(t("passkey.browserUnsupported"));
-			else setCheckError(authErrorText(error instanceof ClientRequestError ? error.code : undefined, t, "passkey.verifyFailed"));
+			if (isPasskeyUnsupported(error)) setCheckError("This browser does not support passkeys");
+			else setCheckError(authErrorText(error instanceof ClientRequestError ? error.code : undefined, "Verification failed"));
 		} finally {
 			setChecking(false);
 		}
@@ -99,7 +97,7 @@ export function PasskeySettings() {
 				if (step === "mfa.disable") {
 					await disableMfa({ stepUpToken: token });
 					await refreshSecurityStatus(true);
-					setNotice(t("passkey.authenticatorOffNotice"));
+					setNotice("Authenticator codes are off. Your password still works.");
 				} else if (step === "password.remove") {
 					await removePassword(token);
 					await refreshSecurityStatus(true);
@@ -144,13 +142,13 @@ export function PasskeySettings() {
 			setRename(null);
 			await refreshSecurityStatus(true);
 		} catch (err) {
-			setRenameError(authErrorText(err instanceof ClientRequestError ? err.code : undefined, t, "passkey.renameFailed"));
+			setRenameError(authErrorText(err instanceof ClientRequestError ? err.code : undefined, "Could not rename the passkey"));
 		} finally {
 			setRenaming(false);
 		}
 	}
 
-	if (!status) return <p role={loadFailed ? "alert" : undefined} className="text-sm text-neutral-500">{loadFailed ? t("passkey.loadFailed") : t("mfa.loading")}</p>;
+	if (!status) return <p role={loadFailed ? "alert" : undefined} className="text-sm text-neutral-500">{loadFailed ? "Could not load passkeys" : "Loading two-factor settings..."}</p>;
 
 	// Password accounts can fall back to password sign-in; passkey-only accounts cannot.
 	const canRemove = status.passkeys.length > 1 || status.passwordSet;
@@ -167,17 +165,17 @@ export function PasskeySettings() {
 			: policyStep ?? "passkey.add";
 	const stepUpTitle = policy
 		? policyStep === "mfa.disable"
-			? t("mfa.turnOffTitle")
+			? "Turn off authenticator codes"
 			: policyStep === "password.remove"
-				? t("passkey.removePasswordTitle")
-				: t("twoStep.requireTitle")
+				? "Remove your password?"
+				: "Require a second step after password sign-in"
 		: undefined;
 	const stepUpDescription = policy
 		? policyStep === "mfa.disable"
-			? t("mfa.turnOffDescription")
+			? "Confirm it is you. Authenticator codes and their recovery codes will stop working."
 			: policyStep === "password.remove"
-				? t("passkey.removePasswordDescription")
-				: t("twoStep.requireDescription")
+				? "Password sign-in will stop working. Your passkeys will be the only way to sign in."
+				: "After entering a password, confirm with a passkey or an authenticator code."
 		: undefined;
 
 	return (
@@ -191,26 +189,26 @@ export function PasskeySettings() {
 							<ShieldOff className="mt-0.5 h-5 w-5 shrink-0 text-neutral-400" />
 						)}
 						<p className="text-sm font-medium text-neutral-900">
-							{status.passkeys.length === 0 ? t("passkey.none") : t("passkey.count", { count: status.passkeys.length })}
+							{status.passkeys.length === 0 ? "No passkeys yet" : (status.passkeys.length === 1 ? `${status.passkeys.length} passkey` : `${status.passkeys.length} passkeys`)}
 						</p>
 					</div>
 					<div className="flex shrink-0 flex-wrap items-center gap-2">
 						{status.passkeys.length > 0 && (
 							<Button type="button" variant="outline" onClick={() => void onCheck()} disabled={checking}>
 								<CheckCircle2 className="h-4 w-4" />
-								{checking ? t("common.pleaseWait") : t("passkey.check")}
+								{checking ? "Please wait..." : "Check a passkey"}
 							</Button>
 						)}
 						<Button type="button" onClick={() => setAddOpen(true)}>
 							<Plus className="h-4 w-4" />
-							{t("passkey.add")}
+							Add a passkey
 						</Button>
 					</div>
 				</div>
 				{checkError && <p role="alert" className="mt-3 text-sm text-red-600">{checkError}</p>}
 				{checkedPasskey && (
 					<p role="status" aria-live="polite" className="sr-only">
-						{t("passkey.justVerified")}: {displayName(checkedPasskey)}
+						Just verified: {displayName(checkedPasskey)}
 					</p>
 				)}
 			</div>
@@ -232,18 +230,18 @@ export function PasskeySettings() {
 										{checkedId === passkey.id && (
 											<span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
 												<CheckCircle2 className="h-3 w-3" />
-												{t("passkey.justVerified")}
+												Just verified
 											</span>
 										)}
 									</div>
 									<p className="mt-1 text-xs text-neutral-500">
 										{passkey.lastUsedAt
-											? t("passkey.lastUsed", { date: new Date(passkey.lastUsedAt).toLocaleString() })
-											: t("passkey.neverUsed")}
+											? `Last used ${new Date(passkey.lastUsedAt).toLocaleString()}`
+											: "Never used"}
 										{" · "}
-										{passkey.backedUp ? t("passkey.backedUp") : t("passkey.deviceOnly")}
+										{passkey.backedUp ? "Synced" : "This device only"}
 									</p>
-									<p className="mt-0.5 text-xs text-neutral-400">{t("passkey.createdAt", { date: new Date(passkey.createdAt).toLocaleDateString() })}</p>
+									<p className="mt-0.5 text-xs text-neutral-400">{`Added ${new Date(passkey.createdAt).toLocaleDateString()}`}</p>
 								</div>
 							</div>
 							<div className="flex shrink-0 items-center gap-1">
@@ -255,7 +253,7 @@ export function PasskeySettings() {
 										setRenameError(null);
 										setRename({ id: passkey.id, name: displayName(passkey) });
 									}}
-									aria-label={t("passkey.renameLabel", { name: displayName(passkey) })}
+									aria-label={`Rename ${displayName(passkey)}`}
 								>
 									<Pencil className="h-4 w-4" />
 								</Button>
@@ -264,9 +262,9 @@ export function PasskeySettings() {
 									variant="ghost"
 									size="sm"
 									disabled={!canRemove}
-									title={canRemove ? undefined : t("passkey.lastMethodHint")}
+									title={canRemove ? undefined : "Add another sign-in method before removing this passkey."}
 									onClick={() => setConfirmRemove({ id: passkey.id, name: displayName(passkey) })}
-									aria-label={t("passkey.removeLabel", { name: displayName(passkey) })}
+									aria-label={`Remove ${displayName(passkey)}`}
 								>
 									<Trash2 className="h-4 w-4" />
 								</Button>
@@ -292,23 +290,23 @@ export function PasskeySettings() {
 						}}
 					>
 						<DialogHeader>
-							<DialogTitle>{t("passkey.addTitle")}</DialogTitle>
-							<DialogDescription>{t("passkey.addDescription")}</DialogDescription>
+							<DialogTitle>Add a passkey</DialogTitle>
+							<DialogDescription>Confirm it is you, then create the passkey. Naming it is optional.</DialogDescription>
 						</DialogHeader>
 						<div className="space-y-2">
-							<Label htmlFor="new-passkey-name">{t("passkey.nameOptional")}</Label>
+							<Label htmlFor="new-passkey-name">Passkey name (optional)</Label>
 							<Input
 								id="new-passkey-name"
 								value={name}
 								onChange={(event) => setName(event.target.value)}
 								maxLength={100}
 								autoComplete="off"
-								placeholder={t("passkey.namePlaceholder")}
+								placeholder={"e.g. Work laptop"}
 								autoFocus
 							/>
-							<p className="text-xs leading-5 text-neutral-500">{t("passkey.nameHint")}</p>
+							<p className="text-xs leading-5 text-neutral-500">Optional. If you leave it blank, we use the provider name or a dated label. You can rename it later.</p>
 						</div>
-						<Button type="submit">{t("common.continue")}</Button>
+						<Button type="submit">Continue</Button>
 					</form>
 				</DialogContent>
 			</Dialog>
@@ -316,8 +314,8 @@ export function PasskeySettings() {
 			<Dialog open={!!confirmRemove} onOpenChange={(open) => !open && setConfirmRemove(null)}>
 				<DialogContent className="sm:max-w-[440px]">
 					<DialogHeader>
-						<DialogTitle>{t("passkey.removeTitle")}</DialogTitle>
-						<DialogDescription>{t("passkey.removeDescription", { name: confirmRemove?.name ?? "" })}</DialogDescription>
+						<DialogTitle>Remove this passkey?</DialogTitle>
+						<DialogDescription>{`"${confirmRemove?.name ?? ""}" will stop working for sign-in.`}</DialogDescription>
 					</DialogHeader>
 					{warnsLastSecondFactor && (
 						<p
@@ -325,12 +323,12 @@ export function PasskeySettings() {
 							className="mb-4 flex items-start gap-2 rounded-lg border border-amber-100 bg-amber-50 px-4 py-3 text-sm leading-5 text-amber-800"
 						>
 							<AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden="true" />
-							<span className="min-w-0">{t("passkey.removeLastSecondFactorWarning")}</span>
+							<span className="min-w-0">Removing your last passkey will also turn off two-step verification. You’ll sign in with your password only.</span>
 						</p>
 					)}
 					<div className="flex justify-end gap-2">
 						<Button type="button" variant="outline" onClick={() => setConfirmRemove(null)}>
-							{t("common.cancel")}
+							Cancel
 						</Button>
 						<Button
 							type="button"
@@ -342,7 +340,7 @@ export function PasskeySettings() {
 								setPending({ type: "remove", ...action });
 							}}
 						>
-							{t("passkey.remove")}
+							Remove
 						</Button>
 					</div>
 				</DialogContent>
@@ -352,11 +350,11 @@ export function PasskeySettings() {
 				<DialogContent className="sm:max-w-[440px]">
 					<form onSubmit={submitRename} className="space-y-4">
 						<DialogHeader>
-							<DialogTitle>{t("passkey.renameTitle")}</DialogTitle>
-							<DialogDescription>{t("passkey.renameDescription")}</DialogDescription>
+							<DialogTitle>Rename passkey</DialogTitle>
+							<DialogDescription>Use a name you will recognise in this list.</DialogDescription>
 						</DialogHeader>
 						<div className="space-y-2">
-							<Label htmlFor="rename-passkey">{t("passkey.name")}</Label>
+							<Label htmlFor="rename-passkey">Passkey name</Label>
 							<Input
 								id="rename-passkey"
 								value={rename?.name ?? ""}
@@ -367,7 +365,7 @@ export function PasskeySettings() {
 							/>
 						</div>
 						{renameError && <p role="alert" className="text-sm text-red-600">{renameError}</p>}
-						<Button type="submit" disabled={renaming}>{renaming ? t("common.pleaseWait") : t("common.save")}</Button>
+						<Button type="submit" disabled={renaming}>{renaming ? "Please wait..." : "Save"}</Button>
 					</form>
 				</DialogContent>
 			</Dialog>

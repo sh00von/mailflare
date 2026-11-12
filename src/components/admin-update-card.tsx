@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { CheckCircle2, CircleX, Database, RefreshCw } from "@/components/icons";
-import { useLanguage } from "@/components/language-provider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -14,7 +13,6 @@ import {
 import type { MigrationStatusResponse, UpdateStatusResponse, UpdateWorkflowResponse } from "./admin-update-card-types";
 
 export function AdminUpdateCard() {
-	const { t } = useLanguage();
 	const [status, setStatus] = useState<UpdateStatusResponse>();
 	const [result, setResult] = useState<UpdateWorkflowResponse>();
 	const [error, setError] = useState("");
@@ -34,7 +32,7 @@ export function AdminUpdateCard() {
 			})
 			.catch((statusError) => {
 				if (isActive) {
-					setError(statusError instanceof Error ? statusError.message : t("update.checkFailed"));
+					setError(statusError instanceof Error ? statusError.message : "Could not check for updates");
 				}
 			})
 			.finally(() => {
@@ -47,7 +45,7 @@ export function AdminUpdateCard() {
 			})
 			.catch((statusError) => {
 				if (isActive) {
-					setMigrationError(statusError instanceof Error ? statusError.message : t("update.migrationCheckFailed"));
+					setMigrationError(statusError instanceof Error ? statusError.message : "Could not check database migrations");
 				}
 			})
 			.finally(() => {
@@ -67,7 +65,7 @@ export function AdminUpdateCard() {
 		try {
 			setResult(await triggerApplicationUpdate());
 		} catch (updateError) {
-			setError(updateError instanceof Error ? updateError.message : t("update.startFailed"));
+			setError(updateError instanceof Error ? updateError.message : "Could not start the update");
 		} finally {
 			setIsPending(false);
 		}
@@ -80,7 +78,7 @@ export function AdminUpdateCard() {
 			setMigrationStatus(await applyDatabaseMigrations());
 		} catch (migrationFailure) {
 			setMigrationError(
-				migrationFailure instanceof Error ? migrationFailure.message : t("update.migrateFailed"),
+				migrationFailure instanceof Error ? migrationFailure.message : "Could not apply database migrations",
 			);
 		} finally {
 			setIsMigrating(false);
@@ -94,9 +92,9 @@ export function AdminUpdateCard() {
 					<RefreshCw className="h-5 w-5" />
 				</div>
 				<div>
-					<CardTitle className="text-base">{t("update.title")}</CardTitle>
+					<CardTitle className="text-base">Application update</CardTitle>
 					<p className="mt-1 text-sm text-neutral-500">
-						{t("update.description")}
+						Check for Replyot releases and keep the database schema current. Self-hosted installs update by deploying a new image or rebuilding from source.
 					</p>
 				</div>
 			</CardHeader>
@@ -106,7 +104,7 @@ export function AdminUpdateCard() {
 				{!isChecking && status?.configured === false && (
 					<div className="space-y-3">
 						<p className="text-sm text-neutral-600">
-							{status.configuration?.length ? t("update.completeConfig") : t("update.selfHosted")}
+							{status.configuration?.length ? "Complete the required Cloudflare Worker configuration:" : "Update this self-hosted installation by deploying a new image or rebuilding from updated source, then recreate the container."}
 						</p>
 						{!!status.configuration?.length && (
 							<ul className="divide-y divide-neutral-100 overflow-hidden rounded-2xl border border-neutral-100">
@@ -119,7 +117,7 @@ export function AdminUpdateCard() {
 										)}
 										<code className="text-xs font-medium text-neutral-800">{item.name}</code>
 										<span className={`ml-auto text-xs font-medium ${item.configured ? "text-green-700" : "text-red-600"}`}>
-											{item.configured ? t("update.configured") : t("update.missing")}
+											{item.configured ? "Configured" : "Missing"}
 										</span>
 									</li>
 								))}
@@ -138,8 +136,8 @@ export function AdminUpdateCard() {
 							)}
 							<p className="min-w-0 text-sm text-neutral-700">
 								{status.available
-									? t("update.available", { target: status.targetVersion, current: status.currentVersion })
-									: t("update.upToDate", { current: status.currentVersion })}
+									? `Replyot v${status.targetVersion} is available. You are using v${status.currentVersion}.`
+									: `Replyot v${status.currentVersion} is up to date.`}
 							</p>
 							{status.available && (
 								<button
@@ -148,7 +146,7 @@ export function AdminUpdateCard() {
 									disabled={isPending}
 									className="ml-auto shrink-0 text-sm font-medium text-blue-700 hover:underline disabled:pointer-events-none disabled:opacity-50"
 								>
-									{isPending ? t("update.starting") : t("update.updateButton")}
+									{isPending ? "Starting update..." : "Update Replyot"}
 								</button>
 							)}
 						</div>
@@ -168,7 +166,7 @@ export function AdminUpdateCard() {
 							<div className="flex items-center gap-3 px-4 py-4">
 								<Database className={`h-4 w-4 shrink-0 text-amber-600 ${isMigrating ? "animate-pulse" : ""}`} />
 								<p className="text-sm text-neutral-700">
-									{t("update.pendingMigrations", { count: migrationStatus.pending.length })}
+									{(migrationStatus.pending.length === 1 ? `${migrationStatus.pending.length} database migration is pending.` : `${migrationStatus.pending.length} database migrations are pending.`)}
 								</p>
 								<button
 									type="button"
@@ -176,7 +174,7 @@ export function AdminUpdateCard() {
 									disabled={isMigrating}
 									className="ml-auto shrink-0 text-sm font-medium text-blue-700 hover:underline disabled:pointer-events-none disabled:opacity-50"
 								>
-									{isMigrating ? t("update.updatingDatabase") : t("update.updateDatabase")}
+									{isMigrating ? "Updating database..." : "Update database"}
 								</button>
 							</div>
 						)}
@@ -184,14 +182,14 @@ export function AdminUpdateCard() {
 						{!isCheckingMigrations && !!migrationStatus?.unknown.length && (
 							<div className="flex items-center gap-3 px-4 py-4 text-sm text-red-600">
 								<CircleX className="h-4 w-4 shrink-0" />
-								{t("update.deployMatching")}
+								Deploy the matching Replyot release before changing this database.
 							</div>
 						)}
 
 						{!isCheckingMigrations && migrationStatus?.ready && (
 							<div className="flex items-center gap-3 px-4 py-4">
 								<CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />
-								<p className="text-sm text-neutral-700">{t("update.databaseUpToDate")}</p>
+								<p className="text-sm text-neutral-700">Database schema is up to date.</p>
 							</div>
 						)}
 					</div>
@@ -199,11 +197,11 @@ export function AdminUpdateCard() {
 
 				{result?.ok && (
 					<p className="text-sm text-green-700">
-						{t("update.started", { repo: result.repository, ref: result.ref })}{" "}
+						{`Update started for ${result.repository}@${result.ref}. Refresh this page after Cloudflare deploys it.`}{" "}
 						{result.runUrl && (
 							<a className="font-medium underline" href={result.runUrl} target="_blank" rel="noreferrer">
-								{t("update.viewWorkflow")}
-								<span className="sr-only"> ({t("common.opensInNewTab")})</span>
+								View workflow
+								<span className="sr-only"> (opens in a new tab)</span>
 							</a>
 						)}
 					</p>

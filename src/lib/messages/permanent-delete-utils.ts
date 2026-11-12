@@ -1,10 +1,9 @@
 import type { PermanentDeleteFolder } from "@/app/api/messages/bulk/types";
-import { defaultTranslator, type Translator } from "../i18n/utils";
 
-const folderLabelKeys = { trash: "navigation.trash", spam: "navigation.spam" } as const;
+const folderLabels = { trash: "Trash", spam: "Spam" } as const;
 
-export function getPermanentDeleteFolderLabel(folder: PermanentDeleteFolder, t: Translator = defaultTranslator): string {
-	return t(folderLabelKeys[folder]);
+export function getPermanentDeleteFolderLabel(folder: PermanentDeleteFolder): string {
+	return folderLabels[folder];
 }
 
 /** Whether the folder being viewed offers "Delete forever" and "Empty …". */
@@ -12,18 +11,20 @@ export function supportsPermanentDelete(folder: string | null | undefined): fold
 	return folder === "trash" || folder === "spam";
 }
 
-export function getEmptyFolderLabel(folder: PermanentDeleteFolder, t: Translator = defaultTranslator): string {
-	return t("list.emptyFolder", { folder: getPermanentDeleteFolderLabel(folder, t) });
+export function getEmptyFolderLabel(folder: PermanentDeleteFolder): string {
+	return `Empty ${getPermanentDeleteFolderLabel(folder)}`;
 }
 
-export function getPermanentDeleteConfirmText(count: number, t: Translator = defaultTranslator): string {
-	return t("delete.confirm", { count });
+export function getPermanentDeleteConfirmText(count: number): string {
+	return (count === 1 ? "Permanently delete this message? This cannot be undone." : `Permanently delete these ${count} messages? This cannot be undone.`);
 }
 
-export function getEmptyFolderConfirmText(folder: PermanentDeleteFolder, total?: number, t: Translator = defaultTranslator): string {
-	const vars = { count: total ?? 0, folder: getPermanentDeleteFolderLabel(folder, t) };
-	if (total === 1) return t("empty.confirm.single", vars);
-	return total && total > 1 ? t("empty.confirm.multiple", vars) : t("empty.confirm.all", vars);
+export function getEmptyFolderConfirmText(folder: PermanentDeleteFolder, total?: number): string {
+	const folderLabel = getPermanentDeleteFolderLabel(folder);
+	if (total === 1) return `Permanently delete the 1 message in ${folderLabel}? This cannot be undone.`;
+	return total && total > 1
+		? `Permanently delete all ${total} messages in ${folderLabel}? This cannot be undone.`
+		: `Permanently delete every message in ${folderLabel}? This cannot be undone.`;
 }
 
 /** Some of the requested messages were not in Trash or Spam any more, so the server kept them. */

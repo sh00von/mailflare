@@ -2,9 +2,7 @@
 
 import React, { useId, useState, useEffect, useRef, useMemo } from "react";
 import { Search, CornerDownLeft } from "@/components/icons";
-import { useLanguage } from "@/components/language-provider";
 import type { CommandItem } from "./types";
-import type { TranslationKey } from "@/lib/i18n/types";
 import { filterCommands, groupCommandsByCategory } from "./command-palette-utils";
 import { CommandPaletteItem } from "./command-palette-item";
 import { useDialogFocus } from "@/components/use-dialog-focus";
@@ -22,7 +20,6 @@ function CommandPaletteDialog({
   onClose: () => void;
   commands: CommandItem[];
 }) {
-  const { t } = useLanguage();
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -80,7 +77,7 @@ function CommandPaletteDialog({
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
-        aria-label={t("palette.placeholder")}
+        aria-label={"Type a command or search actions..."}
         className="relative w-full max-w-xl bg-white border border-neutral-200 rounded-2xl shadow-2xl overflow-hidden flex flex-col z-10"
         onKeyDown={handleKeyDown}
       >
@@ -95,13 +92,13 @@ function CommandPaletteDialog({
               setQuery(e.target.value);
               setSelectedIndex(0);
             }}
-            placeholder={t("palette.placeholder")}
+            placeholder={"Type a command or search actions..."}
             role="combobox"
             aria-expanded="true"
             aria-controls={listboxId}
             aria-autocomplete="list"
             aria-activedescendant={filteredCommands.length ? optionId(activeIndex) : undefined}
-            aria-label={t("palette.placeholder")}
+            aria-label={"Type a command or search actions..."}
             className="w-full bg-transparent text-neutral-900 placeholder-neutral-400 text-[15px] focus:outline-none"
           />
           <kbd className="px-2 py-0.5 text-xs font-semibold text-neutral-500 bg-neutral-100 border border-neutral-200 rounded-md shadow-2xs">
@@ -110,16 +107,16 @@ function CommandPaletteDialog({
         </div>
 
         {/* Results */}
-        <div id={listboxId} role="listbox" aria-label={t("palette.placeholder")} className="max-h-80 overflow-y-auto p-2">
+        <div id={listboxId} role="listbox" aria-label={"Type a command or search actions..."} className="max-h-80 overflow-y-auto p-2">
           {filteredCommands.length === 0 ? (
             <div role="status" className="p-8 text-center text-sm text-neutral-500">
-              {t("palette.noMatch", { query })}
+              {`No matching commands found for “${query}”`}
             </div>
           ) : (
             Object.entries(grouped).map(([category, items]) => (
-              <div key={category} role="group" aria-label={t(`shortcut.category.${category}` as TranslationKey)} className="mb-2 last:mb-0">
+              <div key={category} role="group" aria-label={category} className="mb-2 last:mb-0">
                 <div aria-hidden="true" className="px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-neutral-500">
-                  {t(`shortcut.category.${category}` as TranslationKey)}
+                  {category}
                 </div>
                 {items.map((item) => {
                   const isCurrent = flatIndex === activeIndex;
@@ -152,14 +149,14 @@ function CommandPaletteDialog({
               <kbd className="px-1.5 py-0.5 bg-neutral-200 rounded mr-1 text-[10px]">
                 ↑↓
               </kbd>
-              {t("palette.navigate")}
+              to navigate
             </span>
             <span className="flex items-center">
               <CornerDownLeft className="w-3 h-3 mr-1 inline" />
-              {t("palette.select")}
+              to select
             </span>
           </div>
-          <span className="text-[11px]">{t("palette.actions")}</span>
+          <span className="text-[11px]">Replyot Actions</span>
         </div>
       </div>
     </div>

@@ -3,7 +3,6 @@
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Cloud, ExternalLink } from "@/components/icons";
-import { useLanguage } from "@/components/language-provider";
 import { formatUserDate } from "@/lib/time/utils";
 import { markMessageRead } from "@/components/mark-read";
 import { useSelectedMailbox } from "@/components/mailbox-provider";
@@ -59,7 +58,6 @@ export default function MessageDetailPage() {
 }
 
 function MessageDetailContent({ messageId }: { messageId: string }) {
-  const { t } = useLanguage();
   const { selectedMailbox, mailboxes } = useSelectedMailbox();
   useSendViewStatus(messageId);
   const [data, setData] = useState<MessageDetailResponse | null>(
@@ -128,7 +126,7 @@ function MessageDetailContent({ messageId }: { messageId: string }) {
         return;
       }
       setLoading(true);
-      const nextData = await fetchMessageDetail(messageId).catch(() => fetchMessageDetail(messageId)).catch(() => ({ error: t("message.notFound") }));
+      const nextData = await fetchMessageDetail(messageId).catch(() => fetchMessageDetail(messageId)).catch(() => ({ error: "Message not found" }));
       if (!cancelled) {
         setData(nextData);
         setLoading(false);
@@ -217,7 +215,7 @@ function MessageDetailContent({ messageId }: { messageId: string }) {
   if (!message) {
     return (
       <p className="px-6 py-4 text-sm text-neutral-500">
-        {data?.error ?? t("message.notFound")}
+        {data?.error ?? "Message not found"}
       </p>
     );
   }
@@ -232,7 +230,7 @@ function MessageDetailContent({ messageId }: { messageId: string }) {
   const ccEntries = splitEmailAddressList(message.ccAddr);
   const bccEntries = splitEmailAddressList(message.bccAddr);
   const messageDate = (withTime: boolean) => scheduledAt
-    ? formatScheduledSendTime(scheduledAt, t)
+    ? formatScheduledSendTime(scheduledAt)
     : formatUserDate(message.createdAt, withTime
       ? { month: "short", day: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }
       : { month: "short", day: "2-digit", year: "numeric" });
@@ -269,8 +267,8 @@ function MessageDetailContent({ messageId }: { messageId: string }) {
     </div>
 
     <div ref={scrollRef} onScroll={handleScroll} className="h-full overflow-y-auto overscroll-contain scrollbar-gutter-stable flex-1 min-h-0">
-      <h1 className={clsx(!isAnyPanelVisible ? "sm:pl-16" : "sm:pl-10", "px-4 pb-2 pt-2 text-2xl text-neutral-900 sm:pr-6")} title={message.subject ?? t("list.noSubject")}>
-        {message.subject ?? t("list.noSubject")}
+      <h1 className={clsx(!isAnyPanelVisible ? "sm:pl-16" : "sm:pl-10", "px-4 pb-2 pt-2 text-2xl text-neutral-900 sm:pr-6")} title={message.subject ?? "(no subject)"}>
+        {message.subject ?? "(no subject)"}
       </h1>
       {/* <div className="px-6">
         <div className="mx-auto w-full max-w-[640px]">
@@ -328,7 +326,7 @@ function MessageDetailContent({ messageId }: { messageId: string }) {
                   )}
                 </p>
                 <p className="text-xs text-neutral-500">
-                  {t("source.to").toLowerCase()}{" "}
+                  {"To".toLowerCase()}{" "}
                   <RecipientList
                     entries={toEntries}
                     mailboxId={message.mailboxId}
@@ -340,12 +338,12 @@ function MessageDetailContent({ messageId }: { messageId: string }) {
                 </div>
                 {ccEntries.length > 0 && (
                   <p className="text-xs text-neutral-500">
-                    {t("message.cc")} <RecipientList entries={ccEntries} mailboxId={message.mailboxId} style={showFullRecipientAddresses ? "full" : "address"} />
+                    cc <RecipientList entries={ccEntries} mailboxId={message.mailboxId} style={showFullRecipientAddresses ? "full" : "address"} />
                   </p>
                 )}
                 {bccEntries.length > 0 && (
                   <p className="text-xs text-neutral-500">
-                    {t("message.bcc")} <RecipientList entries={bccEntries} mailboxId={message.mailboxId} style={showFullRecipientAddresses ? "full" : "address"} />
+                    bcc <RecipientList entries={bccEntries} mailboxId={message.mailboxId} style={showFullRecipientAddresses ? "full" : "address"} />
                   </p>
                 )}
               </div>
@@ -380,13 +378,13 @@ function MessageDetailContent({ messageId }: { messageId: string }) {
           <div className="prose max-w-none px-4 text-neutral-900 sm:px-0 sm:pl-16">
             {bodyError ? (
               <div role="alert" className="not-prose rounded-lg border border-neutral-200 bg-neutral-50 p-4">
-                <p className="text-sm text-neutral-700">{t("source.loadFailed")}</p>
+                <p className="text-sm text-neutral-700">Unable to load original message</p>
                 <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => void retryBody()}>
-                  {t("webhooks.retry")}
+                  Retry
                 </Button>
               </div>
             ) : bodyPending ? (
-              <div aria-busy="true" aria-label={t("common.loading")} className="space-y-3">
+              <div aria-busy="true" aria-label={"Loading..."} className="space-y-3">
                 <Skeleton className="h-4 w-full" />
                 <Skeleton className="h-4 w-11/12" />
                 <Skeleton className="h-4 w-4/5" />
@@ -410,7 +408,7 @@ function MessageDetailContent({ messageId }: { messageId: string }) {
           {cloudAttachmentResult.attachments.length > 0 && (
             <section className="mt-8 border-t border-neutral-100 px-4 py-6 sm:px-0 sm:pl-16">
               <h2 className="mb-3 text-sm font-semibold text-neutral-900">
-                {t("message.cloudFiles", { count: cloudAttachmentResult.attachments.length })}
+                {`Cloud files (${cloudAttachmentResult.attachments.length})`}
               </h2>
               <div className="grid gap-2 sm:grid-cols-2">
                 {cloudAttachmentResult.attachments.map((attachment) => (
@@ -427,11 +425,11 @@ function MessageDetailContent({ messageId }: { messageId: string }) {
                         {attachment.filename}
                       </span>
                       <span className="block text-xs text-neutral-500">
-                        {t("message.openFrom", { provider: attachment.provider })}
+                        {`Open from ${attachment.provider}`}
                       </span>
                     </span>
                     <ExternalLink className="h-4 w-4 shrink-0 text-neutral-400" aria-hidden="true" />
-                    <span className="sr-only"> ({t("common.opensInNewTab")})</span>
+                    <span className="sr-only"> (opens in a new tab)</span>
                   </a>
                 ))}
               </div>
@@ -440,7 +438,7 @@ function MessageDetailContent({ messageId }: { messageId: string }) {
           {attachments.length > 0 && (
             <section className="mt-8 border-t border-neutral-100 px-4 py-6 sm:px-0 sm:pl-16">
               <h2 className="mb-3 text-sm font-semibold text-neutral-900">
-                {t("message.attachments", { count: attachments.length })}
+                {`Attachments (${attachments.length})`}
               </h2>
               <div className="grid gap-2 sm:grid-cols-2">
                 {attachments.map((attachment) => (

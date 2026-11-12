@@ -105,21 +105,3 @@ test("a template without seconds keeps the whole suffix after the subject", () =
 		after: "”",
 	});
 });
-
-test("every locale preserves the linked subject and countdown placeholders", () => {
-	const keys = ["compose.sendingIn", "compose.sendingSubject", "compose.sentSubject", "compose.undoSend", "compose.sendNow"];
-	const en = JSON.parse(readFileSync(join(root, "src/lib/i18n/en.json"), "utf8"));
-	const placeholders = (value) => [...value.matchAll(/\{\w+\}/g)].map(([token]) => token).sort();
-	for (const file of readdirSync(join(root, "public/locales"))) {
-		if (!file.endsWith(".json")) continue;
-		const catalog = JSON.parse(readFileSync(join(root, "public/locales", file), "utf8"));
-		for (const key of keys) {
-			assert.ok(catalog[key]?.trim(), `${file}: ${key}`);
-			assert.deepEqual(placeholders(catalog[key]), placeholders(en[key]), `${file}: ${key}`);
-		}
-		const template = catalog["compose.sendingIn"];
-		assert.ok(template.indexOf("{subject}") < template.indexOf("{seconds}"), file);
-		const parts = splitSendTemplate(template, true);
-		assert.equal(parts.before + "SUBJECT" + parts.after + parts.ticker(7), template.replace("{subject}", "SUBJECT").replace("{seconds}", "7"), file);
-	}
-});

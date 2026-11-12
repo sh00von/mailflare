@@ -9,7 +9,6 @@ import { sendSystemEmail } from "@/lib/email/system-mail";
 import { createAuditLog } from "@/lib/mailboxes/audit";
 import { getClientIp } from "@/lib/auth/client-ip";
 import { buildPasswordResetEmail } from "@/lib/auth/password-reset-utils";
-import type { Translator } from "@/lib/i18n/utils";
 
 const TOKEN_MINUTES = 30;
 
@@ -18,7 +17,7 @@ const TOKEN_MINUTES = 30;
  * the account exists or has one: the caller always answers the same way, so
  * the form cannot be used to probe for addresses.
  */
-export async function requestPasswordReset(env: CloudflareEnv, email: string, origin: string, t: Translator): Promise<void> {
+export async function requestPasswordReset(env: CloudflareEnv, email: string, origin: string): Promise<void> {
 	const db = getDb(env);
 	const [user] = await db.select().from(users).where(eq(users.email, email.trim().toLowerCase())).limit(1);
 	// A passkey-only account must not regain password sign-in through email.
@@ -36,7 +35,7 @@ export async function requestPasswordReset(env: CloudflareEnv, email: string, or
 	const { appName } = await getBranding(env);
 	const sent = await sendSystemEmail(env, {
 		to: user.resetEmail,
-		...buildPasswordResetEmail(t, { email: user.email, appName, link, minutes: TOKEN_MINUTES }),
+		...buildPasswordResetEmail({ email: user.email, appName, link, minutes: TOKEN_MINUTES }),
 	});
 	if (!sent) console.warn("Password reset requested but no domain can send mail; link not delivered");
 }

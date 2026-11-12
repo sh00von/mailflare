@@ -13,7 +13,6 @@ import {
 	Strikethrough,
 	Underline,
 } from "@/components/icons";
-import { useLanguage } from "@/components/language-provider";
 import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { EmailHtmlRenderer } from "@/components/messages/email-html-renderer";
@@ -21,13 +20,13 @@ import { sanitizeEmailHtml, sanitizeEditorHtml } from "@/lib/email/html";
 import type { RichTextEditorProps, ToolbarCommand } from "./rich-text-editor-types";
 
 const COMMANDS: ToolbarCommand[] = [
-	{ command: "bold", labelKey: "editor.bold", icon: Bold },
-	{ command: "italic", labelKey: "editor.italic", icon: Italic },
-	{ command: "underline", labelKey: "editor.underline", icon: Underline },
-	{ command: "strikeThrough", labelKey: "editor.strikethrough", icon: Strikethrough },
-	{ command: "insertUnorderedList", labelKey: "editor.bulletedList", icon: List },
-	{ command: "insertOrderedList", labelKey: "editor.numberedList", icon: ListOrdered },
-	{ command: "formatBlock", labelKey: "editor.quote", icon: Quote, value: "blockquote" },
+	{ command: "bold", labelKey: "Bold (⌘B)", icon: Bold },
+	{ command: "italic", labelKey: "Italic (⌘I)", icon: Italic },
+	{ command: "underline", labelKey: "Underline (⌘U)", icon: Underline },
+	{ command: "strikeThrough", labelKey: "Strikethrough", icon: Strikethrough },
+	{ command: "insertUnorderedList", labelKey: "Bulleted list", icon: List },
+	{ command: "insertOrderedList", labelKey: "Numbered list", icon: ListOrdered },
+	{ command: "formatBlock", labelKey: "Quote", icon: Quote, value: "blockquote" },
 ];
 
 /**
@@ -47,7 +46,6 @@ export function RichTextEditor({
 	toolbarEnd,
 	footerContent,
 }: RichTextEditorProps) {
-	const { t } = useLanguage();
 	const editorRef = useRef<HTMLDivElement | null>(null);
 	const [active, setActive] = useState<Record<string, boolean>>({});
 	const [linkOpen, setLinkOpen] = useState(false);
@@ -142,10 +140,10 @@ export function RichTextEditor({
 	const formatButtons = (
 		<>
 		{COMMANDS.map((item) => (
-			<Tooltip key={item.command} label={t(item.labelKey)}>
+			<Tooltip key={item.command} label={item.labelKey}>
 				<button
 					type="button"
-					aria-label={t(item.labelKey)}
+					aria-label={item.labelKey}
 					aria-pressed={!!active[item.command]}
 					disabled={disabled}
 					onMouseDown={(event) => event.preventDefault()}
@@ -159,10 +157,10 @@ export function RichTextEditor({
 				</button>
 			</Tooltip>
 		))}
-		<Tooltip label={t("editor.insertLinkHint")}>
+		<Tooltip label={"Insert link (⌘K)"}>
 			<button
 				type="button"
-				aria-label={t("editor.insertLink")}
+				aria-label={"Insert link"}
 				disabled={disabled}
 				onMouseDown={(event) => event.preventDefault()}
 				onClick={openLink}
@@ -171,10 +169,10 @@ export function RichTextEditor({
 				<Link2 className="h-4 w-4" />
 			</button>
 		</Tooltip>
-		<Tooltip label={t("editor.clearFormatting")}>
+		<Tooltip label={"Clear formatting"}>
 			<button
 				type="button"
-				aria-label={t("editor.clearFormatting")}
+				aria-label={"Clear formatting"}
 				disabled={disabled}
 				onMouseDown={(event) => event.preventDefault()}
 				onClick={() => run("removeFormat")}
@@ -195,7 +193,7 @@ export function RichTextEditor({
 					id={id}
 					role="textbox"
 					aria-multiline="true"
-					aria-label={t("editor.messageBody")}
+					aria-label={"Message body"}
 					contentEditable={!disabled}
 					suppressContentEditableWarning
 					data-placeholder={placeholder}
@@ -215,9 +213,9 @@ export function RichTextEditor({
 							type="button"
 							onClick={() => setShowQuoted((open) => !open)}
 							aria-expanded={showQuoted}
-							aria-label={showQuoted ? t("editor.hideQuoted") : t("editor.showQuoted")}
+							aria-label={showQuoted ? "Hide quoted text" : "Show quoted text"}
 							className="rounded-full border border-neutral-200 bg-neutral-100 px-2 text-xs leading-5 text-neutral-500 hover:bg-neutral-200"
-							title={showQuoted ? t("editor.hideQuoted") : t("editor.showQuoted")}
+							title={showQuoted ? "Hide quoted text" : "Show quoted text"}
 						>
 							•••
 						</button>
@@ -248,11 +246,11 @@ export function RichTextEditor({
 								if (event.key === "Escape") setLinkOpen(false);
 							}}
 							placeholder="https://example.com"
-							aria-label={t("editor.insertLink")}
+							aria-label={"Insert link"}
 							className="h-8 w-64 rounded-md border border-neutral-200 px-2 text-sm outline-none focus:border-blue-400"
 						/>
 						<button type="button" onClick={applyLink} className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700">
-							{t("editor.apply")}
+							Apply
 						</button>
 					</div>
 				)}

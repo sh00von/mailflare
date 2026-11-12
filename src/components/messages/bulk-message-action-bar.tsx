@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import type { BulkMessageAction } from "@/app/api/messages/bulk/types";
-import { useLanguage } from "@/components/language-provider";
 import { BulkMessageToolbar } from "./bulk-message-toolbar";
 import type { BulkMessageActionBarProps } from "./types";
 import { PartialDeleteError } from "@/lib/messages/permanent-delete-utils";
@@ -17,7 +16,6 @@ export function BulkMessageActionBar({
 	selectedMessages,
 	onClearSelection,
 }: BulkMessageActionBarProps) {
-	const { t } = useLanguage();
 	const [pending, setPending] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const hasUnreadSelection = selectedMessages.some((message) => !message.read);
@@ -36,7 +34,7 @@ export function BulkMessageActionBar({
 			);
 			onClearSelection();
 		} catch (actionError) {
-			setError(actionError instanceof PartialDeleteError ? t("actions.error.deleteSkipped") : t("actions.error.update"));
+			setError(actionError instanceof PartialDeleteError ? "Some messages could not be deleted because they are no longer in Trash or Spam." : "Could not update message");
 		} finally {
 			setPending(false);
 		}
@@ -45,7 +43,7 @@ export function BulkMessageActionBar({
 	return (
 		<div
 			role="region"
-			aria-label={t("common.selectedCount", { count: selectedMessages.length })}
+			aria-label={`${selectedMessages.length} selected`}
 			className="shrink-0 border-b border-blue-100 bg-blue-50/50 px-3 py-2"
 		>
 			<div className="min-w-0 overflow-x-auto">

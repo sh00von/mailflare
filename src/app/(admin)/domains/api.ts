@@ -1,4 +1,3 @@
-import { defaultTranslator } from "@/lib/i18n/utils";
 import { authFetch } from "@/lib/auth/client";
 
 /** A rejected response, keeping the parsed body so callers can read fields beyond `error`. */
@@ -17,7 +16,7 @@ export async function requestJson<T>(url: string, method: string, body?: unknown
 		cache: "no-store",
 	});
 	const data = (await response.json()) as T & { error?: string };
-	if (!response.ok) throw new ApiError(data.error ?? defaultTranslator("domains.requestFailed"), data);
+	if (!response.ok) throw new ApiError(data.error ?? "Request failed", data);
 	return data;
 }
 
@@ -58,7 +57,7 @@ export async function runReceivingSetup(domainId: string, provider: "cloudflare"
 		if (!confirmMxReplacement(response, data)) return false;
 		({ response, data } = await call(true));
 	}
-	if (!response.ok) throw new Error(data.error ?? defaultTranslator("domains.setupFailed"));
+	if (!response.ok) throw new Error(data.error ?? "Setup failed");
 	return true;
 }
 
@@ -93,6 +92,6 @@ export async function createDomain(input: CreateDomainInput): Promise<DomainCrea
 	if (confirmMxReplacement(response, data)) {
 		({ response, data } = await call(true));
 	}
-	if (!response.ok) throw new ApiError(data.error ?? defaultTranslator("mailboxes.failed"), data);
+	if (!response.ok) throw new ApiError(data.error ?? "Failed", data);
 	return data;
 }

@@ -3,7 +3,6 @@
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import type { ReactNode } from "react";
 import { X } from "@/components/icons";
-import { useLanguage } from "@/components/language-provider";
 import { FOLLOW_UP_DAY_OPTIONS } from "@/lib/follow-ups/follow-up-utils";
 import { followUpOptionKey } from "./follow-up-client-utils";
 
@@ -19,16 +18,15 @@ export function FollowUpMenu({ trigger, onPick, onClear, disabled }: {
 	onClear?: () => void;
 	disabled?: boolean;
 }) {
-	const { t } = useLanguage();
 	return (
 		<DropdownMenu.Root>
 			<DropdownMenu.Trigger asChild disabled={disabled}>{trigger}</DropdownMenu.Trigger>
 			<DropdownMenu.Portal>
 				<DropdownMenu.Content align="start" sideOffset={6} className="z-50 min-w-56 rounded-lg border border-neutral-200 bg-white p-1 text-sm shadow-lg">
-					<DropdownMenu.Label className="px-3 pb-1 pt-2 text-xs font-medium text-neutral-500">{t("followUp.remindMe")}</DropdownMenu.Label>
+					<DropdownMenu.Label className="px-3 pb-1 pt-2 text-xs font-medium text-neutral-500">Remind me if no reply</DropdownMenu.Label>
 					{FOLLOW_UP_DAY_OPTIONS.map((days) => (
 						<DropdownMenu.Item key={days} onSelect={() => onPick(days)} className={ITEM_CLASS}>
-							{t(followUpOptionKey(days))}
+							{followUpOptionKey(days)}
 						</DropdownMenu.Item>
 					))}
 					{onClear && (
@@ -36,7 +34,7 @@ export function FollowUpMenu({ trigger, onPick, onClear, disabled }: {
 							<DropdownMenu.Separator className="my-1 h-px bg-neutral-100" />
 							<DropdownMenu.Item onSelect={onClear} className={ITEM_CLASS}>
 								<X className="mr-2 h-4 w-4" />
-								{t("followUp.none")}
+								No reminder
 							</DropdownMenu.Item>
 						</>
 					)}

@@ -26,11 +26,10 @@ await build({
 const { getRouteTitleKey } = await import(pathToFileURL(join(directory, "entry.mjs")).href);
 
 test("pages are titled with the most specific matching route", () => {
-	assert.equal(getRouteTitleKey("/settings"), "settings.nav.settings");
-	assert.equal(getRouteTitleKey("/settings/security"), "settings.nav.security");
-	assert.equal(getRouteTitleKey("/settings/api-keys"), "settings.nav.apiKeys");
-	assert.equal(getRouteTitleKey("/accounts/abc/permissions"), "admin.nav.accounts");
-	assert.equal(getRouteTitleKey("/domains"), "admin.nav.domains");
+	assert.equal(getRouteTitleKey("/settings"), "Settings");
+	assert.equal(getRouteTitleKey("/settings/security"), "Security");
+	assert.equal(getRouteTitleKey("/accounts/abc/permissions"), "Accounts");
+	assert.equal(getRouteTitleKey("/domains"), "Domains");
 });
 
 test("routes that set their own title are left alone", () => {

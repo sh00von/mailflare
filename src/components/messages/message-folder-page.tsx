@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent } from "react";
 import { Archive, ChevronLeft, ChevronRight, ListFilter, Mail, MailOpen, Trash2 } from "@/components/icons";
-import { useLanguage } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -67,7 +66,6 @@ function MessageListRow({
 	onOpening,
 	dragMessageIds,
 }: MessageListRowProps) {
-	const { t } = useLanguage();
 	const Icon = config.icon;
 	const [read, setRead] = useState(message.read);
 	const [threadUnread, setThreadUnread] = useState(message.threadUnread);
@@ -78,8 +76,8 @@ function MessageListRow({
 	const rowMessage = { ...message, read, starred, threadUnread };
 	const unread = isMessageListRowUnread(rowMessage);
 	const draggable = config.folder === "inbox" && message.direction === "inbound";
-	const party = getMessageParty(rowMessage, config.folder, currentAccountName, t);
-	const preview = getMessagePreview(rowMessage, config.folder, t);
+	const party = getMessageParty(rowMessage, config.folder, currentAccountName);
+	const preview = getMessagePreview(rowMessage, config.folder);
 	const href = `${config.hrefPrefix}/${message.id}`;
 	const navigation = useMessageNavigation(href, rowMessage);
 
@@ -151,7 +149,7 @@ function MessageListRow({
 					checked={selected}
 					onChange={(event) => onSelectedChange(message.id, event.target.checked)}
 					className="mt-1 h-4 w-4 rounded border-neutral-300"
-					aria-label={t("list.selectFrom", { sender: party })}
+					aria-label={`Select message from ${party}`}
 				/>
 				<Link
 					href={href}
@@ -166,7 +164,7 @@ function MessageListRow({
 				>
 					<span className="flex items-baseline justify-between gap-3">
 						<span className={clsx(unread && "font-semibold",getMessagePartyClassName(rowMessage, config.folder))}>
-							{unread && <span className="sr-only">{t("list.unread")} </span>}
+							{unread && <span className="sr-only">Unread </span>}
 							{party}
 
 							{(message.threadCount ?? 1) > 1 && (
@@ -175,14 +173,14 @@ function MessageListRow({
 						</span>
 						<span className={clsx(unread ?"font-medium":"text-neutral-500","shrink-0 text-[11px]")}>
 							<OpenedIndicator count={message.openCount} />
-							{message.scheduledAt ? formatScheduledSendTime(message.scheduledAt, t) : formatMessageListTimestamp(message.createdAt)}
+							{message.scheduledAt ? formatScheduledSendTime(message.scheduledAt) : formatMessageListTimestamp(message.createdAt)}
 						</span>
 					</span>
 					<span
 						className={`mt-1 block truncate text-sm ${unread ? "font-semibold text-neutral-900" : "text-neutral-700"
 							}`}
 					>
-						{message.subject ?? t("list.noSubject")}
+						{message.subject ?? "(no subject)"}
 					</span>
 					<span className="mt-0.5 block truncate text-xs leading-5 text-neutral-500">
 						{preview}
@@ -195,13 +193,13 @@ function MessageListRow({
 			<SwipeableRow
 				role="listitem"
 				startAction={{
-					label: read ? t("list.markUnread") : t("list.markRead"),
+					label: read ? "Mark unread" : "Mark read",
 					icon: read ? Mail : MailOpen,
 					className: "bg-blue-600",
 					onTrigger: () => void runRowAction(read ? "unread" : "read").catch(() => undefined),
 				}}
 				endAction={{
-					label: t("common.archive"),
+					label: "Archive",
 					icon: Archive,
 					className: "bg-emerald-600",
 					onTrigger: () => void runRowAction("archive").catch(() => undefined),
@@ -218,7 +216,7 @@ function MessageListRow({
 	const content = (
 		<>
 			{config.folder === "inbox" && message.direction === "inbound" && (
-				<Tooltip label={starred ? t("list.starred") : t("list.notStarred")}>
+				<Tooltip label={starred ? "Starred" : "Not starred"}>
 					<Button
 						type="button"
 						variant="ghost"
@@ -227,7 +225,7 @@ function MessageListRow({
 						onClick={() => {
 							void toggleMessageStar(message.id).then((result) => setStarred(result.starred));
 						}}
-						aria-label={t("message.star")}
+						aria-label={"Star"}
 						aria-pressed={starred}
 					>
 						<Icon className={`h-4 w-4 ${starred ? "fill-amber-400 text-amber-400" : "text-neutral-300"}`} />
@@ -238,7 +236,7 @@ function MessageListRow({
 				<Icon className="h-4 w-4 text-neutral-300" />
 			)}
 			<span className={clsx(unread && "font-semibold", getMessagePartyClassName(rowMessage, config.folder))}>
-				{unread && <span className="sr-only">{t("list.unread")} </span>}
+				{unread && <span className="sr-only">Unread </span>}
 				{party}
 
 				{(message.threadCount ?? 1) > 1 && (
@@ -258,9 +256,9 @@ function MessageListRow({
 					className="focus-visible:outline-none after:absolute after:inset-0"
 				>
 					<span className={unread ? "font-semibold text-neutral-900" : ""}>
-						{rowMessage.subject ?? t("list.noSubject")}
+						{rowMessage.subject ?? "(no subject)"}
 					</span>
-					<span className="text-neutral-500"> - {getMessagePreview(rowMessage, config.folder, t)}</span>
+					<span className="text-neutral-500"> - {getMessagePreview(rowMessage, config.folder)}</span>
 				</Link>
 			</span>
 			<time
@@ -269,7 +267,7 @@ function MessageListRow({
 					}`}
 			>
 				<OpenedIndicator count={message.openCount} />
-				{message.scheduledAt ? formatScheduledSendTime(message.scheduledAt, t) : formatMessageListTimestamp(message.createdAt)}
+				{message.scheduledAt ? formatScheduledSendTime(message.scheduledAt) : formatMessageListTimestamp(message.createdAt)}
 			</time>
 		</>
 	);
@@ -281,7 +279,7 @@ function MessageListRow({
 					checked={selected}
 					onChange={(event) => onSelectedChange(message.id, event.target.checked)}
 					className="relative z-10 h-4 w-4 rounded border-neutral-300"
-					aria-label={t("list.selectMessage")}
+					aria-label={"Select message"}
 				/>
 				{content}
 			</div>
@@ -302,7 +300,7 @@ function MessageListRow({
 				checked={selected}
 				onChange={(event) => onSelectedChange(message.id, event.target.checked)}
 				className="relative z-10 h-4 w-4 rounded border-neutral-300"
-				aria-label={t("list.selectFrom", { sender: party })}
+				aria-label={`Select message from ${party}`}
 			/>
 			{content}
 			{(config.folder === "inbox" || config.folder === "snoozed") && message.direction === "inbound" && (
@@ -320,8 +318,7 @@ export function MessageFolderPage({
 	compact = false,
 	selectedMessageId,
 }: MessageFolderPageProps) {
-	const { t } = useLanguage();
-	const title = config.titleKey ? t(config.titleKey) : config.title;
+	const title = config.titleKey ? config.titleKey : config.title;
 	const { selectedMailbox, isLoading: mailboxesLoading } = useSelectedMailbox();
 	const { query } = useMailSearch();
 	const isMobile = useIsMobile();
@@ -462,14 +459,14 @@ export function MessageFolderPage({
 	const permanentDeleteFolder = !config.folderId && supportsPermanentDelete(config.folder) ? config.folder : null;
 	async function emptyFolder() {
 		if (!permanentDeleteFolder || !selectedMailbox?.id) return;
-		if (!window.confirm(getEmptyFolderConfirmText(permanentDeleteFolder, titleTotal, t))) return;
+		if (!window.confirm(getEmptyFolderConfirmText(permanentDeleteFolder, titleTotal))) return;
 		setEmptyingFolder(true);
 		try {
 			await emptyMessageFolder(selectedMailbox.id, permanentDeleteFolder);
 			setOffset(0);
 		} catch (error) {
 			console.error(error);
-			window.alert(t("list.emptyFailed", { folder: getPermanentDeleteFolderLabel(permanentDeleteFolder, t) }));
+			window.alert(`Could not empty ${getPermanentDeleteFolderLabel(permanentDeleteFolder)}. Please try again.`);
 		} finally {
 			setEmptyingFolder(false);
 		}
@@ -486,7 +483,7 @@ export function MessageFolderPage({
 		try {
 			await runSelectedAction(action, folderId);
 		} catch (error) {
-			setActionError(error instanceof PartialDeleteError ? t("actions.error.deleteSkipped") : t("actions.error.update"));
+			setActionError(error instanceof PartialDeleteError ? "Some messages could not be deleted because they are no longer in Trash or Spam." : "Could not update message");
 		}
 	}
 
@@ -494,7 +491,7 @@ export function MessageFolderPage({
 		if (selectedIds.length === 0) return;
 		if (action === "delete") {
 			const ids = expandSelectedIds(selectedIds);
-			if (!window.confirm(getPermanentDeleteConfirmText(ids.length, t))) return;
+			if (!window.confirm(getPermanentDeleteConfirmText(ids.length))) return;
 		}
 
 		setPendingBulkAction(true);
@@ -533,13 +530,13 @@ export function MessageFolderPage({
 			<div className={`flex h-14 shrink-0 items-center justify-between border-b border-neutral-200 ${compact ? "px-4" : "px-4.5 md:px-6"}`}>
 				{selectedMessageId ? <h2 className="sr-only">{title}</h2> : <h1 className="sr-only">{title}</h1>}
 				<div className="flex items-center gap-3 w-full">
-					<Tooltip label={t("list.selectAll")}>
+					<Tooltip label={"Select all visible messages"}>
 						<Checkbox
 							checked={allVisibleSelected}
 							disabled={messages.length === 0}
 							onChange={(event) => toggleAllVisible(event.target.checked)}
 							className="h-4 w-4 rounded border-neutral-300"
-							aria-label={t("list.selectAll")}
+							aria-label={"Select all visible messages"}
 						/>
 					</Tooltip>
 					{selectedIds.length > 0 && !compact ? (
@@ -560,37 +557,37 @@ export function MessageFolderPage({
 				{(selectedIds.length === 0 || compact) && (
 					<div className="flex items-center gap-2 text-neutral-500">
 						<span className="text-xs text-neutral-500 whitespace-nowrap">
-							{t("list.range", { start: pageRange.start, end: pageRange.end, total: pageRange.total })}
+							{`${pageRange.start} - ${pageRange.end} of ${pageRange.total}`}
 						</span>
-						<Tooltip label={t("list.previousPage")}>
+						<Tooltip label={"Previous page"}>
 							<Button
 								variant="ghost"
 								size="sm"
 								disabled={offset === 0 || isLoading}
 								onClick={() => setOffset(Math.max(offset - limit, 0))}
-								aria-label={t("list.previousPage")}
+								aria-label={"Previous page"}
 							>
 								<ChevronLeft className="h-4 w-4" />
 							</Button>
 						</Tooltip>
-						<Tooltip label={t("list.nextPage")}>
+						<Tooltip label={"Next page"}>
 							<Button
 								variant="ghost"
 								size="sm"
 								disabled={offset + messages.length >= total || isLoading}
 								onClick={() => setOffset(offset + limit)}
-								aria-label={t("list.nextPage")}
+								aria-label={"Next page"}
 							>
 								<ChevronRight className="h-4 w-4" />
 							</Button>
 						</Tooltip>
 						{config.folder === "inbox" && (
-							<Tooltip label={unreadOnly ? t("list.showingUnread") : t("list.showUnreadOnly")}>
+							<Tooltip label={unreadOnly ? "Showing unread emails" : "Show unread emails only"}>
 								<Button
 									type="button"
 									variant="ghost"
 									size="sm"
-									aria-label={t("list.showUnreadOnly")}
+									aria-label={"Show unread emails only"}
 									aria-pressed={unreadOnly}
 									onClick={() => setUnreadOnly((current) => !current)}
 									className={unreadOnly ? "bg-blue-100 text-blue-700 hover:bg-blue-100" : undefined}
@@ -600,18 +597,18 @@ export function MessageFolderPage({
 							</Tooltip>
 						)}
 						{permanentDeleteFolder && (
-							<Tooltip label={getEmptyFolderLabel(permanentDeleteFolder, t)}>
+							<Tooltip label={getEmptyFolderLabel(permanentDeleteFolder)}>
 								<Button
 									type="button"
 									variant="ghost"
 									size="sm"
-									aria-label={getEmptyFolderLabel(permanentDeleteFolder, t)}
+									aria-label={getEmptyFolderLabel(permanentDeleteFolder)}
 									disabled={emptyingFolder || isLoading || total === 0}
 									onClick={() => void emptyFolder()}
 									className="gap-1.5 text-xs font-medium text-red-600 hover:text-red-700"
 								>
 									<Trash2 className="h-4 w-4" />
-									{!compact && <span className="max-md:hidden">{emptyingFolder ? t("list.emptying") : getEmptyFolderLabel(permanentDeleteFolder, t)}</span>}
+									{!compact && <span className="max-md:hidden">{emptyingFolder ? "Emptying…" : getEmptyFolderLabel(permanentDeleteFolder)}</span>}
 								</Button>
 							</Tooltip>
 						)}
@@ -646,7 +643,7 @@ export function MessageFolderPage({
 							onMessageAction={(messageId, action) => {
 								setActionError(null);
 								return runBulkMessageAction(expandSelectedIds([messageId]), action, action !== "read" && action !== "unread").catch((error) => {
-									setActionError(error instanceof PartialDeleteError ? t("actions.error.deleteSkipped") : t("actions.error.update"));
+									setActionError(error instanceof PartialDeleteError ? "Some messages could not be deleted because they are no longer in Trash or Spam." : "Could not update message");
 									throw error;
 								});
 							}}
@@ -656,7 +653,7 @@ export function MessageFolderPage({
 				</div>
 				{!isLoading && messages.length === 0 && (
 					<p className="px-6 py-4 text-sm text-neutral-500">
-						{hasActiveFilters ? t("list.noMatch") : config.emptyTextKey ? t(config.emptyTextKey) : config.emptyText}
+						{hasActiveFilters ? "No messages match these filters" : config.emptyTextKey ? config.emptyTextKey : config.emptyText}
 					</p>
 				)}
 			</div>

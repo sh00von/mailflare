@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useLanguage } from "@/components/language-provider";
 import { useSelectedMailbox } from "@/components/mailbox-provider";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -19,7 +18,6 @@ const defaultSettings: MailboxAutoReplySettings = {
 };
 
 export function MailboxAutoReplyForm() {
-  const { t } = useLanguage();
   const { selectedMailbox, setSelectedMailbox, isLoading } =
     useSelectedMailbox();
   const [settings, setSettings] = useState(defaultSettings);
@@ -47,7 +45,7 @@ export function MailboxAutoReplyForm() {
     event.preventDefault();
     if (!selectedMailbox) return;
     if (settings.enabled && !settings.body.trim()) {
-      setStatus(t("settings.autoReply.needMessage"));
+      setStatus("Enter an auto-reply message before enabling it.");
       return;
     }
     setSaving(true);
@@ -62,10 +60,10 @@ export function MailboxAutoReplyForm() {
         autoReplySubject: saved.subject,
         autoReplyBody: saved.body,
       });
-      setStatus(t("common.saved"));
+      setStatus("Saved");
     } catch (error) {
       setStatus(
-        error instanceof Error ? error.message : t("settings.autoReply.failed"),
+        error instanceof Error ? error.message : "Failed to update auto-reply",
       );
     } finally {
       setSaving(false);
@@ -73,11 +71,11 @@ export function MailboxAutoReplyForm() {
   }
 
   if (isLoading)
-    return <p className="text-sm text-neutral-500">{t("settings.signature.loadingInbox")}</p>;
+    return <p className="text-sm text-neutral-500">Loading inbox…</p>;
   if (!selectedMailbox)
     return (
       <p className="text-sm text-neutral-500">
-        {t("settings.autoReply.selectInbox")}
+        Select an inbox to configure auto-reply.
       </p>
     );
 
@@ -90,10 +88,10 @@ export function MailboxAutoReplyForm() {
       <label className="flex items-start gap-3 rounded-xl bg-neutral-50 p-4">
         <span className="flex-1">
           <span className="block text-sm font-medium text-neutral-900">
-            {t("settings.autoReply.enableFor", { address })}
+            {`Enable auto-reply for ${address}`}
           </span>
           <span className="mt-1 block text-sm text-neutral-500">
-            {t("settings.autoReply.limit")}
+            Each sender receives at most one automatic response every 24 hours.
           </span>
         </span>
 
@@ -106,37 +104,37 @@ export function MailboxAutoReplyForm() {
       {settings.enabled && (
         <>
           <div className="space-y-2">
-            <Label htmlFor="autoReplySubject">{t("settings.autoReply.subject")}</Label>
+            <Label htmlFor="autoReplySubject">Subject</Label>
             <Input
               id="autoReplySubject"
               value={settings.subject}
               onChange={(event) =>
                 setSettings({ ...settings, subject: event.target.value })
               }
-              placeholder={t("settings.autoReply.subjectPlaceholder")}
+              placeholder={"Out of office"}
               disabled={!canManage || saving}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="autoReplyBody">{t("settings.autoReply.message")}</Label>
+            <Label htmlFor="autoReplyBody">Message</Label>
             <Textarea
               id="autoReplyBody"
               value={settings.body}
               onChange={(event) =>
                 setSettings({ ...settings, body: event.target.value })
               }
-              placeholder={t("settings.autoReply.messagePlaceholder")}
+              placeholder={"Thanks for your message. I am currently away and will reply when I return."}
               rows={7}
               disabled={!canManage || saving}
             />
           </div>
           <div className="flex items-center gap-3">
             <Button type="submit" disabled={!canManage || saving || !changed}>
-              {saving ? t("common.saving") : t("settings.autoReply.save")}
+              {saving ? "Saving..." : "Save"}
             </Button>
             {!canManage && (
               <p className="text-sm text-neutral-500">
-                {t("settings.autoReply.needFullAccess")}
+                Full access is required to edit auto-reply.
               </p>
             )}
             {status && <p role="status" className="text-sm text-neutral-500">{status}</p>}

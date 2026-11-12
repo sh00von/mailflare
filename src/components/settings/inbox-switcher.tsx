@@ -3,7 +3,6 @@
 import { useRef, useState } from "react";
 import { Check, ChevronDown, UsersRound } from "@/components/icons";
 import { useDismissible } from "@/components/use-dismissible";
-import { useLanguage } from "@/components/language-provider";
 import { useSelectedMailbox, type MailboxOption } from "@/components/mailbox-provider";
 import { ProgressiveAvatarImage } from "@/components/progressive-avatar-image";
 import { getAccountInitial, getMailboxAddress, getMailboxName } from "@/components/mailbox-selector-utils";
@@ -36,7 +35,6 @@ function InboxAvatar({ mailbox }: { mailbox: MailboxOption }) {
 }
 
 function InboxLabel({ mailbox }: { mailbox: MailboxOption }) {
-	const { t } = useLanguage();
 	return (
 		<>
 			<InboxAvatar mailbox={mailbox} />
@@ -44,7 +42,7 @@ function InboxLabel({ mailbox }: { mailbox: MailboxOption }) {
 				<div className="flex items-center gap-1.5">
 					<p className="truncate text-sm font-semibold text-neutral-900">{getMailboxName(mailbox)}</p>
 					{mailbox.type === "shared" && (
-						<span title={t("account.sharedInbox")} aria-label={t("account.sharedInbox")} className="shrink-0 text-blue-600">
+						<span title={"Shared inbox"} aria-label={"Shared inbox"} className="shrink-0 text-blue-600">
 							<UsersRound className="h-3.5 w-3.5" />
 						</span>
 					)}
@@ -56,7 +54,6 @@ function InboxLabel({ mailbox }: { mailbox: MailboxOption }) {
 }
 
 export function InboxSwitcher() {
-	const { t } = useLanguage();
 	const { selectedMailbox, setSelectedMailbox, mailboxes } = useSelectedMailbox();
 	const [open, setOpen] = useState(false);
 	const ref = useRef<HTMLDivElement>(null);
@@ -72,7 +69,7 @@ export function InboxSwitcher() {
 				onClick={() => setOpen((value) => !value)}
 				aria-expanded={open}
 				aria-haspopup="listbox"
-				aria-label={t("settings.account.switchInbox")}
+				aria-label={"Switch inbox"}
 				className="flex w-full items-center gap-3 rounded-2xl border border-neutral-200 px-4 py-3 transition-colors hover:bg-neutral-50"
 			>
 				<InboxLabel mailbox={selectedMailbox} />

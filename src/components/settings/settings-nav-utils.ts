@@ -2,36 +2,36 @@ import type { SettingsNavSection } from "./settings-nav-types";
 
 export const settingsNavSections: SettingsNavSection[] = [
 	{
-		labelKey: "settings.nav.settings",
+		labelKey: "Settings",
 		items: [
 			{
 				href: "/settings/account",
-				labelKey: "settings.nav.account",
+				labelKey: "Account",
 			},
 			{
 				href: "/settings/inbox",
-				labelKey: "settings.nav.inbox",
+				labelKey: "Inbox",
 			},
 			{
 				href: "/settings/security",
-				labelKey: "settings.nav.security",
+				labelKey: "Security",
 			},
 			{
 				href: "/settings/app-passwords",
-				labelKey: "settings.nav.appPasswords",
+				labelKey: "App passwords",
 			},
 		],
 	},
 	{
-		labelKey: "settings.nav.mailbox",
+		labelKey: "Mailbox",
 		items: [
 			{
 				href: "/settings/import",
-				labelKey: "settings.nav.import",
+				labelKey: "Import",
 			},
 			{
 				href: "/settings/export",
-				labelKey: "settings.nav.export",
+				labelKey: "Export",
 			},
 		],
 	},

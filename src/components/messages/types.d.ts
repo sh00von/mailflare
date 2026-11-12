@@ -1,4 +1,3 @@
-import type { TranslationKey } from "@/lib/i18n/types";
 import type { LucideIcon } from "@/components/icons";
 import type { Dispatch, ReactNode, SetStateAction } from "react";
 import type { Message, MessageFolder } from "@/hooks/types";
@@ -8,9 +7,9 @@ export type MessageFolderConfig = {
 	folder: MessageFolder;
 	title: string;
 	/** Translation keys for built-in folders; custom folders show `title` as typed by the user. */
-	titleKey?: TranslationKey;
+	titleKey?: string;
 	emptyText: string;
-	emptyTextKey?: TranslationKey;
+	emptyTextKey?: string;
 	hrefPrefix: string;
 	folderId?: string;
 	icon: LucideIcon;

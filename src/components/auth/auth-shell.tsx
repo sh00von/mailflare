@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useBranding } from "@/components/branding-provider";
-import { LanguageSelector } from "@/components/language-selector";
 import type { AuthShellProps } from "./types";
 
 export function AuthShell({
@@ -58,9 +57,6 @@ export function AuthShell({
             )}
           </div>
 
-          <div className="mt-auto hidden pt-8 lg:block">
-            <LanguageSelector variant="text" />
-          </div>
         </section>
 
         <section className="flex min-w-0 flex-col justify-start px-7 pb-[max(1.75rem,env(safe-area-inset-bottom))] pt-0 sm:justify-center sm:p-10 lg:p-14">
@@ -88,9 +84,6 @@ export function AuthShell({
               {footer}
             </div>
           )}
-          <div className="mt-auto pt-8 lg:hidden">
-            <LanguageSelector variant="text" />
-          </div>
         </section>
       </main>
     </div>

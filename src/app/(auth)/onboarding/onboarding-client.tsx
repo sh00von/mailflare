@@ -3,7 +3,6 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AlertTriangle, ArrowRight, CheckCircle2, LoaderCircle, MailPlus } from "@/components/icons";
-import { useLanguage } from "@/components/language-provider";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +12,6 @@ import { checkDomain, createDomain, createMailbox, getDomains } from "./utils";
 import type { DomainPreflight } from "./types";
 
 export function OnboardingClient() {
-	const { t } = useLanguage();
 	const router = useRouter();
 	const [step, setStep] = useState<1 | 2>(1);
 	const [hostname, setHostname] = useState("");
@@ -52,7 +50,7 @@ export function OnboardingClient() {
 			const result = await checkDomain(normalized);
 			if (!result.ok || !result.domain) {
 				setLoading(false);
-				setError(result.error ?? t("onboarding.domainCheckFailed"));
+				setError(result.error ?? "Domain check failed");
 				return;
 			}
 			checkedDomain = result.domain;
@@ -62,7 +60,7 @@ export function OnboardingClient() {
 		}
 		if (!checkedDomain) {
 			setLoading(false);
-			setError(t("onboarding.domainCheckFailed"));
+			setError("Domain check failed");
 			return;
 		}
 
@@ -74,7 +72,7 @@ export function OnboardingClient() {
 				setError(null);
 				return;
 			}
-			setError(data.error ?? t("onboarding.addDomainFailed"));
+			setError(data.error ?? "Failed to add domain");
 			return;
 		}
 		setMxConflict(false);
@@ -94,7 +92,7 @@ export function OnboardingClient() {
 		if (!result.ok || !result.domain) {
 			setDomainCheck(null);
 			setEnableSending(false);
-			setError(result.error ?? t("onboarding.domainCheckFailed"));
+			setError(result.error ?? "Domain check failed");
 			return;
 		}
 
@@ -109,7 +107,7 @@ export function OnboardingClient() {
 		const { ok, data } = await createMailbox(domainId, localPart);
 		setLoading(false);
 		if (!ok) {
-			setError(data.error ?? t("onboarding.createMailboxFailed"));
+			setError(data.error ?? "Failed to create mailbox");
 			return;
 		}
 		router.push("/inbox");
@@ -118,19 +116,19 @@ export function OnboardingClient() {
 	return (
 		<AuthShell
 			icon={MailPlus}
-			title={step === 1 ? t("onboarding.connectTitle") : t("onboarding.firstMailboxTitle")}
+			title={step === 1 ? "Connect mail routing" : "Create your first mailbox"}
 			description={
 				step === 1
-					? t("onboarding.connectDescription")
-					: t("onboarding.mailboxDescription")
+					? "Add the Cloudflare domain that will receive mail and optionally send through this workspace."
+					: "Choose the mailbox address that should open directly into the inbox."
 			}
 			steps={[
-				{ label: t("onboarding.stepDomain"), active: step === 1 },
-				{ label: t("onboarding.stepMailbox"), active: step === 2 },
+				{ label: "Domain", active: step === 1 },
+				{ label: "Mailbox", active: step === 2 },
 			]}
 			footer={
 				<span className="inline-flex items-center gap-2 text-neutral-500">
-					{t("onboarding.completesInInbox")}
+					Setup completes in the inbox
 					<ArrowRight className="h-4 w-4" />
 				</span>
 			}
@@ -139,10 +137,10 @@ export function OnboardingClient() {
 				{step === 1 && (
 					<>
 						<p className="rounded-2xl bg-[#eaf1fb] px-4 py-3 text-sm leading-6 text-neutral-700">
-							{t("onboarding.cloudflareDns", { token: "\u0001" }).split("\u0001").flatMap((part, index) => index === 0 ? [part] : [<code key={index} className="no-font-mono text-xs font-semibold text-blue-800">CF_TOKEN</code>, part])}
+							{`Your domain must use Cloudflare DNS on the same account as ${"\u0001"}.`.split("\u0001").flatMap((part, index) => index === 0 ? [part] : [<code key={index} className="no-font-mono text-xs font-semibold text-blue-800">CF_TOKEN</code>, part])}
 						</p>
 						<div className="space-y-2">
-							<Label htmlFor="domain">{t("onboarding.domain")}</Label>
+							<Label htmlFor="domain">Domain</Label>
 							<Input
 								id="domain"
 								value={hostname}
@@ -160,9 +158,9 @@ export function OnboardingClient() {
 						</div>
 						<div className="flex items-center justify-between gap-4 rounded-2xl bg-neutral-50 px-4 py-3">
 							<div>
-								<Label htmlFor="onboarding-skip-dns">{t("setup.skipDns")}</Label>
+								<Label htmlFor="onboarding-skip-dns">Skip DNS setup</Label>
 								<p className="mt-1 text-xs leading-5 text-neutral-500">
-									{skipDns ? t("setup.skipDnsOn") : t("setup.skipDnsHint")}
+									{skipDns ? "DNS is not added or checked. Set the records yourself before mail can flow." : "Add the domain without adding or checking DNS records. You can set them later."}
 								</p>
 							</div>
 							<Switch
@@ -178,15 +176,15 @@ export function OnboardingClient() {
 						{!skipDns && (
 						<div className="flex items-center justify-between gap-4 rounded-2xl bg-neutral-50 px-4 py-3">
 							<div>
-								<Label htmlFor="onboarding-enable-sending">{t("setup.enableSending")}</Label>
+								<Label htmlFor="onboarding-enable-sending">Enable sending</Label>
 								<p className="mt-1 text-xs leading-5 text-neutral-500">
 									{domainChecking
-										? t("setup.checkingCloudflare")
+										? "Checking Cloudflare access..."
 										: domainCheck
 											? enableSending
-												? t("setup.requiredToSend")
-												: t("setup.receiveOnly")
-											: t("onboarding.leaveToVerify")}
+												? "Required to send email."
+												: "Receive-only mode."
+											: "Leave the domain field to verify it."}
 								</p>
 							</div>
 							{domainChecking ? (
@@ -204,7 +202,7 @@ export function OnboardingClient() {
 						{domainCheck && !skipDns && (
 							<div className="flex items-center gap-3 rounded-2xl bg-green-50 px-4 py-3 text-sm text-green-700">
 								<CheckCircle2 className="h-4 w-4" />
-								{t("setup.domainFound", { zone: domainCheck.zone.name })}
+								{`Domain found in Cloudflare as ${domainCheck.zone.name}`}
 							</div>
 						)}
 						{mxConflict && (
@@ -212,7 +210,7 @@ export function OnboardingClient() {
 								<div className="flex items-start gap-3">
 									<AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
 									<p className="text-sm leading-6">
-										{t("onboarding.mxConflict")}
+										Existing MX records deliver mail to another provider. Continuing deletes those records and replaces them with Cloudflare Email Routing, so the previous provider will stop receiving mail.
 									</p>
 								</div>
 								<Button
@@ -220,7 +218,7 @@ export function OnboardingClient() {
 									disabled={loading}
 									className="h-11 w-full rounded-full px-6 active:scale-[0.98]"
 								>
-									{loading ? t("onboarding.replacingMx") : t("onboarding.deleteMxContinue")}
+									{loading ? "Replacing MX records..." : "Delete MX records and continue"}
 								</Button>
 							</div>
 						)}
@@ -230,7 +228,7 @@ export function OnboardingClient() {
 								disabled={!hostname || loading || domainChecking}
 								className="h-11 w-full rounded-full px-6 active:scale-[0.98]"
 							>
-								{loading ? t("onboarding.adding") : t("onboarding.addDomain")}
+								{loading ? "Adding..." : "Add domain"}
 							</Button>
 						)}
 					</>
@@ -238,7 +236,7 @@ export function OnboardingClient() {
 				{step === 2 && (
 					<>
 						<div className="space-y-2">
-							<Label htmlFor="localPart">{t("onboarding.mailboxAddress")}</Label>
+							<Label htmlFor="localPart">Mailbox address</Label>
 							<div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
 								<Input
 									id="localPart"
@@ -254,7 +252,7 @@ export function OnboardingClient() {
 							disabled={!localPart || loading}
 							className="h-11 w-full rounded-full px-6 active:scale-[0.98]"
 						>
-							{loading ? t("setup.creating") : t("onboarding.goToInbox")}
+							{loading ? "Creating..." : "Go to inbox"}
 						</Button>
 					</>
 				)}

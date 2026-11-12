@@ -16,8 +16,6 @@ import {
   ShieldCheck,
 } from "@/components/icons";
 import { cn } from "@/lib/utils";
-import { useLanguage } from "./language-provider";
-import type { TranslationKey } from "@/lib/i18n/types";
 import type { NavLink } from "./components-nav-types";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { NavItem } from "./components-nav";
@@ -31,34 +29,34 @@ type AdminLinkPermission = "primary" | "domains" | "users";
 
 type AdminNavLink = {
   href: string;
-  labelKey: TranslationKey;
+  labelKey: string;
   icon: typeof Settings;
   permission?: AdminLinkPermission;
 };
 
 // `id` names a section for its remembered open/closed state; it is not shown.
-const sections: { id?: string; labelKey?: TranslationKey; links: AdminNavLink[] }[] = [
+const sections: { id?: string; labelKey?: string; links: AdminNavLink[] }[] = [
   {
     // label: "Overview",
-    links: [{ href: "/admin", labelKey: "admin.nav.overview", icon: Settings }],
+    links: [{ href: "/admin", labelKey: "Overview", icon: Settings }],
   },
   {
     id: "Email",
-    labelKey: "admin.nav.email",
+    labelKey: "Email",
     links: [
-      { href: "/domains", labelKey: "admin.nav.domains", icon: Globe2, permission: "domains" },
-      { href: "/webhooks", labelKey: "admin.nav.webhooks", icon: Webhook, permission: "primary" },
-      { href: "/spam-filter", labelKey: "admin.nav.spamFilter", icon: ShieldCheck, permission: "primary" },
+      { href: "/domains", labelKey: "Domains", icon: Globe2, permission: "domains" },
+      { href: "/webhooks", labelKey: "Webhooks", icon: Webhook, permission: "primary" },
+      { href: "/spam-filter", labelKey: "Spam filter", icon: ShieldCheck, permission: "primary" },
     ],
   },
   {
     id: "Administration",
-    labelKey: "admin.nav.administration",
+    labelKey: "Administration",
     links: [
-      { href: "/general", labelKey: "admin.nav.general", icon: Settings, permission: "primary" },
-      { href: "/accounts", labelKey: "admin.nav.accounts", icon: Users },
-      { href: "/activity", labelKey: "admin.nav.activity", icon: Activity, permission: "primary" },
-      { href: "/backups", labelKey: "admin.nav.backups", icon: DatabaseBackup, permission: "primary" },
+      { href: "/general", labelKey: "General", icon: Settings, permission: "primary" },
+      { href: "/accounts", labelKey: "Accounts", icon: Users },
+      { href: "/activity", labelKey: "Activity", icon: Activity, permission: "primary" },
+      { href: "/backups", labelKey: "Backups", icon: DatabaseBackup, permission: "primary" },
     ],
   },
 ];
@@ -83,7 +81,6 @@ function AdminSection({ id, label, links, showDivider, minimal }: { id?: string;
 }
 
 export function AdminNav({ className }: { className?: string }) {
-  const { t } = useLanguage();
   const { minimal } = useSidebar();
   const user = useCurrentUser();
 
@@ -96,15 +93,15 @@ export function AdminNav({ className }: { className?: string }) {
   }
 
   return (
-    <SidebarScaffold className={className} header={<SidebarHeader href="/inbox" label={t("account.admin")} />} footer={<SidebarFooter />}>
+    <SidebarScaffold className={className} header={<SidebarHeader href="/inbox" label={"Admin"} />} footer={<SidebarFooter />}>
       <div className={cn("space-y-4", minimal && "space-y-2 pl-1")}>
         {sections.map((section, sectionIndex) => {
-          const links = section.links.filter(canSee).map(({ labelKey, ...link }): NavLink => ({ ...link, label: t(labelKey) }));
+          const links = section.links.filter(canSee).map(({ labelKey, ...link }): NavLink => ({ ...link, label: labelKey }));
           if (links.length === 0) return null;
 
           return (
             // The first section has no label, so fall back to its first href for a stable key.
-            <AdminSection key={section.id ?? links[0].href} id={section.id} label={section.labelKey ? t(section.labelKey) : undefined} links={links} showDivider={minimal && sectionIndex > 0} minimal={minimal} />
+            <AdminSection key={section.id ?? links[0].href} id={section.id} label={section.labelKey ? section.labelKey : undefined} links={links} showDivider={minimal && sectionIndex > 0} minimal={minimal} />
           );
         })}
       </div>

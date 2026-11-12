@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import { useLanguage } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select } from "@/components/ui/select";
@@ -20,7 +19,6 @@ import {
 } from "../utils";
 
 export default function AccountPermissionsPage() {
-	const { t } = useLanguage();
 	const { id } = useParams<{ id: string }>();
 	const currentUser = useCurrentUser();
 	const [account, setAccount] = useState<ManagedAccount | null>(null);
@@ -34,8 +32,8 @@ export default function AccountPermissionsPage() {
 	useEffect(() => {
 		void fetchManagedAccount(id)
 			.then(setAccount)
-			.catch((error) => setMessage(error instanceof Error ? error.message : t("account.permissions.loadFailed")));
-	}, [id, t]);
+			.catch((error) => setMessage(error instanceof Error ? error.message : "Unable to load permissions"));
+	}, [id]);
 
 	const isPrimary = !!account?.canChangeRole;
 	const transferTarget = useMemo(
@@ -58,9 +56,9 @@ export default function AccountPermissionsPage() {
 			await saveManagedAccount(account);
 			// Editing your own flags changes what your navigation shows; drop the cached user.
 			if (currentUser?.id === account.id) clearCurrentUserCache();
-			setMessage(t("account.permissions.updated"));
+			setMessage("Permissions updated");
 		} catch (error) {
-			setMessage(error instanceof Error ? error.message : t("account.permissions.updateFailed"));
+			setMessage(error instanceof Error ? error.message : "Unable to update permissions");
 		} finally {
 			setSaving(false);
 		}
@@ -77,7 +75,7 @@ export default function AccountPermissionsPage() {
 			// A full reload drops the stale cached session so the navigation reflects the new role.
 			window.location.assign(`/accounts/${transferTarget.id}/permissions`);
 		} catch (error) {
-			setMessage(error instanceof Error ? error.message : t("account.permissions.transferFailed"));
+			setMessage(error instanceof Error ? error.message : "Unable to transfer the primary admin role");
 			setTransferring(false);
 		}
 	}
@@ -87,17 +85,17 @@ export default function AccountPermissionsPage() {
 	return (
 		<div className="space-y-6">
 			<div>
-				<h1 className="text-2xl md:text-3xl font-medium text-neutral-900">{t("account.permissions.title")}</h1>
-				<p className="mt-2 text-sm text-neutral-500">{t("account.permissions.description")}</p>
+				<h1 className="text-2xl md:text-3xl font-medium text-neutral-900">Permissions</h1>
+				<p className="mt-2 text-sm text-neutral-500">Control what this account can manage.</p>
 			</div>
 			{account?.isPrimaryAdmin && (
 				<section className="rounded-3xl bg-amber-50 p-6">
-					<p className="text-sm font-semibold text-amber-900">{t("account.permissions.primaryAdmin")}</p>
-					<p className="mt-1 text-sm text-amber-800">{t("account.permissions.primaryNote")}</p>
+					<p className="text-sm font-semibold text-amber-900">Primary admin</p>
+					<p className="mt-1 text-sm text-amber-800">This account owns administration and cannot be demoted or disabled. Transfer the role to hand it over.</p>
 				</section>
 			)}
 			<section className="space-y-3 rounded-3xl bg-white p-6">
-				<label htmlFor="account-role" className="block text-sm font-semibold text-neutral-900">{t("accounts.role")}</label>
+				<label htmlFor="account-role" className="block text-sm font-semibold text-neutral-900">Role</label>
 				<Select
 					id="account-role"
 					value={account?.role ?? "user"}
@@ -106,32 +104,32 @@ export default function AccountPermissionsPage() {
 					className="h-10 text-sm"
 					onChange={(event) => account && setAccount({ ...account, role: event.target.value === "admin" ? "admin" : "user" })}
 				>
-					<option value="user">{t("accounts.roleUser")}</option>
-					<option value="admin">{t("accounts.roleAdmin")}</option>
+					<option value="user">User</option>
+					<option value="admin">Admin</option>
 				</Select>
 				<p className="text-xs text-neutral-500">
 					{account?.canChangeRole
-						? t("account.permissions.admins")
-						: t("account.permissions.onlyPrimaryRoles")}
+						? "Admins can access administration pages and manage Team settings."
+						: "Only the primary admin can change roles."}
 				</p>
 			</section>
 			<div className="overflow-hidden rounded-3xl bg-white">
 				<table className="w-full text-left">
 					<thead className="border-b border-neutral-100 bg-neutral-50 text-xs font-semibold uppercase tracking-wide text-neutral-500">
 						<tr>
-							<th scope="col" className="px-5 py-3">{t("account.permissions.permission")}</th>
-							<th scope="col" className="w-28 px-5 py-3 text-center">{t("account.permissions.allowed")}</th>
+							<th scope="col" className="px-5 py-3">Permission</th>
+							<th scope="col" className="w-28 px-5 py-3 text-center">Allowed</th>
 						</tr>
 					</thead>
 					<tbody className="divide-y divide-neutral-100">
 						<tr>
 							<td className="px-5 py-4">
-								<p className="text-sm font-semibold text-neutral-900">{t("account.permissions.manageMailboxes")}</p>
-								<p className="mt-1 text-xs text-neutral-500">{t("account.permissions.manageMailboxesHint")}</p>
+								<p className="text-sm font-semibold text-neutral-900">Manage mailboxes</p>
+								<p className="mt-1 text-xs text-neutral-500">Allow this account to add and remove its own inboxes.</p>
 							</td>
 							<td className="px-5 py-4 text-center">
 								<Checkbox
-									aria-label={t("account.permissions.allowMailboxes")}
+									aria-label={"Allow mailbox management"}
 									checked={account?.canManageMailboxes ?? false}
 									disabled={!account || !editable}
 									onChange={(event) => account && setAccount({ ...account, canManageMailboxes: event.target.checked })}
@@ -140,12 +138,12 @@ export default function AccountPermissionsPage() {
 						</tr>
 						<tr>
 							<td className="px-5 py-4">
-								<p className="text-sm font-semibold text-neutral-900">{t("account.permissions.manageDomains")}</p>
-								<p className="mt-1 text-xs text-neutral-500">{t("account.permissions.manageDomainsHint")}</p>
+								<p className="text-sm font-semibold text-neutral-900">Manage domains</p>
+								<p className="mt-1 text-xs text-neutral-500">Allow this admin to add and manage domains.</p>
 							</td>
 							<td className="px-5 py-4 text-center">
 								<Checkbox
-									aria-label={t("account.permissions.allowDomains")}
+									aria-label={"Allow domain management"}
 									checked={account?.canManageDomains ?? false}
 									disabled={!account || !account.canChangeRole}
 									onChange={(event) => account && setAccount({ ...account, canManageDomains: event.target.checked })}
@@ -154,12 +152,12 @@ export default function AccountPermissionsPage() {
 						</tr>
 						<tr>
 							<td className="px-5 py-4">
-								<p className="text-sm font-semibold text-neutral-900">{t("account.permissions.manageUsers")}</p>
-								<p className="mt-1 text-xs text-neutral-500">{t("account.permissions.manageUsersHint")}</p>
+								<p className="text-sm font-semibold text-neutral-900">Manage users</p>
+								<p className="mt-1 text-xs text-neutral-500">Allow this admin to add and manage user accounts.</p>
 							</td>
 							<td className="px-5 py-4 text-center">
 								<Checkbox
-									aria-label={t("account.permissions.allowUsers")}
+									aria-label={"Allow user management"}
 									checked={account?.canManageUsers ?? false}
 									disabled={!account || !account.canChangeRole}
 									onChange={(event) => account && setAccount({ ...account, canManageUsers: event.target.checked })}
@@ -171,19 +169,19 @@ export default function AccountPermissionsPage() {
 			</div>
 			<section className="overflow-hidden rounded-3xl bg-white">
 				<div className="border-b border-neutral-100 bg-neutral-50 px-5 py-3">
-					<h2 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">{t("account.permissions.features")}</h2>
-					<p className="mt-1 text-xs text-neutral-500">{t("account.permissions.featuresHint")}</p>
+					<h2 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Feature access</h2>
+					<p className="mt-1 text-xs text-neutral-500">Apps turned off are hidden and blocked for this account.</p>
 				</div>
 				<table className="w-full text-left">
 					<tbody className="divide-y divide-neutral-100">
 						<tr>
 							<td className="px-5 py-4">
-								<p className="text-sm font-semibold text-neutral-900">{t("account.calendar")}</p>
-								<p className="mt-1 text-xs text-neutral-500">{t("account.permissions.calendarHint")}</p>
+								<p className="text-sm font-semibold text-neutral-900">Calendar</p>
+								<p className="mt-1 text-xs text-neutral-500">Events, reminders, and booking pages.</p>
 							</td>
 							<td className="w-28 px-5 py-4 text-center">
 								<Checkbox
-									aria-label={t("account.permissions.allowCalendar")}
+									aria-label={"Allow Calendar"}
 									checked={account?.calendarEnabled ?? true}
 									disabled={!account || !editable}
 									onChange={(event) => account && setAccount({ ...account, calendarEnabled: event.target.checked })}
@@ -192,12 +190,12 @@ export default function AccountPermissionsPage() {
 						</tr>
 						<tr>
 							<td className="px-5 py-4">
-								<p className="text-sm font-semibold text-neutral-900">{t("account.drive")}</p>
-								<p className="mt-1 text-xs text-neutral-500">{t("account.permissions.driveHint")}</p>
+								<p className="text-sm font-semibold text-neutral-900">Drive</p>
+								<p className="mt-1 text-xs text-neutral-500">Files, saved attachments, and shared links.</p>
 							</td>
 							<td className="w-28 px-5 py-4 text-center">
 								<Checkbox
-									aria-label={t("account.permissions.allowDrive")}
+									aria-label={"Allow Drive"}
 									checked={account?.driveEnabled ?? true}
 									disabled={!account || !editable}
 									onChange={(event) => account && setAccount({ ...account, driveEnabled: event.target.checked })}
@@ -209,30 +207,30 @@ export default function AccountPermissionsPage() {
 			</section>
 			{editable && (
 				<Button onClick={() => void savePermissions()} disabled={saving}>
-					{saving ? t("common.saving") : t("account.permissions.save")}
+					{saving ? "Saving..." : "Save permissions"}
 				</Button>
 			)}
 			{isPrimary && (
 				<section className="space-y-4 rounded-3xl bg-white p-6">
 					<div>
-						<h2 className="text-sm font-semibold text-neutral-900">{t("account.permissions.transferTitle")}</h2>
-						<p className="mt-1 text-xs text-neutral-500">{t("account.permissions.transferHint")}</p>
+						<h2 className="text-sm font-semibold text-neutral-900">Transfer primary admin</h2>
+						<p className="mt-1 text-xs text-neutral-500">Choose an account by email to take over administration. You will be asked to confirm.</p>
 					</div>
 					<div className="flex flex-col gap-3 sm:flex-row">
 						<Select
-							aria-label={t("account.permissions.selectNext")}
+							aria-label={"Select the next primary admin"}
 							value={transferTargetId}
 							containerClassName="w-full sm:max-w-sm"
 							className="h-10 text-sm"
 							onChange={(event) => setTransferTargetId(event.target.value)}
 						>
-							<option value="">{t("account.permissions.selectAccount")}</option>
+							<option value="">Select an account</option>
 							{candidates.map((candidate) => (
 								<option key={candidate.id} value={candidate.id}>{candidate.email} — {candidate.name}</option>
 							))}
 						</Select>
 						<Button variant="outline" disabled={!transferTarget} onClick={() => setTransferOpen(true)}>
-							{t("account.permissions.transferTitle")}
+							Transfer primary admin
 						</Button>
 					</div>
 				</section>
@@ -242,9 +240,9 @@ export default function AccountPermissionsPage() {
 			<Dialog open={transferOpen} onOpenChange={setTransferOpen}>
 				<DialogContent className="w-[min(420px,calc(100vw-32px))]">
 					<DialogHeader>
-						<DialogTitle>{t("account.permissions.transferQuestion")}</DialogTitle>
+						<DialogTitle>Transfer primary admin?</DialogTitle>
 						<DialogDescription>
-							{t("account.permissions.transferWarning")}
+							You will lose primary admin access and become a regular admin.
 						</DialogDescription>
 					</DialogHeader>
 					{transferTarget && (
@@ -270,10 +268,10 @@ export default function AccountPermissionsPage() {
 					)}
 					<div className="flex justify-end gap-2">
 						<DialogClose asChild>
-							<Button variant="outline" disabled={transferring}>{t("common.cancel")}</Button>
+							<Button variant="outline" disabled={transferring}>Cancel</Button>
 						</DialogClose>
 						<Button disabled={transferring || !transferTarget} onClick={() => void confirmTransfer()}>
-							{transferring ? t("account.permissions.transferring") : t("account.permissions.confirmTransfer")}
+							{transferring ? "Transferring..." : "Confirm transfer"}
 						</Button>
 					</div>
 				</DialogContent>

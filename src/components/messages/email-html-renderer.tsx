@@ -1,6 +1,5 @@
 "use client";
 
-import { useLanguage } from "@/components/language-provider";
 import { useEffect, useRef, useState } from "react";
 import { prepareReaderEmailHtml } from "@/lib/remote-images/reader";
 import { collapseQuotedEmailHtml } from "@/app/(dashboard)/inbox/[messageId]/quote-collapse-utils";
@@ -23,8 +22,7 @@ export function EmailHtmlRenderer({ html, className, preserveLeadingQuote = fals
 	/** Called when the reader chooses to load remote content. */
 	onAllowRemote?: () => void;
 }) {
-	const { t } = useLanguage();
-	const quoteToggleLabel = t("message.quote.toggle");
+	const quoteToggleLabel = "Toggle quoted email";
 	const host = useRef<HTMLDivElement>(null);
 	const [choice, setChoice] = useState<{ source: string; allow: boolean } | null>(null);
 	const [hasRemote, setHasRemote] = useState(false);
@@ -80,7 +78,7 @@ export function EmailHtmlRenderer({ html, className, preserveLeadingQuote = fals
 					if (!allowRemote) onAllowRemote?.();
 					setChoice({ source: html, allow: !allowRemote });
 				}}>
-				{allowRemote ? null : t("message.allowRemote")}
+				{allowRemote ? null : "Allow remote content"}
 			</button>
 		</div>}
 		<div className="max-w-full overflow-x-auto" ref={host} />

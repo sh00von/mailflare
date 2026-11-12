@@ -4,7 +4,6 @@ import { mobilePrimaryActionClass } from "@/components/page-header-utils";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Activity, Plus, RefreshCw, Send, Trash2 } from "@/components/icons";
-import { useLanguage } from "@/components/language-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -31,7 +30,6 @@ import {
 import { WebhookDeliveries } from "./deliveries";
 
 export default function WebhooksPage() {
-	const { t } = useLanguage();
 	const qc = useQueryClient();
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [url, setUrl] = useState("");
@@ -91,9 +89,9 @@ export default function WebhooksPage() {
 		<div className="space-y-6">
 			<div className="flex flex-wrap items-end justify-between gap-4">
 				<div>
-					<h1 className="text-2xl font-semibold">{t("webhooks.title")}</h1>
+					<h1 className="text-2xl font-semibold">Webhooks</h1>
 					<p className="mt-1 text-sm text-neutral-500">
-						{t("webhooks.description")}
+						Deliver message events to your own endpoints, with automatic retries.
 					</p>
 				</div>
 				<Button
@@ -103,22 +101,22 @@ export default function WebhooksPage() {
 						setDialogOpen(true);
 					}}
 				>
-					<Plus className="h-4 w-4" /> {t("webhooks.add")}
+					<Plus className="h-4 w-4" /> Add endpoint
 				</Button>
 			</div>
 
 			{secret && (
 				<Card>
 					<CardContent className="pt-6 text-sm">
-						<p className="font-medium">{t("webhooks.secretTitle")}</p>
+						<p className="font-medium">Signing secret — shown once</p>
 						<p className="mt-1 text-neutral-500">
-							{t("webhooks.secretHint", { header: "\u0001" }).split("\u0001").flatMap((part, index) => index === 0 ? [part] : [<code key={index}>X-Email-Platform-Signature</code>, part])}
+							{`Verify the ${"\u0001"} header (HMAC-SHA256 of the raw body) with this secret.`.split("\u0001").flatMap((part, index) => index === 0 ? [part] : [<code key={index}>X-Email-Platform-Signature</code>, part])}
 						</p>
 						<code className="mt-2 block break-all rounded-lg bg-neutral-100 p-2 text-xs">
 							{secret}
 						</code>
 						<Button variant="outline" size="sm" className="mt-3" onClick={() => setSecret(null)}>
-							{t("webhooks.dismiss")}
+							Dismiss
 						</Button>
 					</CardContent>
 				</Card>
@@ -130,7 +128,7 @@ export default function WebhooksPage() {
 			) : !webhooks.data?.length ? (
 				<Card>
 					<CardContent className="pt-6 text-sm text-neutral-500">
-						{t("webhooks.none")}
+						No endpoints yet. Add one to start receiving events.
 					</CardContent>
 				</Card>
 			) : (
@@ -152,40 +150,40 @@ export default function WebhooksPage() {
 									</div>
 								</div>
 								<div className="flex items-center gap-2 rounded-full">
-									<span className="text-xs font-medium text-neutral-600">{hook.enabled ? t("webhooks.enabled") : t("webhooks.disabled")}</span>
+									<span className="text-xs font-medium text-neutral-600">{hook.enabled ? "Enabled" : "Disabled"}</span>
 									<Switch
 										checked={hook.enabled}
 										onCheckedChange={() => toggle.mutate(hook)}
-										aria-label={t(hook.enabled ? "webhooks.toggleLabel.disable" : "webhooks.toggleLabel.enable", { url: hook.url })}
+										aria-label={(hook.enabled ? `Disable ${hook.url}` : `Enable ${hook.url}`)}
 									/>
 								</div>
 							</div>
 							<div className="mt-5 grid grid-cols-2 overflow-hidden rounded-2xl bg-neutral-50 sm:grid-cols-5">
 								<div className="px-4 py-3">
 									<span className="block text-lg font-semibold text-neutral-900">{hook.stats.total}</span>
-									<span className="block text-xs text-neutral-500">{t("webhooks.stat.deliveries")}</span>
+									<span className="block text-xs text-neutral-500">Deliveries</span>
 								</div>
 								<div className="px-4 py-3">
 									<span className={`block text-lg font-semibold ${hook.stats.delivered ? "text-green-600" : "text-neutral-500"}`}>
 										{hook.stats.delivered}
 									</span>
-									<span className="block text-xs text-neutral-500">{t("webhooks.stat.delivered")}</span>
+									<span className="block text-xs text-neutral-500">Delivered</span>
 								</div>
 								<div className="px-4 py-3">
 									<span className={`block text-lg font-semibold ${hook.stats.pending ? "text-amber-600" : "text-neutral-500"}`}>
 										{hook.stats.pending}
 									</span>
-									<span className="block text-xs text-neutral-500">{t("webhooks.stat.inFlight")}</span>
+									<span className="block text-xs text-neutral-500">In flight</span>
 								</div>
 								<div className="px-4 py-3">
 									<span className={`block text-lg font-semibold ${hook.stats.failing ? "text-red-600" : "text-neutral-500"}`}>
 										{hook.stats.failing}
 									</span>
-									<span className="block text-xs text-neutral-500">{t("webhooks.stat.failed")}</span>
+									<span className="block text-xs text-neutral-500">Failed</span>
 								</div>
 								<div className="px-4 py-3">
 									<span className="block text-lg font-semibold text-neutral-500">{hook.maxAttempts}</span>
-									<span className="block text-xs text-neutral-500">{t("webhooks.stat.maxAttempts")}</span>
+									<span className="block text-xs text-neutral-500">Max attempts</span>
 								</div>
 							</div>
 
@@ -196,12 +194,12 @@ export default function WebhooksPage() {
 									onClick={() => setExpanded(expanded === hook.id ? null : hook.id)}
 								>
 									<Activity className="h-4 w-4" />
-									{expanded === hook.id ? t("webhooks.hideHistory") : t("webhooks.history")}
+									{expanded === hook.id ? "Hide delivery history" : "Delivery history"}
 								</Button>
 								<div className="ml-auto flex flex-wrap items-center gap-2">
 									{testResult[hook.id] && (
 										<p className="mr-1 text-sm text-neutral-600">
-											{t("webhooks.testDelivery", { result: testResult[hook.id] })}
+											{`Test delivery: ${testResult[hook.id]}`}
 										</p>
 									)}
 									<Button
@@ -210,25 +208,25 @@ export default function WebhooksPage() {
 										onClick={() => runTest.mutate(hook.id)}
 										disabled={runTest.isPending}
 									>
-										<Send className="h-4 w-4" /> {t("webhooks.test")}
+										<Send className="h-4 w-4" /> Test
 									</Button>
 									<Button
 										variant="ghost"
 										size="sm"
 										onClick={() => {
-											if (window.confirm(t("webhooks.rotateConfirm"))) rotate.mutate(hook.id);
+											if (window.confirm("Rotate this signing secret? The previous secret will stop signing new deliveries immediately.")) rotate.mutate(hook.id);
 										}}
 										disabled={rotate.isPending}
 									>
-										<RefreshCw className="h-4 w-4" /> {t("webhooks.rotate")}
+										<RefreshCw className="h-4 w-4" /> Rotate secret
 									</Button>
 									<Button
 										variant="ghost"
 										size="sm"
 										onClick={() => remove.mutate(hook.id)}
-										aria-label={t("webhooks.deleteLabel", { url: hook.url })}
+										aria-label={`Delete ${hook.url}`}
 									>
-										<Trash2 className="h-4 w-4" /> {t("common.delete")}
+										<Trash2 className="h-4 w-4" /> Delete
 									</Button>
 								</div>
 							</div>
@@ -246,9 +244,9 @@ export default function WebhooksPage() {
 			<Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
 				<DialogContent className="max-h-[calc(100vh-4rem)] overflow-y-auto">
 					<DialogHeader>
-						<DialogTitle>{t("webhooks.add")}</DialogTitle>
+						<DialogTitle>Add endpoint</DialogTitle>
 						<DialogDescription>
-							{t("webhooks.addDescription")}
+							Failed deliveries retry automatically with exponential backoff.
 						</DialogDescription>
 					</DialogHeader>
 					<form
@@ -259,7 +257,7 @@ export default function WebhooksPage() {
 						}}
 					>
 						<div className="space-y-2">
-							<Label htmlFor="hook-url">{t("webhooks.endpointUrl")}</Label>
+							<Label htmlFor="hook-url">Endpoint URL</Label>
 							<Input
 								id="hook-url"
 								type="url"
@@ -269,24 +267,24 @@ export default function WebhooksPage() {
 							/>
 						</div>
 						<div className="space-y-2">
-							<Label htmlFor="hook-description">{t("webhooks.descriptionLabel")}</Label>
+							<Label htmlFor="hook-description">Description</Label>
 							<Input
 								id="hook-description"
 								value={description}
-								placeholder={t("webhooks.optional")}
+								placeholder={"Optional"}
 								onChange={(e) => setDescription(e.target.value)}
 							/>
 						</div>
 						<div className="space-y-2">
-							<Label>{t("webhooks.events")}</Label>
+							<Label>Events</Label>
 							{WEBHOOK_EVENTS.map((event) => (
 								<label
 									key={event.value}
 									className="flex cursor-pointer items-center justify-between rounded-lg border border-neutral-200 px-3 py-2"
 								>
 									<span>
-										<span className="block text-sm font-medium">{t(event.labelKey)}</span>
-										<span className="block text-xs text-neutral-500">{t(event.hintKey)}</span>
+										<span className="block text-sm font-medium">{event.labelKey}</span>
+										<span className="block text-xs text-neutral-500">{event.hintKey}</span>
 									</span>
 									<input
 										type="checkbox"
@@ -298,7 +296,7 @@ export default function WebhooksPage() {
 							))}
 						</div>
 						<div className="space-y-2">
-							<Label htmlFor="hook-attempts">{t("webhooks.stat.maxAttempts")}</Label>
+							<Label htmlFor="hook-attempts">Max attempts</Label>
 							<Input
 								id="hook-attempts"
 								type="number"
@@ -313,13 +311,13 @@ export default function WebhooksPage() {
 
 						<div className="flex justify-end gap-2">
 							<Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-								{t("common.cancel")}
+								Cancel
 							</Button>
 							<Button type="submit" disabled={create.isPending || events.length === 0}>
 								<RefreshCw
 									className={create.isPending ? "h-4 w-4 animate-spin" : "hidden"}
 								/>
-								{t("webhooks.create")}
+								Create
 							</Button>
 						</div>
 					</form>

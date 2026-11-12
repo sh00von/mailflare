@@ -1,5 +1,4 @@
 import { Fragment } from "react";
-import { useLanguage } from "@/components/language-provider";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -44,7 +43,6 @@ export default function DomainItemCard({
   setupRecord,
   setupMessage,
 }: DomainItemCardProps) {
-  const { t } = useLanguage();
   const auth = dns?.auth;
 
   return (
@@ -71,7 +69,7 @@ export default function DomainItemCard({
               className="gap-1"
             >
               <StatusIcon ok={item.status === "active"} className="h-3 w-3" />
-              {item.status === "active" ? t("dns.status.active") : item.status === "pending" ? t("dns.status.pending") : item.status}
+              {item.status === "active" ? "active" : item.status === "pending" ? "pending" : item.status}
             </Badge>
             {item.receivingProvider === "cloudflare" ? (
               <Badge
@@ -79,25 +77,25 @@ export default function DomainItemCard({
                 className={cn("gap-1", !item.routingEnabled && "opacity-50")}
               >
                 <StatusIcon ok={item.routingEnabled} className="h-3 w-3" />
-                {t("domains.badge.routing")}
+                routing
               </Badge>
             ) : item.receivingProvider === "none" ? (
               <Badge variant="secondary" className="gap-1 opacity-50">
-                {t("domains.badge.sendingOnly")}
+                sending only
               </Badge>
             ) : (
               <Badge variant="outline" className="gap-1">
-                {t("domains.badge.receivingVia", { provider: item.receivingProvider === "ses" ? "Amazon SES" : "Resend" })}
+                {`receiving via ${item.receivingProvider === "ses" ? "Amazon SES" : "Resend"}`}
               </Badge>
             )}
             {item.sendingProvider === "resend" || item.sendingProvider === "ses" ? (
               <Badge variant="outline" className="gap-1">
                 <StatusIcon ok className="h-3 w-3" />
-                {t("domains.badge.sendingVia", { provider: item.sendingProvider === "ses" ? "Amazon SES" : "Resend" })}
+                {`sending via ${item.sendingProvider === "ses" ? "Amazon SES" : "Resend"}`}
               </Badge>
             ) : item.sendingProvider === "none" ? (
               <Badge variant="secondary" className="gap-1 opacity-50">
-                {t("domains.badge.receivingOnly")}
+                receiving only
               </Badge>
             ) : (
               <Badge
@@ -105,7 +103,7 @@ export default function DomainItemCard({
                 className={cn("gap-1", !item.sendingEnabled && "opacity-50")}
               >
                 <StatusIcon ok={item.sendingEnabled} className="h-3 w-3" />
-                {t("domains.badge.sending")}
+                sending
               </Badge>
             )}
           </div>
@@ -117,7 +115,7 @@ export default function DomainItemCard({
                   {index > 0 && <span className="text-neutral-300">|</span>}
                   <span
                     className="flex items-center gap-1 text-neutral-500"
-                    title={`${record.toUpperCase()} · ${getDnsAuthStatusLabel(auth[record], t)}`}
+                    title={`${record.toUpperCase()} · ${getDnsAuthStatusLabel(auth[record])}`}
                   >
                     <span className="uppercase">{record}</span>
                     <StatusIcon
@@ -134,11 +132,11 @@ export default function DomainItemCard({
             >
               {expanded ? (
                 <>
-                  {t("domains.hideDetails")} <ChevronRight className="h-3 w-3" />
+                  Hide details <ChevronRight className="h-3 w-3" />
                 </>
               ) : (
                 <>
-                  {t("domains.showDetails")} <ChevronDown className="h-3 w-3" />
+                  Show details <ChevronDown className="h-3 w-3" />
                 </>
               )}
             </button>
@@ -177,7 +175,7 @@ export default function DomainItemCard({
             size="sm"
             className="absolute right-4 top-4 h-8 w-8 p-0"
             disabled={remove.isPending}
-            aria-label={t("domains.actionsFor", { host: item.hostname })}
+            aria-label={`Actions for ${item.hostname}`}
           >
             <MoreVertical className="h-4 w-4" />
           </Button>
@@ -193,14 +191,16 @@ export default function DomainItemCard({
               onSelect={() => {
                 // Removing a domain deletes its mailboxes (and all their mail)
                 // and disables Email Routing on the zone, so require the hostname.
-                const typed = window.prompt(t("domains.removeConfirm", { host: item.hostname }));
+                const typed = window.prompt(`Remove ${item.hostname}? This permanently deletes every mailbox on this domain, including all their messages, and turns off Email Routing for the zone.
+
+Type ${item.hostname} to confirm.`);
                 if (typed?.trim().toLowerCase() !== item.hostname.toLowerCase()) return;
                 remove.mutate(item.id);
               }}
               className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-red-600 outline-none hover:bg-red-50 focus:bg-red-50 data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
             >
               <Trash2 className="h-4 w-4" />
-              {t("domains.removeDomain")}
+              Remove domain
             </DropdownMenu.Item>
           </DropdownMenu.Content>
         </DropdownMenu.Portal>

@@ -3,7 +3,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "@/components/icons";
-import { useLanguage } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
 import { Tooltip } from "@/components/ui/tooltip";
 import { useSelectedMailbox } from "@/components/mailbox-provider";
@@ -78,7 +77,6 @@ export function MessageDetailNavigationProvider({ children, config, currentMessa
 }
 
 export function MessageDetailNavigation({ messageId, unread }: MessageDetailNavigationProps) {
-	const { t } = useLanguage();
 	const context = useContext(NavigationContext);
 	const recordUnread = context?.recordUnread;
 	const router = useRouter();
@@ -125,15 +123,15 @@ export function MessageDetailNavigation({ messageId, unread }: MessageDetailNavi
 		<div className="ml-auto flex shrink-0 items-center gap-2 text-neutral-500">
 			{totalUnread > 0 && (
 			<span className="mr-2 whitespace-nowrap text-xs" aria-live="polite">
-				{t("message.nav.unreadPosition", { position: unreadOrder, total: totalUnread })}
+				{`${unreadOrder} of ${totalUnread} unread`}
 			</span>
 			)}
-			<Tooltip label={t("message.nav.newer")}>
+			<Tooltip label={"Newer email"}>
 				<Button
 					type="button"
 					variant="ghost"
 					size="roundedSM"
-					aria-label={t("message.nav.newer")}
+					aria-label={"Newer email"}
 					disabled={!previousId}
 					onPointerEnter={() => prefetchMessage(previousId)}
 					onFocus={() => prefetchMessage(previousId)}
@@ -146,12 +144,12 @@ export function MessageDetailNavigation({ messageId, unread }: MessageDetailNavi
 					<ChevronLeft size={18} />
 				</Button>
 			</Tooltip>
-			<Tooltip label={t("message.nav.older")}>
+			<Tooltip label={"Older email"}>
 				<Button
 					type="button"
 					variant="ghost"
 					size="roundedSM"
-					aria-label={t("message.nav.older")}
+					aria-label={"Older email"}
 					disabled={!nextId}
 					onPointerEnter={() => prefetchMessage(nextId)}
 					onFocus={() => prefetchMessage(nextId)}

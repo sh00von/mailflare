@@ -2,12 +2,19 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2 } from "@/components/icons";
-import { useLanguage } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { ImportJobSummary } from "@/lib/import/jobs-types";
 import { fetchImportJobs, removeImportJob, resumeImportJob } from "@/app/(settings)/settings/import/utils";
 import { getImportJobPercent, IMPORT_JOBS_POLL_MS, isImportJobActive } from "./import-jobs-utils";
+
+const IMPORT_JOB_STATUS_LABELS: Record<ImportJobSummary["status"], string> = {
+	queued: "Queued",
+	running: "Running",
+	completed: "Completed",
+	failed: "Failed",
+	cancelled: "Cancelled",
+};
 
 const STATUS_STYLE: Record<ImportJobSummary["status"], string> = {
 	queued: "bg-neutral-100 text-neutral-600",
@@ -19,7 +26,6 @@ const STATUS_STYLE: Record<ImportJobSummary["status"], string> = {
 
 /** Imports run on the server; this lists them and follows the ones still working. `refreshKey` forces a reload. */
 export function ImportJobs({ refreshKey }: { refreshKey: number }) {
-	const { t } = useLanguage();
 	const [jobs, setJobs] = useState<ImportJobSummary[]>([]);
 	const [loaded, setLoaded] = useState(false);
 	const [resuming, setResuming] = useState<string | null>(null);
@@ -77,7 +83,7 @@ export function ImportJobs({ refreshKey }: { refreshKey: number }) {
 			setPassword("");
 			setResumeError(null);
 		} catch (error) {
-			setResumeError(error instanceof Error ? error.message : t("importJobs.resumeFailed"));
+			setResumeError(error instanceof Error ? error.message : "Unable to resume the import");
 		} finally {
 			await load();
 		}
@@ -90,7 +96,7 @@ export function ImportJobs({ refreshKey }: { refreshKey: number }) {
 			{hasActive && (
 				<p className="flex items-center gap-2 text-sm text-neutral-600">
 					<Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-					{t("importJobs.running")}
+					An import is running
 				</p>
 			)}
 			<ul className="space-y-3">
@@ -103,21 +109,21 @@ export function ImportJobs({ refreshKey }: { refreshKey: number }) {
 								<div className="min-w-0">
 									<p className="truncate text-sm font-medium text-neutral-900">{job.label}</p>
 									<p className="text-xs text-neutral-500">
-										{job.kind === "imap" ? t("importPage.imap") : t("importPage.backupFile")} ·{" "}
+										{job.kind === "imap" ? "IMAP" : "Backup File"} ·{" "}
 										{new Date(job.createdAt).toLocaleString()}
 									</p>
 								</div>
 								<div className="flex shrink-0 items-center gap-2">
 									<span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLE[job.status]}`}>
-										{t(`importJobs.status.${job.status}`)}
+										{IMPORT_JOB_STATUS_LABELS[job.status] ?? job.status}
 									</span>
 									{job.status === "failed" && (
 										<Button type="button" size="sm" onClick={() => void onResume(job)}>
-											{t("importJobs.resume")}
+											Resume
 										</Button>
 									)}
 									<Button type="button" variant="outline" size="sm" onClick={() => void onRemove(job)}>
-										{active ? t("importJobs.cancel") : t("importJobs.dismiss")}
+										{active ? "Cancel" : "Dismiss"}
 									</Button>
 								</div>
 							</div>
@@ -126,10 +132,10 @@ export function ImportJobs({ refreshKey }: { refreshKey: number }) {
 									<div className="flex justify-between gap-3">
 										<span className="truncate">
 											{job.currentSource
-												? t("importPage.importingSource", { source: job.currentSource })
+												? `Importing ${job.currentSource}`
 												: job.status === "queued"
-													? t("importJobs.waiting")
-													: t("importPage.importingMessages")}
+													? "Waiting to start"
+													: "Importing messages"}
 										</span>
 										<span>{percent === null ? "…" : `${percent}%`}</span>
 									</div>
@@ -145,15 +151,10 @@ export function ImportJobs({ refreshKey }: { refreshKey: number }) {
 								{active && job.total <= 0 ? (
 									<span className="inline-flex items-center gap-1.5">
 										<Loader2 className="h-3 w-3 animate-spin" aria-hidden />
-										{t("importJobs.counting")}
+										Counting messages…
 									</span>
 								) : (
-									t("importJobs.counts", {
-										processed: job.processed,
-										total: job.total,
-										imported: job.imported,
-										skipped: job.skipped,
-									})
+									`${job.processed} of ${job.total} processed · ${job.imported} imported · ${job.skipped} skipped`
 								)}
 							</p>
 							{resuming === job.id && job.status === "failed" && (
@@ -169,11 +170,11 @@ export function ImportJobs({ refreshKey }: { refreshKey: number }) {
 										autoComplete="off"
 										value={password}
 										onChange={(event) => setPassword(event.target.value)}
-										placeholder={t("importJobs.resumePassword")}
-										aria-label={t("importJobs.resumePassword")}
+										placeholder={"IMAP password"}
+										aria-label={"IMAP password"}
 									/>
 									<Button type="submit" size="sm" disabled={!password}>
-										{t("importJobs.resume")}
+										Resume
 									</Button>
 								</form>
 							)}
@@ -183,7 +184,7 @@ export function ImportJobs({ refreshKey }: { refreshKey: number }) {
 							)}
 							{job.errorCount > 0 && (
 								<details className="text-xs text-neutral-600">
-									<summary className="cursor-pointer">{t("importJobs.errors", { count: job.errorCount })}</summary>
+									<summary className="cursor-pointer">{`Problems with ${job.errorCount} messages`}</summary>
 									<ul className="mt-2 list-disc space-y-1 pl-5">
 										{job.errors.slice(0, 5).map((item) => (
 											<li key={item}>{item}</li>

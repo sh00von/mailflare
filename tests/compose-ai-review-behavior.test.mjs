@@ -20,9 +20,6 @@ const mock = new Map([
   ["next/navigation", `
 export function useRouter() { return { push() {}, replace() {} }; }
 `],
-  ["@/components/language-provider", `
-export function useLanguage() { return { t(key) { return key; } }; }
-`],
   ["@/components/mailbox-provider", `
 export function useSelectedMailbox() { return globalThis.__reviewTestMailboxes; }
 `],

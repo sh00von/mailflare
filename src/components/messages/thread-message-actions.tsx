@@ -6,7 +6,6 @@ import { useCompose } from "@/components/compose/compose-context";
 import { MessageSourceDialog } from "@/components/messages/message-source-dialog";
 import { MessageActionMenu, MessageActionMenuItem, MessageActionMenuSeparator } from "@/components/message-actions/action-menu";
 import { getOwnAddressForMessage } from "@/app/(dashboard)/inbox/[messageId]/utils";
-import { useLanguage } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
 import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -33,7 +32,6 @@ export function ThreadMessageActions({
 	detailsOpen = false,
 	onToggleDetails,
 }: ThreadMessageActionsProps) {
-	const { t } = useLanguage();
 	const { openDraftComposer } = useCompose();
 	const [starred, setStarred] = useState(message.starred);
 	const [sourceOpen, setSourceOpen] = useState(false);
@@ -53,7 +51,7 @@ export function ThreadMessageActions({
 		try {
 			setStarred((await toggleMessageStar(message.id)).starred);
 		} catch (nextError) {
-			setError(nextError instanceof Error ? nextError.message : t("message.error.star"));
+			setError(nextError instanceof Error ? nextError.message : "Unable to update star");
 		} finally {
 			setPending(false);
 		}
@@ -76,7 +74,7 @@ export function ThreadMessageActions({
 			});
 			openDraftComposer(draftId);
 		} catch (nextError) {
-			setError(nextError instanceof Error ? nextError.message : t("message.error.reply"));
+			setError(nextError instanceof Error ? nextError.message : "Could not start reply");
 		} finally {
 			setPending(false);
 		}
@@ -95,7 +93,7 @@ export function ThreadMessageActions({
 			});
 			openDraftComposer(draftId);
 		} catch (nextError) {
-			setError(nextError instanceof Error ? nextError.message : t("message.error.forward"));
+			setError(nextError instanceof Error ? nextError.message : "Could not start forward");
 		} finally {
 			setPending(false);
 		}
@@ -107,7 +105,7 @@ export function ThreadMessageActions({
 		try {
 			await runSingleMessageAction(message.id, action);
 		} catch (nextError) {
-			setError(nextError instanceof Error ? nextError.message : t("message.error.update"));
+			setError(nextError instanceof Error ? nextError.message : "Could not update message");
 		} finally {
 			setPending(false);
 		}
@@ -121,7 +119,7 @@ export function ThreadMessageActions({
 			await blockMessageContact({ mailboxId, senderAddress: message.fromAddr });
 			await runSingleMessageAction(message.id, "trash");
 		} catch (nextError) {
-			setError(nextError instanceof Error ? nextError.message : t("message.error.block"));
+			setError(nextError instanceof Error ? nextError.message : "Could not block contact");
 		} finally {
 			setPending(false);
 		}
@@ -131,13 +129,13 @@ export function ThreadMessageActions({
 		<div className="flex items-center gap-0.5">
 			{error && <span role="alert" className="mr-1 max-w-32 truncate text-xs text-red-600" title={error}>{error}</span>}
 			{onToggleDetails && (
-				<Tooltip label={t("message.details")}>
+				<Tooltip label={"Details"}>
 					<Button
 						type="button"
 						variant="ghost"
 						size="sm"
 						className={cn("h-8 w-8 px-0", detailsOpen && "bg-neutral-100 text-neutral-900")}
-						aria-label={t("message.details")}
+						aria-label={"Details"}
 						aria-expanded={detailsOpen}
 						onClick={onToggleDetails}
 					>
@@ -145,13 +143,13 @@ export function ThreadMessageActions({
 					</Button>
 				</Tooltip>
 			)}
-			<Tooltip label={starred ? t("message.removeStar") : t("message.star")}>
+			<Tooltip label={starred ? "Remove star" : "Star"}>
 				<Button
 					type="button"
 					variant="ghost"
 					size="sm"
 					className="h-8 w-8 px-0"
-					aria-label={starred ? t("message.removeStar") : t("message.star")}
+					aria-label={starred ? "Remove star" : "Star"}
 					aria-pressed={starred}
 					disabled={pending}
 					onClick={() => void onToggleStar()}
@@ -161,13 +159,13 @@ export function ThreadMessageActions({
 			</Tooltip>
 			{!starOnly && (
 				<>
-					<Tooltip label={t("message.reply")}>
+					<Tooltip label={"Reply"}>
 						<Button
 							type="button"
 							variant="ghost"
 							size="sm"
 							className="h-8 w-8 px-0"
-							aria-label={t("message.reply")}
+							aria-label={"Reply"}
 							disabled={pending}
 							onClick={() => void onReply("reply")}
 						>
@@ -175,14 +173,14 @@ export function ThreadMessageActions({
 						</Button>
 					</Tooltip>
 					<MessageActionMenu
-						label={t("common.moreActions")}
+						label={"More actions"}
 						trigger={
 							<Button
 								type="button"
 								variant="ghost"
 								size="sm"
 								className="h-8 w-8 px-0"
-								aria-label={t("common.moreActions")}
+								aria-label={"More actions"}
 								disabled={pending}
 							>
 								<MoreVertical className="h-4 w-4" />
@@ -190,25 +188,25 @@ export function ThreadMessageActions({
 						}
 					>
 						<MessageActionMenuItem icon={<Reply className="h-4 w-4" />} onSelect={() => void onReply("reply")}>
-							{t("message.reply")}
+							Reply
 						</MessageActionMenuItem>
 						{canReplyAll && (
 							<MessageActionMenuItem icon={<ReplyAll className="h-4 w-4" />} onSelect={() => void onReply("replyAll")}>
-								{t("message.replyAll")}
+								Reply all
 							</MessageActionMenuItem>
 						)}
 						<MessageActionMenuItem icon={<Forward className="h-4 w-4" />} onSelect={() => void onForward()}>
-							{t("message.forward")}
+							Forward
 						</MessageActionMenuItem>
 						<MessageActionMenuItem icon={<FileCode2 className="h-4 w-4" />} onSelect={() => setSourceOpen(true)}>
-							{t("message.showOriginal")}
+							Show original
 						</MessageActionMenuItem>
 						<MessageActionMenuSeparator />
 						<MessageActionMenuItem
 							icon={message.read ? <Mail className="h-4 w-4" /> : <MailOpen className="h-4 w-4" />}
 							onSelect={() => void onMessageAction(message.read ? "unread" : "read")}
 						>
-							{message.read ? t("common.markUnread") : t("common.markRead")}
+							{message.read ? "Mark as unread" : "Mark as read"}
 						</MessageActionMenuItem>
 						{moveActions.map((item) => (
 							<MessageActionMenuItem
@@ -216,14 +214,14 @@ export function ThreadMessageActions({
 								icon={createElement(item.icon, { size: 16 })}
 								onSelect={() => void onMessageAction(item.action)}
 							>
-								{t(item.labelKey)}
+								{item.labelKey}
 							</MessageActionMenuItem>
 						))}
 						{message.direction === "inbound" && mailboxId && (
 							<>
 								<MessageActionMenuSeparator />
 								<MessageActionMenuItem icon={<Ban className="h-4 w-4" />} onSelect={() => void onBlock()}>
-									{t("message.blockContact")}
+									Block contact
 								</MessageActionMenuItem>
 							</>
 						)}

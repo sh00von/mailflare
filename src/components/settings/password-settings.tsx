@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { KeyRound } from "@/components/icons";
-import { useLanguage } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -20,7 +19,6 @@ import { PasskeyFirstChoice, type PasskeyPolicyChoice } from "./passkey-first-ch
  * or remove it once another sign-in method exists.
  */
 export function PasswordSettings() {
-	const { t } = useLanguage();
 	const { status, error: loadFailed } = useSecurityStatus();
 	const [currentPassword, setCurrentPassword] = useState("");
 	const [newPassword, setNewPassword] = useState("");
@@ -37,7 +35,7 @@ export function PasswordSettings() {
 		setMessage(null);
 		setError(null);
 		if (newPassword !== confirmPassword) {
-			setError(t("settings.password.mismatch"));
+			setError("New passwords do not match");
 			return;
 		}
 		setBusy(true);
@@ -46,10 +44,10 @@ export function PasswordSettings() {
 			setCurrentPassword("");
 			setNewPassword("");
 			setConfirmPassword("");
-			setMessage(t("settings.password.changed"));
+			setMessage("Password changed");
 			await refreshSecurityStatus(true);
 		} catch (err) {
-			setError(authErrorText(err instanceof ClientRequestError ? err.code : undefined, t, "settings.password.failed"));
+			setError(authErrorText(err instanceof ClientRequestError ? err.code : undefined, "Failed to change password"));
 		} finally {
 			setBusy(false);
 		}
@@ -63,7 +61,7 @@ export function PasswordSettings() {
 			return;
 		} else {
 			await removePassword(token);
-			setMessage(t("passkey.passwordRemoved"));
+			setMessage("Password removed. Your passkeys are now the only way to sign in.");
 		}
 		await refreshSecurityStatus(true);
 		setPending(null);
@@ -81,12 +79,12 @@ export function PasswordSettings() {
 		setError(null);
 		try {
 			await setPassword(newPassword, passwordProof, choice === "password-and-passkey");
-			setMessage(t("passkey.passwordSet"));
+			setMessage("Password set");
 			setNewPassword("");
 			setConfirmPassword("");
 			await refreshSecurityStatus(true);
 		} catch (err) {
-			setError(authErrorText(err instanceof ClientRequestError ? err.code : undefined, t, "settings.password.failed"));
+			setError(authErrorText(err instanceof ClientRequestError ? err.code : undefined, "Failed to change password"));
 			await refreshSecurityStatus(true);
 		} finally {
 			setPasswordProof(null);
@@ -94,43 +92,43 @@ export function PasswordSettings() {
 		}
 	}
 
-	if (!status) return <p role={loadFailed ? "alert" : undefined} className="text-sm text-neutral-500">{loadFailed ? t("settings.password.failed") : t("mfa.loading")}</p>;
+	if (!status) return <p role={loadFailed ? "alert" : undefined} className="text-sm text-neutral-500">{loadFailed ? "Failed to change password" : "Loading two-factor settings..."}</p>;
 
 	return (
 		<div className="space-y-4">
 			{status.passwordSet ? (
 				<form onSubmit={change} className="space-y-4">
 					<div className="space-y-2">
-						<Label htmlFor="currentPassword">{t("settings.password.current")}</Label>
+						<Label htmlFor="currentPassword">Current password</Label>
 						<Input id="currentPassword" type="password" autoComplete="current-password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} required />
 					</div>
 					<div className="space-y-2">
-						<Label htmlFor="newPassword">{t("settings.password.new")}</Label>
+						<Label htmlFor="newPassword">New password</Label>
 						<Input id="newPassword" type="password" autoComplete="new-password" minLength={8} value={newPassword} onChange={(event) => setNewPassword(event.target.value)} required />
 					</div>
 					<div className="space-y-2">
-						<Label htmlFor="confirmPassword">{t("settings.password.confirm")}</Label>
+						<Label htmlFor="confirmPassword">Confirm new password</Label>
 						<Input id="confirmPassword" type="password" autoComplete="new-password" minLength={8} value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} required />
 					</div>
 					<div className="flex flex-wrap items-center gap-3">
-						<Button type="submit" disabled={busy}>{busy ? t("settings.password.changing") : t("settings.password.change")}</Button>
+						<Button type="submit" disabled={busy}>{busy ? "Changing..." : "Change password"}</Button>
 						<Button
 							type="button"
 							variant="outline"
 							onClick={() => setConfirmRemove(true)}
 							disabled={busy || status.passkeys.length === 0}
-							title={status.passkeys.length === 0 ? t("passkey.addBeforeRemovingPassword") : undefined}
+							title={status.passkeys.length === 0 ? "Add a passkey before removing your password." : undefined}
 						>
-							{t("passkey.removePassword")}
+							Remove password
 						</Button>
 					</div>
 					{status.passkeys.length === 0 ? (
-						<p className="text-xs leading-5 text-neutral-500">{t("passkey.addBeforeRemovingPassword")}</p>
+						<p className="text-xs leading-5 text-neutral-500">Add a passkey before removing your password.</p>
 					) : (
 						// Without a second step the password is the weakest factor, so the
 						// passkey-only account is the better one.
 						!status.requireSecondFactor && (
-							<p className="text-xs leading-5 text-neutral-500">{t("passkey.removePasswordRecommended")}</p>
+							<p className="text-xs leading-5 text-neutral-500">Recommended: your passkey signs you in on its own, so the password is no longer needed.</p>
 						)
 					)}
 				</form>
@@ -141,24 +139,24 @@ export function PasswordSettings() {
 						event.preventDefault();
 						setError(null);
 						if (newPassword !== confirmPassword) {
-							setError(t("settings.password.mismatch"));
+							setError("New passwords do not match");
 							return;
 						}
 						setPending("set");
 					}}
 				>
-					<p className="text-sm text-neutral-500">{t("passkey.noPassword")}</p>
+					<p className="text-sm text-neutral-500">This account signs in with passkeys only. Set a password if you want one as a fallback.</p>
 					<div className="space-y-2">
-						<Label htmlFor="setPassword">{t("settings.password.new")}</Label>
+						<Label htmlFor="setPassword">New password</Label>
 						<Input id="setPassword" type="password" autoComplete="new-password" minLength={8} value={newPassword} onChange={(event) => setNewPassword(event.target.value)} required />
 					</div>
 					<div className="space-y-2">
-						<Label htmlFor="setPasswordConfirm">{t("settings.password.confirm")}</Label>
+						<Label htmlFor="setPasswordConfirm">Confirm new password</Label>
 						<Input id="setPasswordConfirm" type="password" autoComplete="new-password" minLength={8} value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} required />
 					</div>
 					<Button type="submit" disabled={busy}>
 						<KeyRound className="h-4 w-4" />
-						{t("passkey.setPassword")}
+						Set password
 					</Button>
 				</form>
 			)}
@@ -169,13 +167,13 @@ export function PasswordSettings() {
 			<Dialog open={confirmRemove} onOpenChange={setConfirmRemove}>
 				<DialogContent className="sm:max-w-[440px]">
 					<DialogHeader>
-						<DialogTitle>{t("passkey.removePasswordTitle")}</DialogTitle>
-						<DialogDescription>{t("passkey.removePasswordDescription")}</DialogDescription>
+						<DialogTitle>Remove your password?</DialogTitle>
+						<DialogDescription>Password sign-in will stop working. Your passkeys will be the only way to sign in.</DialogDescription>
 					</DialogHeader>
-					<p className="mb-4 text-sm leading-6 text-neutral-500">{t("passkey.lostAllHint")}</p>
+					<p className="mb-4 text-sm leading-6 text-neutral-500">Lost every passkey? Ask an administrator for a recovery link. If you are the only administrator, use the server recovery procedure.</p>
 					<div className="flex justify-end gap-2">
 						<Button type="button" variant="outline" onClick={() => setConfirmRemove(false)}>
-							{t("common.cancel")}
+							Cancel
 						</Button>
 						<Button
 							type="button"
@@ -185,7 +183,7 @@ export function PasswordSettings() {
 								setPending("remove");
 							}}
 						>
-							{t("passkey.removePassword")}
+							Remove password
 						</Button>
 					</div>
 				</DialogContent>

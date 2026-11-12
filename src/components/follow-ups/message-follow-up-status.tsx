@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { BellRing, Check } from "@/components/icons";
-import { useLanguage } from "@/components/language-provider";
 import type { MessageFollowUp } from "@/lib/follow-ups/types";
 import { formatUserDate } from "@/lib/time/utils";
 import { FollowUpMenu } from "./follow-up-menu";
@@ -13,7 +12,6 @@ const LINK_CLASS = "font-medium text-blue-600 hover:underline disabled:opacity-5
 
 /** Reminder state of a sent message, with a way to set, move or remove it. */
 export function MessageFollowUpStatus({ messageId }: { messageId: string }) {
-	const { t } = useLanguage();
 	const [followUp, setFollowUp] = useState<MessageFollowUp | null | undefined>(undefined);
 	const [failed, setFailed] = useState(false);
 
@@ -40,16 +38,16 @@ export function MessageFollowUpStatus({ messageId }: { messageId: string }) {
 			{followUp?.status === "replied" ? (
 				<>
 					<Check className="h-3.5 w-3.5" aria-hidden />
-					{t("followUp.replied")}
+					Reply received
 				</>
 			) : open ? (
 				<>
 					<BellRing className="h-3.5 w-3.5 text-amber-600" aria-hidden />
 					{followUp.status === "due"
-						? t("followUp.noReplyYet")
-						: t("followUp.scheduledFor", { date: formatUserDate(followUp.dueAt, DATE_FORMAT) })}
+						? "No reply yet. The reminder is in your inbox."
+						: `Reminder on ${formatUserDate(followUp.dueAt, DATE_FORMAT)} if no reply`}
 					<FollowUpMenu
-						trigger={<button type="button" className={LINK_CLASS}>{t("followUp.change")}</button>}
+						trigger={<button type="button" className={LINK_CLASS}>Change</button>}
 						onPick={(days) => run(setMessageFollowUp(messageId, days))}
 						onClear={() => run(clearMessageFollowUp(messageId))}
 					/>
@@ -59,13 +57,13 @@ export function MessageFollowUpStatus({ messageId }: { messageId: string }) {
 					trigger={
 						<button type="button" className="inline-flex items-center gap-1.5 hover:text-neutral-900">
 							<BellRing className="h-3.5 w-3.5" aria-hidden />
-							{t("followUp.remindMe")}
+							Remind me if no reply
 						</button>
 					}
 					onPick={(days) => run(setMessageFollowUp(messageId, days))}
 				/>
 			)}
-			{failed && <span role="alert" className="text-red-600">{t("followUp.failed")}</span>}
+			{failed && <span role="alert" className="text-red-600">The reminder could not be updated.</span>}
 		</p>
 	);
 }

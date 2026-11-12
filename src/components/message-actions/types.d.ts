@@ -1,4 +1,3 @@
-import type { TranslationKey } from "@/lib/i18n/types";
 import type { BulkMessageAction } from "@/app/api/messages/bulk/types";
 import type { Message, MessageDirection } from "@/hooks/types";
 import { IconNode } from "@/components/icons";
@@ -79,6 +78,6 @@ export type BlockMessageContactInput = {
 
 export type MoveMessageActionItem = {
 	action: BulkMessageAction;
-	labelKey: TranslationKey;
+	labelKey: string;
 	icon: any
 };
