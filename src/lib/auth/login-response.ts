@@ -23,12 +23,15 @@ export async function completeLogin(
 		redirect: "/inbox",
 		...options.body,
 	});
+	const isHttps = request.headers.get("x-forwarded-proto") === "https" || request.url.startsWith("https://");
+	const cookieDomain = process.env.COOKIE_DOMAIN?.trim() || undefined;
 	response.headers.set("Cache-Control", "no-store");
 	response.cookies.set(SESSION_COOKIE, token, {
 		httpOnly: true,
-		secure: process.env.NODE_ENV === "production",
+		secure: isHttps,
 		sameSite: "lax",
 		path: "/",
+		...(cookieDomain ? { domain: cookieDomain } : {}),
 		maxAge: 60 * 60 * 24 * 30,
 	});
 	const accountsJar = await cookies();

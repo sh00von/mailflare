@@ -93,7 +93,7 @@ export function EmailClientsSettings() {
 						</div>
 					)}
 					<p className="text-xs text-neutral-500">
-						{t("emailClients.shownOnce", { link: "\u0001", url: "\u0002" }).split(/(\u0001|\u0002)/).map((part, index) => part === "\u0001" ? <Link key={index} href="/settings/api-keys" className="text-blue-700 underline">{t("settings.nav.apiKeys")}</Link> : part === "\u0002" ? <code key={index}>{server}/.well-known/jmap</code> : part)}
+						{t("emailClients.shownOnce", { link: "\u0001", url: "\u0002" }).split(/(\u0001|\u0002)/).map((part, index) => part === "\u0001" ? <Link key={index} href="/settings/app-passwords" className="text-blue-700 underline">{t("settings.nav.appPasswords")}</Link> : part === "\u0002" ? <code key={index}>{server}/.well-known/jmap</code> : part)}
 					</p>
 				</div>
 			) : (

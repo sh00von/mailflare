@@ -17,27 +17,14 @@ export const settingsNavSections: SettingsNavSection[] = [
 				labelKey: "settings.nav.security",
 			},
 			{
-				href: "/settings/api-keys",
-				labelKey: "settings.nav.apiKeys",
-			},
-			{
 				href: "/settings/app-passwords",
 				labelKey: "settings.nav.appPasswords",
-			},
-			{
-				href: "/settings/rules",
-				labelKey: "settings.nav.rules",
 			},
 		],
 	},
 	{
 		labelKey: "settings.nav.mailbox",
 		items: [
-			{
-				href: "/settings/mailboxes",
-				labelKey: "admin.nav.mailboxes",
-				requiresMailboxAccess: true,
-			},
 			{
 				href: "/settings/import",
 				labelKey: "settings.nav.import",

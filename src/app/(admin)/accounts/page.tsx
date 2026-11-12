@@ -54,21 +54,34 @@ export default function AccountsPage() {
 		setSeats(data.seats ?? null);
 	}
 
+	async function loadDomains() {
+		const response = await authFetch("/api/domains");
+		const data = (await response.json()) as { domains?: Domain[]; error?: string };
+		if (!response.ok) throw new Error(data.error ?? t("accounts.domainsFailed"));
+		const list = data.domains ?? [];
+		setDomains(list);
+		setDomainId((current) => current || list[0]?.id || "");
+	}
+
 	useEffect(() => {
+		void loadDomains().catch(() => undefined);
 		fetchAccounts().then(async (list) => {
 			setAccounts(list.accounts ?? []);
 			setSeats(list.seats ?? null);
-			const response = await authFetch("/api/domains");
-			const data = (await response.json()) as { domains?: Domain[]; error?: string };
-			if (!response.ok) throw new Error(data.error ?? t("accounts.domainsFailed"));
-			setDomains(data.domains ?? []);
-			setDomainId(data.domains?.[0]?.id ?? "");
 		}).catch((error) => {
 			const text = error instanceof Error ? error.message : t("accounts.loadFailed");
 			setTeamRequired(/(pro|team) license/i.test(text) && !/seats/i.test(text));
 			setMessage(text);
 		}).finally(() => setLoading(false));
 	}, []);
+
+	useEffect(() => {
+		if (createOpen && domains.length === 0) {
+			void loadDomains().catch((error) => {
+				setMessage(error instanceof Error ? error.message : t("accounts.domainsFailed"));
+			});
+		}
+	}, [createOpen, domains.length]);
 
 	async function createAccount(event: React.FormEvent<HTMLFormElement>) {
 		event.preventDefault();

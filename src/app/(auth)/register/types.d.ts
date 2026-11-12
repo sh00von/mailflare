@@ -27,8 +27,18 @@ export type DomainSetupResult = {
 	error?: string;
 };
 
+export type DnsRecordChecklistItem = {
+	type: "MX" | "TXT";
+	name: string;
+	value: string;
+	priority?: number;
+	added: boolean;
+};
+
 export type MxCheckResult = {
 	hasExistingMx?: boolean;
+	currentMx?: string[];
+	requiredRecords?: DnsRecordChecklistItem[];
 	error?: string;
 };
 

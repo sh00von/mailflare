@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { AlertTriangle, ArrowRight, CheckCircle2, LoaderCircle, MailPlus, XCircle } from "@/components/icons";
+import { AlertTriangle, CheckCircle2, LoaderCircle, MailPlus } from "@/components/icons";
 import { useEffect, useState } from "react";
 import { useLanguage } from "@/components/language-provider";
 import { AuthShell } from "@/components/auth/auth-shell";
@@ -10,508 +9,321 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { TurnstileField } from "@/components/auth/turnstile";
 import {
-  getSetupStatus,
-  checkExistingMx,
-  prepareSetup,
-  submitPrimaryDomain,
-  submitRegistration,
+	checkExistingMx,
+	prepareSetup,
+	submitPrimaryDomain,
+	submitRegistration,
 } from "./utils";
-import type { DomainPreflight, DomainSetupResult, SetupRequirementCheck } from "./types";
+import type { DnsRecordChecklistItem, DomainSetupResult } from "./types";
 
 export function RegisterClient() {
-  const { t } = useLanguage();
-  const router = useRouter();
-  const [hasAdminAccount, setHasAdminAccount] = useState<boolean | null>(null);
-  const [hasPrimaryDomain, setHasPrimaryDomain] = useState<boolean | null>(
-    null,
-  );
-  const [primaryDomain, setPrimaryDomain] = useState<string | null>(null);
-  const [primaryDomainSendingRequested, setPrimaryDomainSendingRequested] = useState<boolean | null>(null);
-  const [setupDomain, setSetupDomain] = useState<string | null>(null);
-  const [domainCheck, setDomainCheck] = useState<DomainPreflight | null>(null);
-  const [domainChecking, setDomainChecking] = useState(false);
-  const [enableSending, setEnableSending] = useState(false);
-  const [setupEnableSending, setSetupEnableSending] = useState(false);
-  const [skipDns, setSkipDns] = useState(false);
-  const [setupSkipDns, setSetupSkipDns] = useState(false);
-  const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [checks, setChecks] = useState<SetupRequirementCheck[]>([]);
-  const [databaseMigrated, setDatabaseMigrated] = useState(false);
-  const [preparationComplete, setPreparationComplete] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [mxChecking, setMxChecking] = useState(true);
-  const [mxRecordsExist, setMxRecordsExist] = useState<boolean | null>(null);
-  const [replaceMxRecords, setReplaceMxRecords] = useState(false);
-  const [mxCheckRevision, setMxCheckRevision] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [turnstileReset, setTurnstileReset] = useState(0);
-  const [usePasskey, setUsePasskey] = useState(false);
+	const { t } = useLanguage();
+	const [ready, setReady] = useState(false);
+	const [step, setStep] = useState<1 | 2 | 3>(1);
+	const [orgName, setOrgName] = useState("");
+	const [domainName, setDomainName] = useState("");
+	const [dnsChecklist, setDnsChecklist] = useState<DnsRecordChecklistItem[]>([]);
+	const [dnsChecking, setDnsChecking] = useState(false);
+	const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+	const [error, setError] = useState<string | null>(null);
+	const [loading, setLoading] = useState(false);
+	const [turnstileReset, setTurnstileReset] = useState(0);
+	const [usePasskey, setUsePasskey] = useState(false);
 
-  useEffect(() => {
-    void runPreparation();
-  }, []);
+	useEffect(() => {
+		let active = true;
+		void prepareSetup()
+			.then((res) => {
+				if (!active) return;
+				if (!res.ok) setError(res.data.error ?? "Workspace initialization failed. Please try again.");
+				setReady(true);
+			})
+			.catch((err: unknown) => {
+				if (!active) return;
+				setError(err instanceof Error ? err.message : "Could not initialize setup");
+				setReady(true);
+			});
+		return () => { active = false; };
+	}, []);
 
-  const accountDomain = setupDomain ?? primaryDomain;
+	async function loadDnsChecklist(hostname: string) {
+		setDnsChecking(true);
+		setError(null);
+		try {
+			const { ok, data } = await checkExistingMx(hostname);
+			if (!ok) {
+				setError(typeof data.error === "string" ? data.error : "Could not check DNS records");
+				return;
+			}
+			setDnsChecklist(data.requiredRecords ?? []);
+		} catch (err) {
+			setError(err instanceof Error ? err.message : "Could not check DNS records");
+		} finally {
+			setDnsChecking(false);
+		}
+	}
 
-  useEffect(() => {
-    if (step !== 3 || !accountDomain) return;
-    if (setupSkipDns) {
-      // DNS is skipped, so there is nothing on the zone to check.
-      setMxChecking(false);
-      setMxRecordsExist(false);
-      setReplaceMxRecords(false);
-      setError(null);
-      return;
-    }
+	async function onDomainStepSubmit(e: React.FormEvent<HTMLFormElement>) {
+		e.preventDefault();
+		const cleanDomain = domainName.toLowerCase().trim();
+		if (!cleanDomain) return;
+		setLoading(true);
+		setError(null);
+		try {
+			const { ok, data } = (await submitPrimaryDomain(cleanDomain)) as { ok: boolean; data: DomainSetupResult };
+			if (!ok || !data.domain) {
+				setError(typeof data.error === "string" ? data.error : "Please enter a valid, unregistered domain name");
+				return;
+			}
+			setDomainName(data.domain.hostname);
+			setStep(2);
+			void loadDnsChecklist(data.domain.hostname);
+		} finally {
+			setLoading(false);
+		}
+	}
 
-    let active = true;
-    setMxChecking(true);
-    setMxRecordsExist(null);
-    setReplaceMxRecords(false);
-    setError(null);
+	async function onAccountSubmit(e: React.FormEvent<HTMLFormElement>) {
+		e.preventDefault();
+		const formData = new FormData(e.currentTarget);
+		setLoading(true);
+		setError(null);
 
-    void checkExistingMx(accountDomain)
-      .then(({ ok, data }) => {
-        if (!active) return;
-        setMxChecking(false);
-        if (!ok || data.hasExistingMx === undefined) {
-          setError(typeof data.error === "string" ? data.error : t("setup.mxCheckFailed"));
-          return;
-        }
-        setMxRecordsExist(data.hasExistingMx);
-      })
-      .catch((error: unknown) => {
-        if (!active) return;
-        setMxChecking(false);
-        setError(error instanceof Error ? error.message : t("setup.mxCheckFailed"));
-      });
+		try {
+			const { ok, data } = await submitRegistration(formData, {
+				firstRun: true,
+				domain: domainName,
+				enableSending: true,
+				skipDns: false,
+			});
+			if (!ok) {
+				setError(
+					data.code === "passkey_unavailable"
+						? t("authError.passkeyUnavailable")
+						: typeof data.error === "string"
+							? data.error
+							: t("setup.registrationFailed"),
+				);
+				setTurnstileReset((v) => v + 1);
+				return;
+			}
+			window.location.assign(data.redirect ?? "/domains");
+		} catch (err) {
+			setError(err instanceof Error ? err.message : t("setup.registrationFailed"));
+			setTurnstileReset((v) => v + 1);
+		} finally {
+			setLoading(false);
+		}
+	}
 
-    return () => {
-      active = false;
-    };
-  }, [step, accountDomain, mxCheckRevision, setupSkipDns, t]);
+	const stepTitle =
+		step === 1
+			? "Set up your business domain"
+			: step === 2
+				? `Connect ${domainName}`
+				: "Create your admin account";
 
-  async function runPreparation() {
-    setLoading(true);
-    setError(null);
-    setPreparationComplete(false);
+	const stepSubtitle =
+		step === 1
+			? "Enter your organization and custom domain to launch your free email & workspace."
+			: step === 2
+				? "Add these DNS records at your domain registrar so you can send and receive mail."
+				: `Create your first email address on ${domainName}.`;
 
-    try {
-      const preparation = await prepareSetup();
-      setChecks(preparation.data.checks ?? []);
-      setDatabaseMigrated(!!preparation.data.migrated);
-      if (!preparation.ok) {
-        setError(preparation.data.error ?? t("setup.completeConfig"));
-        return;
-      }
-
-      const data = await getSetupStatus();
-      setHasAdminAccount(data.hasAdminAccount);
-      setHasPrimaryDomain(data.hasPrimaryDomain);
-      setPrimaryDomain(data.primaryDomain?.hostname ?? null);
-      setPrimaryDomainSendingRequested(data.primaryDomain?.sendingRequested ?? null);
-      setPreparationComplete(true);
-    } catch (error) {
-      setError(error instanceof Error ? error.message : t("setup.prepFailed"));
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function onDomainSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-
-    const hostname = String(new FormData(e.currentTarget).get("domain") ?? "").toLowerCase().trim();
-    if (skipDns) {
-      setLoading(false);
-      setSetupDomain(hostname);
-      setSetupEnableSending(true);
-      setSetupSkipDns(true);
-      setStep(3);
-      return;
-    }
-    setSetupSkipDns(false);
-    const usedCachedCheck = domainCheck?.hostname === hostname;
-    const result: { ok: boolean; data: DomainSetupResult } = usedCachedCheck
-      ? { ok: true, data: { domain: domainCheck } }
-      : await submitPrimaryDomain(hostname);
-    const { ok, data } = result;
-    setLoading(false);
-    if (!ok || !data.domain) {
-      setError(
-        typeof data.error === "string" ? data.error : t("setup.domainFailed"),
-      );
-      return;
-    }
-    setSetupDomain(data.domain.hostname);
-    setSetupEnableSending(usedCachedCheck ? enableSending : false);
-    setStep(3);
-  }
-
-  async function onDomainBlur(e: React.FocusEvent<HTMLInputElement>) {
-    const hostname = e.currentTarget.value.toLowerCase().trim();
-    if (skipDns || hostname.length < 3 || domainCheck?.hostname === hostname) return;
-
-    setDomainChecking(true);
-    setError(null);
-    const { ok, data } = await submitPrimaryDomain(hostname);
-    setDomainChecking(false);
-    if (!ok || !data.domain) {
-      setDomainCheck(null);
-      setEnableSending(false);
-      setError(typeof data.error === "string" ? data.error : t("setup.domainCheckFailed"));
-      return;
-    }
-
-    setDomainCheck(data.domain);
-    setEnableSending(false);
-  }
-
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-
-    const form = new FormData(e.currentTarget);
-    const domain = setupDomain ?? primaryDomain;
-    if (!domain) {
-      setLoading(false);
-      setError(t("setup.domainIncomplete"));
-      return;
-    }
-
-    const { ok, data } = await submitRegistration(form, {
-      firstRun: true,
-      domain,
-      enableSending: setupDomain
-        ? setupEnableSending
-        : primaryDomainSendingRequested ?? undefined,
-      replaceMxRecords,
-      skipDns: setupDomain ? setupSkipDns : undefined,
-    });
-    setLoading(false);
-    if (!ok) {
-      if (data.code === "MX_RECORDS_CONFLICT") {
-        setMxRecordsExist(true);
-        setReplaceMxRecords(false);
-        setError(null);
-        setTurnstileReset((value) => value + 1);
-        return;
-      }
-      setError(
-        data.code === "passkey_unavailable"
-          ? t("authError.passkeyUnavailable")
-          : typeof data.error === "string" ? data.error : t("setup.registrationFailed"),
-      );
-      setTurnstileReset((value) => value + 1);
-      return;
-    }
-    window.location.assign(data.redirect ?? "/login");
-  }
-
-  const showDomainStep = hasPrimaryDomain === false && step === 2;
-
-  if (hasAdminAccount === true) {
-    return (
-      <AuthShell
-        icon={MailPlus}
-        title={t("setup.closedTitle")}
-        footer={
-          <Link
-            href="/login"
-            className="inline-flex items-center gap-2 hover:underline"
-          >
-            {t("setup.signInInstead")}
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-        }
-      >
-        <div className="space-y-5">
-          <p className="text-sm leading-6 text-neutral-600">
-            {t("setup.alreadyHasAccount", { domain: primaryDomain ?? t("setup.thisWorkspace") })}
-          </p>
-          <Button
-            type="button"
-            className="h-11 w-full rounded-full px-6 active:scale-[0.98]"
-            onClick={() => router.push("/login")}
-          >
-            {t("setup.goToLogin")}
-          </Button>
-        </div>
-      </AuthShell>
-    );
-  }
-
-  return (
-    <AuthShell
-      icon={MailPlus}
-      title={step === 1 ? t("setup.prepareTitle") : showDomainStep ? t("setup.addDomainTitle") : t("setup.createMailboxTitle")}
-      // description={
-      // 	showDomainStep
-      // 		? "Connect the primary Cloudflare zone first so routing records can be created before the first mailbox."
-      // 		: `Choose a mailbox username on ${accountDomain ?? "the primary domain"} and add a recovery email.`
-      // }
-      steps={
-        [
-          { label: t("setup.stepSystem"), active: step === 1 },
-          { label: t("setup.stepDomain"), active: step === 2 },
-          { label: t("setup.stepAccount"), active: step === 3 },
-        ]
-      }
-    >
-      {step === 1 ? (
-        <div className="space-y-5">
-          <p className="text-sm leading-6 text-neutral-600">
-            {t("setup.prepareIntro")}
-          </p>
-          <div className="space-y-2">
-            {loading && checks.length === 0 && (
-              <div className="flex items-center gap-3 rounded-2xl bg-neutral-50 px-4 py-3 text-sm text-neutral-600">
-                <LoaderCircle className="h-4 w-4 animate-spin" />
-                {t("setup.checking")}
-              </div>
-            )}
-            {checks.map((check) => (
-              <div key={check.key} className="flex items-start gap-3 rounded-2xl bg-neutral-50 px-4 py-3">
-                {check.configured ? (
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
-                ) : (
-                  <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
-                )}
-                <div>
-                  <p className="text-sm font-medium text-neutral-800">{check.key}</p>
-                  {!check.configured && <p className="mt-1 text-xs leading-5 text-neutral-500">{check.message}</p>}
-                </div>
-              </div>
-            ))}
-            {preparationComplete && (
-              <div className="flex items-center gap-3 rounded-2xl bg-green-50 px-4 py-3 text-sm text-green-700">
-                <CheckCircle2 className="h-4 w-4" />
-                {databaseMigrated ? t("setup.migrated") : t("setup.schemaReady")}
-              </div>
-            )}
-          </div>
-          {error && (
-            <p role="alert" className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-              {error}
-            </p>
-          )}
-          {preparationComplete ? (
-            <Button
-              type="button"
-              className="h-11 w-full rounded-full px-6 active:scale-[0.98]"
-              onClick={() => setStep(hasPrimaryDomain ? 3 : 2)}
-            >
-              {t("common.continue")}
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              variant="outline"
-              className="h-11 w-full rounded-full px-6 active:scale-[0.98]"
-              disabled={loading}
-              onClick={() => void runPreparation()}
-            >
-              {loading ? t("setup.checkingShort") : t("setup.checkAgain")}
-            </Button>
-          )}
-        </div>
-      ) : showDomainStep ? (
-        <form method="post" onSubmit={onDomainSubmit} className="space-y-5">
-          <div className="space-y-2">
-            <Label htmlFor="domain">{t("setup.primaryDomain")}</Label>
-            <Input
-              id="domain"
-              name="domain"
-              placeholder="example.com"
-              autoComplete="off"
-              required
-              onBlur={(event) => void onDomainBlur(event)}
-              onChange={(event) => {
-                if (domainCheck?.hostname !== event.currentTarget.value.toLowerCase().trim()) {
-                  setDomainCheck(null);
-                  setEnableSending(false);
-                }
-              }}
-            />
-            <p className="text-xs leading-5 text-neutral-500">
-              {t("setup.zoneHint")}
-            </p>
-          </div>
-          <div className="flex items-center justify-between gap-4 rounded-2xl bg-neutral-50 px-4 py-3">
-            <div>
-              <Label htmlFor="setup-skip-dns">{t("setup.skipDns")}</Label>
-              <p className="mt-1 text-xs leading-5 text-neutral-500">
-                {skipDns ? t("setup.skipDnsOn") : t("setup.skipDnsHint")}
-              </p>
-            </div>
-            <Switch
-              id="setup-skip-dns"
-              checked={skipDns}
-              onCheckedChange={(checked) => {
-                setSkipDns(checked);
-                setError(null);
-              }}
-            />
-          </div>
-          {!skipDns && (
-          <div className="flex items-center justify-between gap-4 rounded-2xl bg-neutral-50 px-4 py-3">
-            <div>
-              <Label htmlFor="setup-enable-sending">{t("setup.enableSending")}</Label>
-              <p className="mt-1 text-xs leading-5 text-neutral-500">
-                {domainChecking
-                  ? t("setup.checkingCloudflare")
-                  : domainCheck
-                    ? enableSending
-                      ? t("setup.requiredToSend")
-                      : t("setup.receiveOnly")
-                    : t("setup.enterDomain")}
-              </p>
-            </div>
-            <Switch
-              id="setup-enable-sending"
-              checked={enableSending}
-              onCheckedChange={setEnableSending}
-              disabled={domainChecking || !domainCheck || skipDns}
-            />
-          </div>
-          )}
-          {domainCheck && !skipDns && (
-            <div className="flex items-center gap-3 rounded-2xl bg-green-50 px-4 py-3 text-sm text-green-700">
-              <CheckCircle2 className="h-4 w-4" />
-              {t("setup.domainFound", { zone: domainCheck.zone.name })}
-            </div>
-          )}
-          {error && (
-            <p role="alert" className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-              {error}
-            </p>
-          )}
-          <Button
-            type="submit"
-            className="h-11 w-full rounded-full px-6 active:scale-[0.98]"
-            disabled={loading || domainChecking}
-          >
-            {loading ? t("setup.addingDomain") : t("common.continue")}
-          </Button>
-        </form>
-      ) : (
-        <form method="post" onSubmit={onSubmit} className="space-y-5">
-					{mxChecking && (
-						<div className="flex items-center gap-3 rounded-2xl bg-neutral-50 px-4 py-3 text-sm text-neutral-600">
-							<LoaderCircle className="h-4 w-4 animate-spin" />
-							{t("setup.checkingMx")}
-						</div>
+	return (
+		<AuthShell
+			icon={MailPlus}
+			title={stepTitle}
+			description={stepSubtitle}
+			steps={["1 Domain", "2 Connect DNS", "3 Account"]}
+			currentStep={step}
+			footer={
+				<Link href="/login" className="hover:underline">
+					Already have a workspace? Sign in
+				</Link>
+			}
+		>
+			{!ready ? (
+				<div className="flex items-center justify-center gap-3 py-8 text-sm text-neutral-500">
+					<LoaderCircle className="h-4 w-4 animate-spin" />
+					Preparing workspace...
+				</div>
+			) : step === 1 ? (
+				<form onSubmit={onDomainStepSubmit} className="space-y-4">
+					<div className="space-y-2">
+						<Label htmlFor="orgName">Organization / Business name (optional)</Label>
+						<Input
+							id="orgName"
+							placeholder="Ordify Inc."
+							value={orgName}
+							onChange={(e) => setOrgName(e.target.value)}
+						/>
+					</div>
+					<div className="space-y-2">
+						<Label htmlFor="domain">Your custom domain</Label>
+						<Input
+							id="domain"
+							name="domain"
+							placeholder="ordify.site"
+							autoComplete="off"
+							required
+							value={domainName}
+							onChange={(e) => setDomainName(e.target.value)}
+						/>
+						<p className="text-xs leading-5 text-neutral-500">
+							Your team email addresses will end with @{domainName.trim() || "yourdomain.com"}.
+						</p>
+					</div>
+					{error && (
+						<p role="alert" className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+							{error}
+						</p>
 					)}
-					{mxRecordsExist === false && (
-						<div className="flex items-center gap-3 rounded-2xl bg-green-50 px-4 py-3 text-sm text-green-700">
-							<CheckCircle2 className="h-4 w-4" />
-							{t("setup.noMx")}
-						</div>
-					)}
-					{mxRecordsExist === true && (
-						<label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-amber-900">
-							<Checkbox
-								checked={replaceMxRecords}
-								onChange={(event) => setReplaceMxRecords(event.target.checked)}
-								className="mt-1"
-							/>
-							<span>
-								<span className="flex items-center gap-2 text-sm font-medium">
-									<AlertTriangle className="h-4 w-4" />
-									{t("setup.replaceMx")}
-								</span>
-								<span className="mt-1 block text-xs leading-5">
-									{t("setup.replaceMxHint")}
-								</span>
-							</span>
-						</label>
-					)}
-          <div className="space-y-2">
-            <Label htmlFor="username">{t("setup.username")}</Label>
-            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 relative">
-              <Input
-                id="username"
-                name="username"
-                placeholder={t("setup.usernamePlaceholder")}
-                autoComplete="username"
-                required
-								className="pr-34"
-              />
-              <span className="max-w-36 truncate text-sm font-medium text-neutral-500 absolute top-2.5 right-5">
-                @{accountDomain ?? t("setup.domainFallback")}
-              </span>
-            </div>
-          </div>
-          <label className="flex cursor-pointer items-start gap-3 rounded-2xl bg-neutral-50 px-4 py-3">
-            <Checkbox
-              name="usePasskey"
-              checked={usePasskey}
-              onChange={(event) => setUsePasskey(event.target.checked)}
-              className="mt-1"
-            />
-            <span>
-              <span className="block text-sm font-medium text-neutral-800">{t("auth.usePasskeyInstead")}</span>
-              <span className="mt-1 block text-xs leading-5 text-neutral-500">{t("auth.usePasskeyInsteadHint")}</span>
-            </span>
-          </label>
-          {!usePasskey && (
-            <div className="space-y-2">
-              <Label htmlFor="password">{t("auth.password")}</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                minLength={8}
-                autoComplete="new-password"
-                required
-              />
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <Label htmlFor="resetEmail">{t("setup.recoveryEmail")}</Label>
-            <Input
-              id="resetEmail"
-              name="resetEmail"
-              type="email"
-              autoComplete="email"
-              placeholder="you@gmail.com"
-              required
-            />
-            {/* <p className="text-xs leading-5 text-neutral-500">Used later for password reset.</p> */}
-          </div>
-
-          {error && (
-            <p role="alert" className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-              {error}
-            </p>
-          )}
-					{!mxChecking && mxRecordsExist === null && (
-						<Button
-							type="button"
-							variant="outline"
-							className="h-11 w-full rounded-full px-6 active:scale-[0.98]"
-							onClick={() => setMxCheckRevision((value) => value + 1)}
-						>
-							{t("setup.checkMxAgain")}
-						</Button>
-					)}
-          <TurnstileField resetSignal={turnstileReset} />
-					<Button
-						type="submit"
-						className="h-11 w-full rounded-full px-6 active:scale-[0.98] mt-8"
-						disabled={loading || mxChecking || mxRecordsExist === null || (mxRecordsExist && !replaceMxRecords) || hasAdminAccount === null || hasPrimaryDomain === null}
-					>
-						{loading ? t("setup.creating") : t("setup.createAccount")}
+					<Button type="submit" className="h-11 w-full rounded-full px-6" disabled={loading}>
+						{loading ? "Checking domain..." : "Continue"}
 					</Button>
-        </form>
-      )}
-    </AuthShell>
-  );
+				</form>
+			) : step === 2 ? (
+				<div className="space-y-4">
+					<div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
+						<div className="mb-2 flex items-center justify-between gap-2">
+							<span className="text-sm font-semibold text-neutral-900">Required DNS records</span>
+							<button
+								type="button"
+								onClick={() => void loadDnsChecklist(domainName)}
+								disabled={dnsChecking}
+								className="cursor-pointer text-xs font-medium text-blue-700 hover:underline disabled:opacity-50"
+							>
+								{dnsChecking ? "Checking..." : "Re-check DNS"}
+							</button>
+						</div>
+						<p className="mb-3 text-xs text-neutral-500">
+							Open your DNS provider (Namecheap, GoDaddy, Route53, etc.) and add these records:
+						</p>
+						{dnsChecking && dnsChecklist.length === 0 ? (
+							<div className="flex items-center gap-2 py-4 text-xs text-neutral-500">
+								<LoaderCircle className="h-4 w-4 animate-spin" />
+								Checking live DNS for {domainName}...
+							</div>
+						) : (
+							<div className="space-y-2">
+								{dnsChecklist.map((rec, i) => (
+									<div key={`${rec.type}-${rec.name}-${i}`} className="rounded-xl border border-neutral-200 bg-white p-3 text-xs">
+										<div className="flex items-center justify-between gap-2">
+											<span className="font-semibold text-neutral-900">
+												{rec.type} &middot; Host: <code>{rec.name}</code>
+												{rec.priority !== undefined ? ` (Priority ${rec.priority})` : ""}
+											</span>
+											<span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${rec.added ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-800"}`}>
+												{rec.added ? <CheckCircle2 className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
+												{rec.added ? "Added" : "To Add"}
+											</span>
+										</div>
+										<div className="mt-1.5 flex items-center justify-between gap-2">
+											<code className="break-all text-neutral-600">{rec.value}</code>
+											<button
+												type="button"
+												onClick={() => {
+													void navigator.clipboard.writeText(rec.value);
+													setCopiedIdx(i);
+													setTimeout(() => setCopiedIdx(null), 1500);
+												}}
+												className="shrink-0 cursor-pointer rounded-md border border-neutral-200 px-2.5 py-1 text-[11px] font-medium text-neutral-700 hover:bg-neutral-100"
+											>
+												{copiedIdx === i ? "Copied" : "Copy"}
+											</button>
+										</div>
+									</div>
+								))}
+							</div>
+						)}
+					</div>
+					{error && (
+						<p role="alert" className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+							{error}
+						</p>
+					)}
+					<div className="flex flex-col gap-2 sm:flex-row">
+						<Button type="button" variant="outline" className="h-11 rounded-full px-5" onClick={() => setStep(1)}>
+							Back
+						</Button>
+						<Button type="button" className="h-11 flex-1 rounded-full px-6" onClick={() => setStep(3)}>
+							Continue to Account Setup
+						</Button>
+					</div>
+				</div>
+			) : (
+				<form method="post" onSubmit={onAccountSubmit} className="space-y-4">
+					<div className="space-y-2">
+						<Label htmlFor="username">Your admin email</Label>
+						<div className="relative flex items-center">
+							<Input
+								id="username"
+								name="username"
+								placeholder="you"
+								autoComplete="username"
+								required
+								className="pr-36"
+							/>
+							<span className="pointer-events-none absolute right-4 max-w-36 truncate text-sm font-medium text-neutral-500">
+								@{domainName}
+							</span>
+						</div>
+					</div>
+					<label className="flex cursor-pointer items-start gap-3 rounded-2xl bg-neutral-50 px-4 py-3">
+						<Checkbox
+							name="usePasskey"
+							checked={usePasskey}
+							onChange={(event) => setUsePasskey(event.target.checked)}
+							className="mt-1"
+						/>
+						<span>
+							<span className="block text-sm font-medium text-neutral-800">{t("auth.usePasskeyInstead")}</span>
+							<span className="mt-1 block text-xs leading-5 text-neutral-500">{t("auth.usePasskeyInsteadHint")}</span>
+						</span>
+					</label>
+					{!usePasskey && (
+						<div className="space-y-2">
+							<Label htmlFor="password">{t("auth.password")}</Label>
+							<Input
+								id="password"
+								name="password"
+								type="password"
+								minLength={8}
+								autoComplete="new-password"
+								required
+							/>
+						</div>
+					)}
+					<div className="space-y-2">
+						<Label htmlFor="resetEmail">{t("setup.recoveryEmail")}</Label>
+						<Input
+							id="resetEmail"
+							name="resetEmail"
+							type="email"
+							autoComplete="email"
+							placeholder="you@gmail.com"
+							required
+						/>
+					</div>
+					<TurnstileField resetTrigger={turnstileReset} />
+					{error && (
+						<p role="alert" className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+							{error}
+						</p>
+					)}
+					<div className="flex flex-col gap-2 sm:flex-row">
+						<Button type="button" variant="outline" className="h-11 rounded-full px-5" onClick={() => setStep(2)}>
+							Back
+						</Button>
+						<Button type="submit" className="h-11 flex-1 rounded-full px-6" disabled={loading}>
+							{loading ? "Creating workspace..." : "Create Workspace"}
+						</Button>
+					</div>
+				</form>
+			)}
+		</AuthShell>
+	);
 }

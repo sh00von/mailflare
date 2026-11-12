@@ -26,7 +26,6 @@ import {
 } from "./conversation-thread-utils";
 import clsx from "clsx";
 import { useMessageListVisibility } from "./message-list-visibility";
-import { useAssistantOpen } from "../agent/assistant-open-state";
 
 /**
  * The other messages in a conversation, ordered oldest to newest and collapsed
@@ -138,8 +137,7 @@ export function ConversationMessageCard({
 	const outbound = message.direction === "outbound";
 	const attachments = message.attachments.filter((attachment) => attachment.disposition === "attachment");
 	const { visible: messageListVisible } = useMessageListVisibility();
-	const isAssistantOpen = useAssistantOpen();
-	const isAnyPanelVisible = messageListVisible || isAssistantOpen;
+	const isAnyPanelVisible = messageListVisible;
 
 	useEffect(() => setLocallyRead(message.read), [message.read]);
 

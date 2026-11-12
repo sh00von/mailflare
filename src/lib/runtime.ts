@@ -16,7 +16,7 @@ export function isNodeRuntime(env?: Pick<CloudflareEnv, "MAILFLARE_RUNTIME">): b
 	return (env ?? getNodeEnv())?.MAILFLARE_RUNTIME === "node";
 }
 
-/** True when the app can talk to the Cloudflare API to manage zones and routing. */
-export function hasCloudflareCredentials(env: Pick<CloudflareEnv, "CF_TOKEN" | "CF_API_KEY" | "CF_EMAIL">): boolean {
-	return !!env.CF_TOKEN?.trim() || (!!env.CF_API_KEY?.trim() && !!env.CF_EMAIL?.trim());
+/** Cloudflare API integration is disabled in Node-only mode. */
+export function hasCloudflareCredentials(_env?: Pick<CloudflareEnv, "CF_TOKEN" | "CF_API_KEY" | "CF_EMAIL">): boolean {
+	return false;
 }

@@ -23,7 +23,7 @@ export async function generateMetadata(): Promise<Metadata> {
 	const { appName } = await getHomeBranding();
 	return {
 		title: appName,
-		description: "Multi-tenant email on Cloudflare",
+		description: "Self-hosted email, calendar, and drive",
 		icons: { icon: "/api/branding/icon", apple: "/icon-192.png" },
 		appleWebApp: {
 			capable: true,
@@ -48,18 +48,16 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-	const locale = await getRequestLocale();
-	const messages = locale === DEFAULT_LOCALE ? undefined : await loadServerMessages(locale);
+	const locale = DEFAULT_LOCALE;
 	const branding = await getHomeBranding();
 	return (
-		<html lang={locale} dir={getDirection(locale)} data-remote-image-proxy="enabled" suppressHydrationWarning>
+		<html lang={locale} dir="ltr" data-remote-image-proxy="enabled" suppressHydrationWarning>
 			<head>
 				<script dangerouslySetInnerHTML={{ __html: sidebarBootstrapScript }} />
 				<script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
-				<link rel="icon" href="/api/branding/icon"></link>
 			</head>
 			<body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-				<LanguageProvider initialLocale={locale} initialMessages={messages}><Providers initialBranding={branding}>{children}</Providers></LanguageProvider>
+				<LanguageProvider initialLocale={locale}><Providers initialBranding={branding}>{children}</Providers></LanguageProvider>
 			</body>
 		</html>
 	);

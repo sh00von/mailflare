@@ -1047,25 +1047,6 @@ export const appSettings = sqliteTable("app_settings", {
 		.$defaultFn(() => new Date()),
 });
 
-export const licenseSettings = sqliteTable("license_settings", {
-	id: text("id").primaryKey(),
-	instanceId: text("instance_id").notNull().unique(),
-	instanceUrl: text("instance_url"),
-	licenseKeyHash: text("license_key_hash"),
-	plan: text("plan", { enum: ["community", "pro", "team"] }).notNull().default("community"),
-	state: text("state", { enum: ["inactive", "active", "invalid", "expired", "deactivated"] })
-		.notNull()
-		.default("inactive"),
-	features: text("features").notNull().default("[]"),
-	// Account seats from Paymug's seatLimit; null is unlimited. Rows predating seats keep one.
-	seatLimit: integer("seat_limit").default(1),
-	activatedAt: timestamp("activated_at"),
-	validatedAt: timestamp("validated_at"),
-	updatedAt: timestamp("updated_at")
-		.notNull()
-		.$defaultFn(() => new Date()),
-});
-
 export const backups = sqliteTable(
 	"backups",
 	{
@@ -1091,112 +1072,6 @@ export const backups = sqliteTable(
 		index("backups_created_by_idx").on(t.createdByUserId),
 	],
 );
-
-export const mailboxAgentSettings = sqliteTable("mailbox_agent_settings", {
-	mailboxId: text("mailbox_id").primaryKey().references(() => mailboxes.id, { onDelete: "cascade" }),
-	enabled: bool("enabled").notNull().default(false),
-	modelId: text("model_id"),
-	autoDraftEnabled: bool("auto_draft_enabled").notNull().default(false),
-	reviewerUserId: text("reviewer_user_id").references(() => users.id, { onDelete: "set null" }),
-	instructions: text("instructions").notNull().default(""),
-	dailyLimit: integer("daily_limit").notNull().default(25),
-	updatedAt: timestamp("updated_at").notNull().$defaultFn(() => new Date()),
-}, (t) => [index("mailbox_agent_settings_reviewer_idx").on(t.reviewerUserId)]);
-
-export const aiUsage = sqliteTable("ai_usage", {
-	id: text("id").primaryKey(),
-	createdAt: timestamp("created_at").notNull().$defaultFn(() => new Date()),
-	provider: text("provider").notNull(),
-	model: text("model").notNull(),
-	source: text("source").notNull(),
-	inputTokens: integer("input_tokens"),
-	outputTokens: integer("output_tokens"),
-	costUsdMicros: integer("cost_usd_micros"),
-}, (t) => [index("ai_usage_created_idx").on(t.createdAt)]);
-
-export const agentConversations = sqliteTable("agent_conversations", {
-	id: text("id").primaryKey(),
-	userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-	mailboxId: text("mailbox_id").notNull().references(() => mailboxes.id, { onDelete: "cascade" }),
-	title: text("title").notNull().default("New conversation"),
-	createdAt: timestamp("created_at").notNull().$defaultFn(() => new Date()),
-	updatedAt: timestamp("updated_at").notNull().$defaultFn(() => new Date()),
-}, (t) => [
-	index("agent_conversations_owner_idx").on(t.userId, t.mailboxId, t.updatedAt),
-	index("agent_conversations_mailbox_idx").on(t.mailboxId),
-]);
-
-export const agentChatMessages = sqliteTable("agent_chat_messages", {
-	id: text("id").primaryKey(),
-	conversationId: text("conversation_id").notNull().references(() => agentConversations.id, { onDelete: "cascade" }),
-	role: text("role", { enum: ["user", "assistant", "tool"] }).notNull(),
-	content: text("content").notNull(),
-	toolName: text("tool_name"),
-	createdAt: timestamp("created_at").notNull().$defaultFn(() => new Date()),
-}, (t) => [index("agent_chat_messages_conversation_idx").on(t.conversationId, t.createdAt)]);
-
-export const agentJobs = sqliteTable("agent_jobs", {
-	id: text("id").primaryKey(),
-	mailboxId: text("mailbox_id").notNull().references(() => mailboxes.id, { onDelete: "cascade" }),
-	sourceMessageId: text("source_message_id").notNull().references(() => messages.id, { onDelete: "cascade" }),
-	reviewerUserId: text("reviewer_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-	status: text("status", { enum: ["pending", "running", "completed", "skipped", "failed"] }).notNull().default("pending"),
-	attempts: integer("attempts").notNull().default(0),
-	nextAttemptAt: timestamp("next_attempt_at").notNull().$defaultFn(() => new Date()),
-	leaseUntil: timestamp("lease_until"),
-	draftId: text("draft_id").references(() => messages.id, { onDelete: "set null" }),
-	reason: text("reason"),
-	createdAt: timestamp("created_at").notNull().$defaultFn(() => new Date()),
-}, (t) => [
-	uniqueIndex("agent_jobs_source_idx").on(t.mailboxId, t.sourceMessageId),
-	index("agent_jobs_due_idx").on(t.status, t.nextAttemptAt),
-	index("agent_jobs_source_message_idx").on(t.sourceMessageId),
-	index("agent_jobs_draft_idx").on(t.draftId),
-	index("agent_jobs_reviewer_idx").on(t.reviewerUserId),
-]);
-
-export const agentDraftMetadata = sqliteTable("agent_draft_metadata", {
-	draftId: text("draft_id").primaryKey().references(() => messages.id, { onDelete: "cascade" }),
-	mailboxId: text("mailbox_id").notNull().references(() => mailboxes.id, { onDelete: "cascade" }),
-	origin: text("origin", { enum: ["chat", "auto", "mcp"] }).notNull(),
-	sourceMessageId: text("source_message_id").references(() => messages.id, { onDelete: "set null" }),
-	revision: integer("revision").notNull().default(1),
-	humanEditedAt: timestamp("human_edited_at"),
-	scheduledAt: timestamp("scheduled_at"),
-	createdAt: timestamp("created_at").notNull().$defaultFn(() => new Date()),
-}, (t) => [
-	index("agent_draft_meta_source_msg_idx").on(t.sourceMessageId),
-	index("agent_draft_metadata_mailbox_idx").on(t.mailboxId),
-]);
-
-export const agentSendApprovals = sqliteTable("agent_send_approvals", {
-	id: text("id").primaryKey(),
-	draftId: text("draft_id").notNull().references(() => messages.id, { onDelete: "cascade" }),
-	mailboxId: text("mailbox_id").notNull().references(() => mailboxes.id, { onDelete: "cascade" }),
-	userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-	requestKeyId: text("request_key_id").references(() => apiKeys.id, { onDelete: "set null" }),
-	revision: integer("revision").notNull(),
-	payloadHash: text("payload_hash").notNull(),
-	status: text("status", { enum: ["pending", "claimed", "sent", "unknown", "expired", "cancelled"] }).notNull().default("pending"),
-	claimedAt: timestamp("claimed_at"),
-	messageId: text("message_id"),
-	expiresAt: timestamp("expires_at").notNull(),
-	createdAt: timestamp("created_at").notNull().$defaultFn(() => new Date()),
-}, (t) => [
-	index("agent_send_approvals_user_idx").on(t.userId, t.status),
-	uniqueIndex("agent_send_approvals_delivery_idx").on(t.draftId).where(sql`status IN ('claimed', 'sent', 'unknown')`),
-	index("agent_send_approvals_request_key_idx").on(t.requestKeyId),
-	index("agent_send_approvals_mailbox_idx").on(t.mailboxId),
-	index("agent_send_approvals_draft_idx").on(t.draftId),
-]);
-
-export const mcpKeyMailboxes = sqliteTable("mcp_key_mailboxes", {
-	keyId: text("key_id").notNull().references(() => apiKeys.id, { onDelete: "cascade" }),
-	mailboxId: text("mailbox_id").notNull().references(() => mailboxes.id, { onDelete: "cascade" }),
-}, (t) => [
-	uniqueIndex("mcp_key_mailbox_idx").on(t.keyId, t.mailboxId),
-	index("mcp_key_mailboxes_mailbox_idx").on(t.mailboxId),
-]);
 
 export const driveItems = sqliteTable("drive_items", {
 	id: text("id").primaryKey(),
@@ -1294,14 +1169,5 @@ export const schema = {
 	backupSettings,
 	backups,
 	appSettings,
-	licenseSettings,
-	mailboxAgentSettings,
-	aiUsage,
-	agentConversations,
-	agentChatMessages,
-	agentJobs,
-	agentDraftMetadata,
-	agentSendApprovals,
-	mcpKeyMailboxes,
 	importJobs,
 };

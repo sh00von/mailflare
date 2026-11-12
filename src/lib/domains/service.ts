@@ -85,20 +85,21 @@ export async function addDomainForUser(
 		}
 
 		const domainId = existing?.id ?? newId("dom");
+		const isManual = provisioned.zone.id === "manual";
 		const values = {
 			id: domainId,
 			userId,
 			hostname: provisioned.hostname,
 			zoneId: provisioned.zone.id,
-			status: !skipDns && (provisioned.routingEnabled || provisioned.sendingEnabled || receivingProvider !== "cloudflare") ? ("active" as const) : ("pending" as const),
-			receivingProvider,
+			status: isManual || (!skipDns && (provisioned.routingEnabled || provisioned.sendingEnabled || receivingProvider !== "cloudflare")) ? ("active" as const) : ("pending" as const),
+			receivingProvider: isManual ? ("none" as const) : receivingProvider,
 			routingStatus: provisioned.routingStatus ?? null,
 			sendingSubdomainTag: provisioned.sendingSubdomainTag,
-			sendingRequested: skipDns ? false : provisioned.sendingRequested,
+			sendingRequested: isManual ? true : skipDns ? false : provisioned.sendingRequested,
 			...(skipDns ? { sendingProvider: "none" as const } : options?.sendingProvider ? { sendingProvider: options.sendingProvider } : existing && existing.sendingProvider !== "none" ? {} : { sendingProvider: provisioned.sendingRequested ? ("cloudflare" as const) : ("none" as const) }),
-			sendingEnabled: skipDns ? false : provisioned.sendingEnabled,
-			routingEnabled: skipDns ? false : provisioned.routingEnabled,
-			dnsSkipped: options?.skipDns === true,
+			sendingEnabled: isManual ? true : skipDns ? false : provisioned.sendingEnabled,
+			routingEnabled: isManual ? true : skipDns ? false : provisioned.routingEnabled,
+			dnsSkipped: isManual ? false : options?.skipDns === true,
 		};
 
 		if (existing) {

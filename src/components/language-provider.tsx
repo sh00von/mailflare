@@ -21,21 +21,8 @@ export function LanguageProvider({ initialLocale, initialMessages, children }: {
 	const [active, setActive] = useState<Active>({ locale: initialLocale, messages: initialMessages });
 	const latestRequest = useRef(0);
 
-	const setLocale = useCallback((next: Locale) => {
-		const nextLocale = resolveLocale(next);
-		const request = ++latestRequest.current;
-		void loadMessages(nextLocale).then((messages) => {
-			if (request !== latestRequest.current) return;
-			// Preference cookies can be disabled; the selection still works for this session.
-			try {
-				document.cookie = serializeLocaleCookie(nextLocale, window.location.protocol === "https:");
-			} catch {
-				// Keep the in-memory preference when cookie storage is unavailable.
-			}
-			document.documentElement.lang = nextLocale;
-			document.documentElement.dir = getDirection(nextLocale);
-			setActive({ locale: nextLocale, messages });
-		}).catch(() => undefined);
+	const setLocale = useCallback((_next: Locale) => {
+		// English-only build: locale switching is disabled.
 	}, []);
 
 	const value = useMemo<LanguageState>(

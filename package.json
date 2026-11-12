@@ -1,19 +1,13 @@
 {
-  "name": "mailflare",
+  "name": "replyot",
   "version": "0.5.4",
   "private": true,
   "scripts": {
-    "dev": "npm run db:bundle && vp dev --port 3000",
-    "build": "npm run db:bundle && vp build",
-    "build:next": "npm run db:bundle && MAILFLARE_RUNTIME=node next build",
-    "start": "vp preview --port 3000",
+    "dev": "pnpm run dev:node",
+    "build": "pnpm run build:node",
+    "build:next": "pnpm run db:bundle && next build",
+    "start": "pnpm run start:node",
     "lint": "vp lint .",
-    "deploy": "npm run build && npm run deploy:worker",
-    "deploy:worker": "wrangler deploy",
-    "deploy:local": "npm run deploy",
-    "upload": "npm run build && wrangler versions upload",
-    "preview": "npm run build && vp preview --port 3000",
-    "cf-typegen": "wrangler types --env-interface CloudflareEnv ./cloudflare-env.d.ts",
     "push:keys": "node scripts/generate-vapid-keys.mjs",
     "db:bundle": "node scripts/generate-migration-bundle.mjs",
     "db:generate": "drizzle-kit generate",
@@ -21,55 +15,17 @@
     "db:generate:mysql": "MAILFLARE_DB_DIALECT=mysql drizzle-kit generate --config=drizzle.config.mysql.ts",
     "db:smoke": "node scripts/run-ts.mjs scripts/db-smoke.ts",
     "auth:recovery-link": "node scripts/run-ts.mjs scripts/passkey-recovery-link.ts",
-    "db:migrate:local": "wrangler d1 migrations apply DB --local",
-    "db:migrate:remote": "wrangler d1 migrations apply DB --remote",
-    "migrate": "wrangler d1 migrations apply DB",
     "db:seed": "curl -X POST http://localhost:3000/api/seed",
-    "build:node": "npm run db:bundle && MAILFLARE_RUNTIME=node next build && node scripts/build-server.mjs",
-    "start:node": "MAILFLARE_RUNTIME=node NODE_ENV=production node dist/server.mjs",
-    "dev:node": "npm run db:bundle && node scripts/build-server.mjs && MAILFLARE_RUNTIME=node node dist/server.mjs",
+    "build:node": "pnpm run db:bundle && next build && node scripts/build-server.mjs",
+    "start:node": "node dist/server.mjs",
+    "dev:node": "pnpm run db:bundle && node scripts/build-server.mjs && node dist/server.mjs",
     "test:e2e": "playwright test"
-  },
-  "cloudflare": {
-    "bindings": {
-      "CF_TOKEN": {
-        "description": "Runtime Cloudflare API token used by Mailflare onboarding to call the Zones, DNS, and Email Routing APIs. Cloudflare's deploy/build token is not passed to the app, so create this separately at https://dash.cloudflare.com/profile/api-tokens with `Zone Read`, `DNS Edit`, `Email Routing Edit`, and `Email Routing Rules Write` permissions for the zones you will connect. Add `Email Sending Edit` to enable outbound mail. Paste only the token secret value, without `Bearer`."
-      },
-      "TURNSTILE_SECRET_KEY": {
-        "description": "Cloudflare Turnstile secret key used to verify login and first-run registration challenges. Pair with NEXT_PUBLIC_TURNSTILE_SITE_KEY at build time."
-      },
-      "NEXT_PUBLIC_TURNSTILE_SITE_KEY": {
-        "description": "Cloudflare Turnstile public site key used by the login and first-run registration widgets."
-      },
-      "CF_EMAIL_WORKER_NAME": {
-        "description": "Worker name used when creating Cloudflare Email Routing rules. Set this to the deployed Worker name; if you rename the Worker, update this value too."
-      },
-      "GITHUB_UPDATE_TOKEN": {
-        "description": "Fine-grained GitHub token for the installation repository with Actions: write permission. Used by the admin update endpoint to dispatch deploy-update.yml."
-      },
-      "GITHUB_UPDATE_REF": {
-        "description": "Optional branch used to dispatch updates. Leave blank to use the repository default branch."
-      },
-      "GITHUB_UPDATE_REPO": {
-        "description": "Your github repository that connect to cloudflare worker"
-      },
-      "CF_EMAIL": {
-        "description": "Legacy Global API Key auth only. Use this with `CF_API_KEY` instead of `CF_TOKEN`."
-      },
-      "CF_API_KEY": {
-        "description": "Legacy Global API Key auth only. Prefer `CF_TOKEN` for new deployments."
-      }
-    }
   },
   "license": "SEE LICENSE IN LICENSE",
   "dependencies": {
-    "@ai-sdk/openai": "4.0.75",
-    "@ai-sdk/openai-compatible": "^3.0.55",
-    "@ai-sdk/react": "^4.0.116",
     "@hugeicons/core-free-icons": "^4.3.5",
     "@hugeicons/react": "^1.1.10",
     "@libsql/client": "^0.18.0",
-    "@modelcontextprotocol/server": "^2.1.0",
     "@neondatabase/serverless": "^1.2.0",
     "@planetscale/database": "^2.0.0",
     "@radix-ui/react-dialog": "^1.1.15",
@@ -83,8 +39,6 @@
     "@simplewebauthn/browser": "^14.0.0",
     "@simplewebauthn/server": "^14.0.3",
     "@tanstack/react-query": "^5.100.11",
-    "@vinext/cloudflare": "1.0.0-beta.11",
-    "ai": "^7.0.113",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^13.0.3",
     "class-variance-authority": "^0.7.1",
@@ -114,13 +68,10 @@
     "sass": "^1.105.0",
     "smtp-server": "^3.19.12",
     "tailwind-merge": "^3.6.0",
-    "vinext": "1.0.0-beta.13",
-    "workers-ai-provider": "^4.0.0",
+    "ws": "^8.22.2",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "^1.61.0",
-    "@cloudflare/workers-types": "^5.20260828.1",
     "@electric-sql/pglite-socket": "^0.2.14",
     "@next/eslint-plugin-next": "16.3.3",
     "@playwright/test": "^1.64.1",
@@ -149,8 +100,7 @@
     "tsx": "^4.23.13",
     "typescript": "^5.7.4",
     "vite": "npm:@voidzero-dev/vite-plus-core@1.0.0",
-    "vite-plus": "1.0.0",
-    "wrangler": "^4.127.1"
+    "vite-plus": "1.0.0"
   },
   "overrides": {
     "@esbuild-kit/core-utils": {

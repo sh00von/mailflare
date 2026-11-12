@@ -1,6 +1,6 @@
 import { and, eq, lt, or, isNull } from "drizzle-orm";
 import { getDb } from "@/db";
-import { apiKeys, mcpKeyMailboxes, users } from "@/db/schema";
+import { apiKeys, users } from "@/db/schema";
 import { parseScopes } from "@/lib/api-keys";
 import { findApiKeyForSecret } from "@/lib/api/find-api-key";
 import type { ApiAuthResult } from "@/lib/api/key-auth-types";
@@ -30,10 +30,7 @@ export async function authenticateApiKeyValue(env: CloudflareEnv, key: string): 
 		.where(and(eq(apiKeys.id, candidate.id), or(isNull(apiKeys.lastUsedAt), lt(apiKeys.lastUsedAt, stale))));
 
 	const scopes = parseScopes(candidate.scopes);
-	const allowed = candidate.mailboxScopeEnabled
-		? await db.select({ mailboxId: mcpKeyMailboxes.mailboxId }).from(mcpKeyMailboxes).where(eq(mcpKeyMailboxes.keyId, candidate.id))
-		: null;
-	return { keyId: candidate.id, keyKind: candidate.kind, userId: user.id, email: user.email, scopes: scopes.some((scope) => ADMIN_SCOPES.has(scope)) ? scopes.filter((scope) => ADMIN_SCOPES.has(scope)) : scopes, mailboxIds: allowed?.map((row) => row.mailboxId) ?? null, user };
+	return { keyId: candidate.id, keyKind: candidate.kind, userId: user.id, email: user.email, scopes: scopes.some((scope) => ADMIN_SCOPES.has(scope)) ? scopes.filter((scope) => ADMIN_SCOPES.has(scope)) : scopes, mailboxIds: null, user };
 }
 
 /**

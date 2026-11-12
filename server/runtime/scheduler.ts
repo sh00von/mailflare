@@ -1,5 +1,4 @@
 import { runScheduledDatabaseBackup } from "@/lib/backups/runner";
-import { runAgentMaintenance } from "@/lib/agent/maintenance";
 import { runTrashRetention } from "@/lib/email/trash-retention";
 import { runDriveTrashRetention } from "@/lib/drive/retention";
 import { runAccountRetention } from "@/lib/accounts/deletion";
@@ -13,7 +12,6 @@ import { sweepOrphanedRawMail } from "@/lib/email/raw-sweeper";
 export function startScheduler(env: CloudflareEnv) {
 	let lastRunDay = "";
 	const timer = setInterval(() => {
-		runAgentMaintenance(env).catch((error) => console.error("Agent maintenance failed", error));
 		runTrashRetention(env).catch((error) => console.error("Trash retention failed", error));
 		sweepImportJobs(env).catch((error) => console.error("Import job sweep failed", error));
 		const now = new Date();

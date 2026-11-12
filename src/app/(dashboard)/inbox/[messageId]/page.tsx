@@ -48,7 +48,6 @@ import { EmailHtmlRenderer } from "@/components/messages/email-html-renderer";
 import { getEmailAddress } from "@/lib/email/address";
 import { useRemoteContent } from "@/components/messages/use-remote-content";
 import clsx from "clsx";
-import { useAssistantOpen } from "@/components/agent/assistant-open-state";
 import { useMessageContentScroll } from "./use-message-content-scroll";
 import { useSendViewStatus } from "@/components/messages/use-send-view-status";
 
@@ -87,8 +86,7 @@ function MessageDetailContent({ messageId }: { messageId: string }) {
   const { visible: messageListVisible } = useMessageListVisibility();
   usePageLoading(loading, true);
   const thread = useMessageThread(messageId, data?.message?.threadId);
-  const assistantVisible = useAssistantOpen();
-  const isAnyPanelVisible = messageListVisible || assistantVisible;
+  const isAnyPanelVisible = messageListVisible;
   const { scrollRef, scrolled, handleScroll } = useMessageContentScroll(messageId, loading);
 
   useEffect(() => {
@@ -241,7 +239,7 @@ function MessageDetailContent({ messageId }: { messageId: string }) {
   return (<>
 
     <div className={clsx("flex py-2 h-12 items-center px-2 border-b sticky top-0 bg-white z-40 gap-3", scrolled ? "border-neutral-200" : "border-transparent")}>
-      <MessageReadingHeaderButton assistantVisible={assistantVisible} />
+      <MessageReadingHeaderButton assistantVisible={false} />
       {/* <div className="min-w-0 flex-1" /> */}
       {/* <div className="flex items-center flex-row gap-6">
 					<Link

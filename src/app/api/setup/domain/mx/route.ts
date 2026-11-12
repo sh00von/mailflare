@@ -1,17 +1,31 @@
+import { resolveMx, resolveTxt } from "node:dns/promises";
 import { NextResponse } from "next/server";
-import { hasAdminAccount } from "@/lib/auth/setup";
 import { getEnv } from "@/lib/cloudflare";
 import { preflightDomain } from "@/lib/domains/preflight";
-import { hasConflictingMxRecords } from "@/lib/domains/mx-records";
 import { setupDomainSchema } from "@/lib/validators";
 import { readJsonBody } from "@/lib/http/request";
 import { RequestBodyTooLargeError } from "@/lib/http/errors";
 
+async function safeResolveMx(hostname: string): Promise<string[]> {
+	try {
+		const records = await resolveMx(hostname);
+		return records.map((r) => r.exchange.trim().toLowerCase().replace(/\.$/, ""));
+	} catch {
+		return [];
+	}
+}
+
+async function safeResolveTxt(hostname: string): Promise<string[]> {
+	try {
+		const records = await resolveTxt(hostname);
+		return records.map((chunks) => chunks.join("").trim());
+	} catch {
+		return [];
+	}
+}
+
 export async function POST(request: Request) {
 	const env = getEnv();
-	if (await hasAdminAccount(env)) {
-		return NextResponse.json({ error: "Initial setup is already complete" }, { status: 403 });
-	}
 
 	let body: unknown;
 	try {
@@ -28,12 +42,26 @@ export async function POST(request: Request) {
 
 	try {
 		const domain = await preflightDomain(env, parsed.data.hostname);
-		const hasExistingMx = await hasConflictingMxRecords(
-			env,
-			domain.zone.id,
-			domain.hostname,
-		);
-		return NextResponse.json({ hasExistingMx });
+		const expectedMx = (process.env.MAIL_HOSTNAME?.trim() || `mail.${domain.hostname}`).toLowerCase().replace(/\.$/, "");
+		const [currentMx, rootTxt, dmarcTxt] = await Promise.all([
+			safeResolveMx(domain.hostname),
+			safeResolveTxt(domain.hostname),
+			safeResolveTxt(`_dmarc.${domain.hostname}`),
+		]);
+
+		const mxAdded = currentMx.some((mx) => mx === expectedMx);
+		const spfAdded = rootTxt.some((txt) => txt.toLowerCase().startsWith("v=spf1") && txt.toLowerCase().includes(expectedMx));
+		const dmarcAdded = dmarcTxt.some((txt) => txt.toLowerCase().startsWith("v=dmarc1"));
+
+		return NextResponse.json({
+			hasExistingMx: false,
+			currentMx,
+			requiredRecords: [
+				{ type: "MX", name: "@", value: expectedMx, priority: 10, added: mxAdded },
+				{ type: "TXT", name: "@", value: `v=spf1 a:${expectedMx} ~all`, added: spfAdded },
+				{ type: "TXT", name: "_dmarc", value: "v=DMARC1; p=none", added: dmarcAdded },
+			],
+		});
 	} catch (error) {
 		const message = error instanceof Error ? error.message : "MX record check failed";
 		return NextResponse.json({ error: message }, { status: 502 });

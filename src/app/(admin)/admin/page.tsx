@@ -18,19 +18,6 @@ type AdminSection = {
 
 const sections: AdminSection[] = [
 	{
-		href: "/agent",
-		titleKey: "admin.nav.agent",
-		descriptionKey: "admin.section.agent",
-		icon: Bot,
-		permission: "primary",
-	},
-	{
-		href: "/mailboxes",
-		titleKey: "admin.nav.mailboxes",
-		descriptionKey: "admin.section.mailboxes",
-		icon: Mail,
-	},
-	{
 		href: "/domains",
 		titleKey: "admin.nav.domains",
 		descriptionKey: "admin.section.domains",
@@ -38,31 +25,10 @@ const sections: AdminSection[] = [
 		permission: "domains",
 	},
 	{
-		href: "/branding",
-		titleKey: "admin.nav.branding",
-		descriptionKey: "admin.section.branding",
-		icon: Palette,
-		permission: "primary",
-	},
-	{
-		href: "/licenses",
-		titleKey: "admin.nav.licenses",
-		descriptionKey: "admin.section.licenses",
-		icon: BadgeDollarSign,
-		permission: "primary",
-	},
-	{
 		href: "/accounts",
 		titleKey: "admin.nav.accounts",
 		descriptionKey: "admin.section.accounts",
 		icon: Users,
-	},
-	{
-		href: "/api-keys",
-		titleKey: "admin.section.apiKeysTitle",
-		descriptionKey: "admin.section.apiKeys",
-		icon: KeyRound,
-		permission: "primary",
 	},
 	// {
 	// 	href: "/webhooks",

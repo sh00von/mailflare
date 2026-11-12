@@ -1,26 +1,17 @@
-import { cookies } from "next/headers";
-import { getEnv } from "@/lib/cloudflare";
-import { LOCALE_COOKIE, createTranslator, loadMessages, resolveLocale } from "./utils";
+import { DEFAULT_LOCALE, createTranslator } from "./utils";
 import type { Locale, Messages } from "./types";
 
-/** The locale chosen in the preference cookie, for server code that must render in it. */
+/** English-only build: always returns the default locale. */
 export async function getRequestLocale() {
-	return resolveLocale((await cookies()).get(LOCALE_COOKIE)?.value);
+	return DEFAULT_LOCALE;
 }
 
-/** Server-side catalog load through the static assets binding; English when the catalog cannot be read. */
-export async function loadServerMessages(locale: Locale): Promise<Partial<Messages> | undefined> {
-	try {
-		const assets = getEnv().ASSETS;
-		return await loadMessages(locale, (path) => assets.fetch(new URL(path, "https://mailflare.local")));
-	} catch (error) {
-		console.warn(`Falling back to English: ${error instanceof Error ? error.message : error}`);
-		return undefined;
-	}
+/** English-only build: English catalog is bundled in memory. */
+export async function loadServerMessages(_locale: Locale): Promise<Partial<Messages> | undefined> {
+	return undefined;
 }
 
 // For server components and route handlers; client components use `useLanguage()`.
 export async function getServerTranslator() {
-	const locale = await getRequestLocale();
-	return createTranslator(locale, await loadServerMessages(locale));
+	return createTranslator(DEFAULT_LOCALE);
 }

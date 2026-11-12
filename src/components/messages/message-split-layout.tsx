@@ -4,7 +4,6 @@ import { usePathname } from "next/navigation";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useLanguage } from "@/components/language-provider";
 import { useSidebar } from "@/components/sidebar-state";
-import { useAssistantOpen } from "@/components/agent/assistant-open-state";
 import { useMailSearch } from "@/components/mail-search/mail-search-context";
 import { useSelectedMailbox } from "@/components/mailbox-provider";
 import { useIsDesktop } from "@/components/sidebar-mobile-utils";
@@ -42,8 +41,7 @@ export function MessageSplitLayout({
 	const { t } = useLanguage();
 	const { userId, setForcedMinimal } = useSidebar();
 	const isDesktop = useIsDesktop();
-	const assistantOpen = useAssistantOpen();
-	const listVisible = twoColumnReading && !assistantOpen && manualListVisible;
+	const listVisible = twoColumnReading && manualListVisible;
 	const detailPrefix = `${config.hrefPrefix}/`;
 	const selectedMessageId = pathname.startsWith(detailPrefix)
 		? pathname.slice(detailPrefix.length).split("/")[0]

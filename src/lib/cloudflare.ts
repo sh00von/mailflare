@@ -1,10 +1,13 @@
-import { env } from "cloudflare:workers";
 import { getNodeEnv } from "@/lib/runtime";
 import { withDatabase } from "@/db/with-database";
 import { withStorage } from "@/lib/storage";
 
 export function getEnv(): CloudflareEnv {
-	return withDatabase(withStorage(getNodeEnv() ?? (env as CloudflareEnv)));
+	const env = getNodeEnv();
+	if (!env) {
+		throw new Error("Node runtime environment is not initialized (globalThis.__mailflareNodeEnv is unset).");
+	}
+	return withDatabase(withStorage(env));
 }
 
 export async function getEnvAsync(): Promise<CloudflareEnv> {

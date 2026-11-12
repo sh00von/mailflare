@@ -2,10 +2,10 @@ import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { getEnv } from "@/lib/cloudflare";
 import { getDb } from "@/db";
-import { mailboxes, users } from "@/db/schema";
+import { domains, mailboxes, users } from "@/db/schema";
 import { hashPassword, PASSWORDLESS_PASSWORD_HASH } from "@/lib/auth/password";
 import { hasAdminAccount } from "@/lib/auth/setup";
-import { SESSION_COOKIE } from "@/lib/auth/session";
+import { createSession, SESSION_COOKIE } from "@/lib/auth/session";
 import { createEnrollmentGrant, SETUP_COOKIE } from "@/lib/auth/webauthn/grants";
 import { newId } from "@/lib/ids";
 import { firstRunRegisterSchema } from "@/lib/validators";
@@ -23,9 +23,7 @@ import { ensureBookingUsername } from "@/lib/booking/username";
 export async function POST(request: Request) {
 	const env = getEnv();
 	const db = getDb(env);
-	if (await hasAdminAccount(env)) {
-		return NextResponse.json({ error: "Registration is closed after the first account is created" }, { status: 403 });
-	}
+	const isFirstUser = !(await hasAdminAccount(env));
 
 	let body: unknown;
 	try {
@@ -53,6 +51,10 @@ export async function POST(request: Request) {
 	if (existing) {
 		return NextResponse.json({ error: "Email already registered" }, { status: 409 });
 	}
+	const [existingDomain] = await db.select({ id: domains.id }).from(domains).where(eq(domains.hostname, domainName)).limit(1);
+	if (existingDomain) {
+		return NextResponse.json({ error: "Domain is already registered" }, { status: 409 });
+	}
 
 	const userId = newId("usr");
 	await db.insert(users).values({
@@ -64,7 +66,10 @@ export async function POST(request: Request) {
 		passwordHash: usePasskey ? PASSWORDLESS_PASSWORD_HASH : hashPassword(password!),
 		name,
 		role: "admin",
-		isPrimaryAdmin: true,
+		isPrimaryAdmin: isFirstUser,
+		canManageDomains: true,
+		canManageUsers: true,
+		canManageMailboxes: true,
 	});
 
 	// Create the setup grant before touching DNS. If it cannot be written, the
@@ -97,8 +102,10 @@ export async function POST(request: Request) {
 		});
 		const domain = added.domain;
 		changes = added.changes;
-		await ensureEmailRoutingRuleToWorker(env, domain.zoneId, email);
-		changes.createdAddressRules.push(email);
+		if (domain.zoneId !== "manual") {
+			await ensureEmailRoutingRuleToWorker(env, domain.zoneId, email);
+			changes.createdAddressRules.push(email);
+		}
 		const mailboxId = newId("mbx");
 		await db.insert(mailboxes).values({
 			id: mailboxId,
@@ -123,29 +130,44 @@ export async function POST(request: Request) {
 		);
 	}
 
-	// A passkey-only first account has no password, so it gets a one-time link
-	// that can only enrol a passkey. A session is issued after that succeeds.
+	const adminAppUrl = process.env.ADMIN_APP_URL?.trim().replace(/\/+$/, "") || process.env.MAIL_APP_URL?.trim().replace(/\/+$/, "") || "";
+	const cookieDomain = process.env.COOKIE_DOMAIN?.trim() || undefined;
+	const sessionToken = setupToken ? null : await createSession(env, userId);
 	const response = NextResponse.json({
 		ok: true,
-		redirect: setupToken ? "/setup/passkey" : "/login",
+		redirect: setupToken ? "/setup/passkey" : `${adminAppUrl}/domains`,
 		...(setupToken ? { requiresPasskeySetup: true } : {}),
 	});
 	response.headers.set("Cache-Control", "no-store");
+	const isHttps = request.headers.get("x-forwarded-proto") === "https" || request.url.startsWith("https://");
 	if (setupToken) {
 		response.cookies.set(SETUP_COOKIE, setupToken, {
 			httpOnly: true,
-			secure: process.env.NODE_ENV === "production",
+			secure: isHttps,
 			sameSite: "lax",
 			path: "/",
+			...(cookieDomain ? { domain: cookieDomain } : {}),
 			maxAge: 24 * 60 * 60,
 		});
 	}
-	response.cookies.set(SESSION_COOKIE, "", {
-		httpOnly: true,
-		secure: process.env.NODE_ENV === "production",
-		sameSite: "lax",
-		path: "/",
-		maxAge: 0,
-	});
+	if (sessionToken) {
+		response.cookies.set(SESSION_COOKIE, sessionToken, {
+			httpOnly: true,
+			secure: isHttps,
+			sameSite: "lax",
+			path: "/",
+			...(cookieDomain ? { domain: cookieDomain } : {}),
+			maxAge: 30 * 24 * 60 * 60,
+		});
+	} else {
+		response.cookies.set(SESSION_COOKIE, "", {
+			httpOnly: true,
+			secure: isHttps,
+			sameSite: "lax",
+			path: "/",
+			...(cookieDomain ? { domain: cookieDomain } : {}),
+			maxAge: 0,
+		});
+	}
 	return response;
 }

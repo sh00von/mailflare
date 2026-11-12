@@ -526,6 +526,13 @@
       "when": 1793280378889,
       "tag": "0083_add_message_has_unsubscribe",
       "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "6",
+      "when": 1794477527655,
+      "tag": "0076_friendly_the_renegades",
+      "breakpoints": true
     }
   ]
 }

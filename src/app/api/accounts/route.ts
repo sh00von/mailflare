@@ -11,7 +11,10 @@ import { accountListItemFromUser, listAccountsForAdmin, requireTeamAdmin } from 
 export async function GET(request: Request) {
 	const access = await requireTeamAdmin(request);
 	if (access.error) return access.error;
-	const rows = await listAccountsForAdmin(getDb(access.env));
+	const allRows = await listAccountsForAdmin(getDb(access.env));
+	const rows = isPrimaryAdmin(access.user!)
+		? allRows
+		: allRows.filter((row) => row.id === access.user!.id);
 	const [{ accountSeatLimit }, seatsUsed] = await Promise.all([getLicenseEntitlements(access.env), countUsedAccountSeats(access.env)]);
 	return NextResponse.json({
 		accounts: rows.map((row) => accountListItemFromUser(row)),

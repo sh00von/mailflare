@@ -46,6 +46,7 @@ export async function listConflictingMxRecords(
 	zoneId: string,
 	hostname: string,
 ): Promise<CfDnsRecord[]> {
+	if (zoneId === "manual") return [];
 	const records = await listMxRecords(env, zoneId, hostname);
 	return records.filter((record) => !isCloudflareEmailRoutingMx(record));
 }
@@ -55,6 +56,7 @@ export async function hasConflictingMxRecords(
 	zoneId: string,
 	hostname: string,
 ): Promise<boolean> {
+	if (zoneId === "manual") return false;
 	const records = await listMxRecords(env, zoneId, hostname);
 	return records.some((record) => !isCloudflareEmailRoutingMx(record));
 }

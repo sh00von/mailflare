@@ -8,19 +8,20 @@ ENV NEXT_TELEMETRY_DISABLED=1 MAILFLARE_RUNTIME=node
 # a fallback for platforms without one.
 FROM base AS deps
 RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
-COPY package.json package-lock.json ./
-RUN npm ci --ignore-scripts && npm rebuild better-sqlite3
+RUN corepack enable && corepack prepare pnpm@latest --activate
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --ignore-scripts && pnpm rebuild better-sqlite3
 
 FROM deps AS build
 COPY . .
 ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY
 ENV NEXT_PUBLIC_TURNSTILE_SITE_KEY=$NEXT_PUBLIC_TURNSTILE_SITE_KEY
-RUN npm run build:node && rm -rf .next-node/cache
+RUN pnpm run build:node && rm -rf .next-node/cache
 
 # Production dependencies only. The Workers toolchain arrives as transitive
 # dependencies of the Cloudflare adapter and is never loaded here, so it goes.
 FROM deps AS prod-deps
-RUN npm prune --omit=dev --ignore-scripts \
+RUN pnpm prune --prod --ignore-scripts \
 	&& rm -rf node_modules/wrangler node_modules/miniflare node_modules/workerd node_modules/@cloudflare node_modules/cloudflare node_modules/@aws-sdk node_modules/esbuild node_modules/@esbuild node_modules/typescript
 
 FROM base AS runtime

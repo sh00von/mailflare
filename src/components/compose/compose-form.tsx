@@ -16,8 +16,6 @@ import { formatEmailAddress, getEmailAddress } from "@/lib/email/address";
 import { clearMessageDetailCache } from "@/lib/messages/detail-cache";
 import { useCompose } from "@/components/compose/compose-context";
 import { cn } from "@/lib/utils";
-import { SendReview } from "@/components/agent/send-review";
-import type { ReviewSnapshot } from "@/components/agent/send-review-types";
 import { useIsMobile } from "@/components/sidebar-mobile-utils";
 import { useSheetViewport } from "./use-sheet-viewport";
 import { useTrackOpens } from "./use-track-opens";
@@ -59,8 +57,6 @@ export function ComposeForm({
 	const { showNotice, openDraftComposer, isCurrentNotice } = useCompose();
 	const { selectedMailbox, setSelectedMailbox, mailboxes } = useSelectedMailbox();
 	const [draftId, setDraftId] = useState<string | null>(null);
-	const [agentRevision, setAgentRevision] = useState<number | null>(null);
-	const [agentReview, setAgentReview] = useState<{ approvalId: string; snapshot: ReviewSnapshot } | null>(null);
 	const [to, setTo] = useState<string[]>([]);
 	const [cc, setCc] = useState<string[]>([]);
 	const [bcc, setBcc] = useState<string[]>([]);
@@ -120,13 +116,6 @@ export function ComposeForm({
 	const pendingSave = useRef<(() => Promise<void>) | null>(null);
 	const draftGeneration = useRef(0);
 	const draftIdRef = useRef<string | null>(null);
-	const agentRevisionRef = useRef(agentRevision);
-	useEffect(() => {
-		agentRevisionRef.current = agentRevision;
-	}, [agentRevision]);
-	// A pending human send review owns this snapshot. Autosaving after creating
-	// an approval increments its revision and makes confirmation impossible.
-	const reviewInProgressRef = useRef(false);
 	const saveQueue = useRef<Promise<void>>(Promise.resolve());
 	const uploadedFiles = useRef(new WeakSet<File>());
 	const rejectedFiles = useRef(new WeakSet<File>());
@@ -190,8 +179,6 @@ export function ComposeForm({
 
 				draftIdRef.current = draft.id;
 				setDraftId(draft.id);
-				setAgentRevision(draft.agent?.revision ?? null);
-				setScheduledAt(draft.agent?.scheduledAt ? new Date(draft.agent.scheduledAt) : null);
 				setTo(headerToRecipients(draft.toAddr));
 				const draftCc = headerToRecipients(draft.ccAddr);
 				const draftBcc = headerToRecipients(draft.bccAddr);
@@ -347,9 +334,6 @@ export function ComposeForm({
 			setToast({ type: "error", message: t("schedule.pastTime") });
 			return;
 		}
-		// Freeze autosave for an AI draft before waiting for any queued save.
-		// Otherwise a debounced PATCH can invalidate the approval snapshot.
-		if (draftId && agentRevision !== null) reviewInProgressRef.current = true;
 		if (saveTimer.current) clearTimeout(saveTimer.current);
 		pendingSave.current = null;
 		setLoading(true);
@@ -357,34 +341,6 @@ export function ComposeForm({
 		const currentDraftId = draftIdRef.current;
 		const unsentAttachments = attachments.filter((attachment) => !uploadedFiles.current.has(attachment.file));
 		const fullHtml = joinQuotedHtml(html, quotedHtml);
-		if (draftId && agentRevision !== null) {
-			try {
-				if (saveTimer.current) clearTimeout(saveTimer.current);
-				if (attachments.length > 0) {
-					const form = new FormData();
-					for (const attachment of attachments) form.append("attachments", attachment.file);
-					const uploaded = await authFetch(`/api/drafts/${draftId}/attachments`, { method: "POST", body: form });
-					const result = await uploaded.json() as { attachments?: ComposeStoredAttachment[]; error?: string };
-					if (!uploaded.ok) throw new Error(result.error || t("compose.error.draftAttachments"));
-					setStoredAttachments((current) => [...current, ...(result.attachments ?? [])]);
-					setAttachments([]);
-				}
-				const updated = await authFetch(`/api/drafts/${draftId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mailboxId: selectedMailbox?.id, from: fromAddr, to: recipientsToHeader(to), cc: recipientsToHeader(cc), bcc: recipientsToHeader(bcc), subject, html: fullHtml, text: htmlToPlainText(fullHtml), inReplyTo: threading?.inReplyTo ?? null, references: threading?.references ?? null, threadId: threading?.threadId ?? null, scheduledAt: scheduledAt?.toISOString() ?? null }) });
-				if (!updated.ok) throw new Error(t("compose.error.saveForReview"));
-				const current = await fetchDraft(draftId);
-				if (!current.agent) throw new Error(t("compose.error.aiMetadata"));
-				setAgentRevision(current.agent.revision);
-				const response = await authFetch("/api/agent/approvals", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ draftId, expectedRevision: current.agent.revision }) });
-				const result = await response.json() as { approvalId?: string; snapshot?: ReviewSnapshot; error?: string };
-				if (!response.ok || !result.approvalId || !result.snapshot) throw new Error(result.error || t("compose.error.createReview"));
-				setAgentReview({ approvalId: result.approvalId, snapshot: result.snapshot });
-			} catch (cause) {
-				reviewInProgressRef.current = false;
-				setToast({ type: "error", message: cause instanceof Error ? cause.message : t("compose.error.reviewDraft") });
-			}
-			finally { setLoading(false); }
-			return;
-		}
 		let res: Response;
 		let data: SendResult & { error?: string };
 		try {
@@ -784,7 +740,6 @@ export function ComposeForm({
 
 	return (
 		<>
-			{agentReview && <SendReview approvalId={agentReview.approvalId} snapshot={agentReview.snapshot} onClose={() => { reviewInProgressRef.current = false; setAgentReview(null); }} onSent={() => { reviewInProgressRef.current = false; setAgentReview(null); if (onClose) dismiss(); else router.push("/sent"); }} />}
 			{mode === "popup" && modalMode && !minimized && <div className="fixed inset-0 z-40 bg-black/65 dark:bg-black/75" aria-hidden="true" />}
 			{toast && (
 				<div
@@ -929,7 +884,7 @@ export function ComposeForm({
 									disabled={loading || loadingDraft || !fromAddr}
 									className="rounded-r-none px-4 max-md:h-10 max-md:px-5 max-md:text-[15px]"
 								>
-									{loading ? t("compose.preparing") : scheduledAt ? t("compose.schedule") : agentRevision !== null ? t("compose.reviewSend") : t("compose.send")}
+									{loading ? t("compose.preparing") : scheduledAt ? t("compose.schedule") : t("compose.send")}
 								</Button>
 								<ScheduleSendMenu
 									disabled={loading || loadingDraft || !fromAddr}

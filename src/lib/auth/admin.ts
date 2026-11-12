@@ -28,11 +28,11 @@ export function assertPrimaryAdmin(
 	}
 }
 
-/** Domains can be managed by the primary admin or an admin the primary granted it to. */
+/** Domains can be managed by self-registered users (for their own domains) or admins granted domain access. */
 export function canManageDomains(
-	user: Pick<SessionUser, "role" | "isPrimaryAdmin" | "canManageDomains">,
+	user: Pick<SessionUser, "role" | "isPrimaryAdmin" | "canManageDomains"> & { createdByUserId?: string | null },
 ): boolean {
-	return isPrimaryAdmin(user) || (user.role === "admin" && user.canManageDomains);
+	return isPrimaryAdmin(user) || (user.role === "admin" && user.canManageDomains) || !user.createdByUserId;
 }
 
 /** User accounts can be managed by the primary admin or an admin the primary granted it to. */

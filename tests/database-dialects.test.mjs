@@ -144,12 +144,15 @@ test("MySQL keeps every index under the InnoDB key size limit", () => {
 	}
 });
 
-const migrationTables = (directory) =>
-	new Set(
-		readdirSync(join(root, directory))
-			.filter((name) => name.endsWith(".sql"))
-			.flatMap((name) => [...readFileSync(join(root, directory, name), "utf8").matchAll(/CREATE TABLE [`"]?(\w+)[`"]?/gi)].map((match) => match[1])),
-	);
+function migrationTables(directory) {
+	const tables = new Set();
+	for (const name of readdirSync(join(root, directory)).filter((n) => n.endsWith(".sql")).sort()) {
+		const sql = readFileSync(join(root, directory, name), "utf8");
+		for (const match of sql.matchAll(/CREATE TABLE [`"]?(\w+)[`"]?/gi)) tables.add(match[1]);
+		for (const match of sql.matchAll(/DROP TABLE (?:IF EXISTS )?[`"]?(\w+)[`"]?/gi)) tables.delete(match[1]);
+	}
+	return tables;
+}
 
 for (const [dialect, directory] of [["postgres", "drizzle/migrations-pg"], ["mysql", "drizzle/migrations-mysql"], ["sqlite", "drizzle/migrations"]]) {
 	// SQLite's history includes tables later dropped; its coverage is checked by backup-table-list.test.mjs.

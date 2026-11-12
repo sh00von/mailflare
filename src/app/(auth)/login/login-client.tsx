@@ -313,6 +313,14 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
         >
           {loading ? t("auth.signingIn") : t("auth.signIn")}
         </Button>
+        {!adding && (
+          <p className="text-center text-sm text-neutral-600">
+            Don&apos;t have a workspace?{" "}
+            <Link href="/register" className="font-medium text-blue-600 hover:underline">
+              Create account
+            </Link>
+          </p>
+        )}
         <p className="text-center text-xs uppercase tracking-wide text-neutral-400">{t("passkey.or")}</p>
         <Button
           type="button"
@@ -324,14 +332,6 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
           <KeyRound className="h-4 w-4" />
           {t("passkey.signIn")}
         </Button>
-        <details className="text-center">
-          <summary className="cursor-pointer list-none text-xs font-medium text-neutral-500 underline decoration-neutral-300 underline-offset-2 hover:text-neutral-800 [&::-webkit-details-marker]:hidden">
-            {t("passkey.cantUse")}
-          </summary>
-          <p className="mt-2 rounded-2xl border border-neutral-100 bg-neutral-50/60 px-4 py-3 text-left text-xs leading-5 text-neutral-500">
-            {t("passkey.lostAllHint")}
-          </p>
-        </details>
       </form>
     </AuthShell>
   );
