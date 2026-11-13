@@ -12,7 +12,7 @@ export default function DraftsPage() {
 				titleKey: "Drafts",
 				emptyText: "No drafts",
 				emptyTextKey: "No drafts",
-				hrefPrefix: "/drafts",
+				hrefPrefix: "/mail/drafts",
 				icon: FileText,
 				badgeVariant: "outline",
 			}}

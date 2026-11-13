@@ -33,7 +33,7 @@ export function useCustomFolderConfig(folderId: string): MessageFolderConfig {
 			folderId,
 			title: folderName,
 			emptyText: "No emails in this folder",
-			hrefPrefix: `/folders/${folderId}`,
+			hrefPrefix: `/mail/folders/${folderId}`,
 			icon: Folder,
 			showRowBadge: false,
 		}),

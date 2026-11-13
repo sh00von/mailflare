@@ -117,7 +117,7 @@ npm run db:migrate:local
 npm run dev
 ```
 
-Add your Cloudflare credentials to `.dev.vars`, then open [localhost:3000](http://localhost:3000). Run `npm run db:seed` to load sample data.
+Add your Cloudflare credentials to `.dev.vars`, then open [localhost:4008](http://localhost:4008). Run `npm run db:seed` to load sample data.
 
 - `npm run build`: build the Worker
 - `npm run deploy`: build and deploy

@@ -1,3 +1,58 @@
+declare global {
+	interface D1Database {
+		prepare(query: string): any;
+		batch(statements: any[]): Promise<any[]>;
+		exec(query: string): Promise<any>;
+		dump?(): Promise<ArrayBuffer>;
+	}
+	interface R2Bucket {
+		get(key: string, options?: any): Promise<any>;
+		put(key: string, value: any, options?: any): Promise<any>;
+		delete(key: string | string[]): Promise<any>;
+		list(options?: any): Promise<any>;
+		head?(key: string): Promise<any>;
+	}
+	interface ForwardableEmailMessage {
+		from: string;
+		to: string;
+		raw: ReadableStream;
+		setReject(reason: string): void;
+		forward(rcptTo: string, headers?: Headers): Promise<void>;
+		reply(message: any): Promise<void>;
+	}
+	interface SendEmail {
+		send(message: any): Promise<void>;
+	}
+	interface Queue<T = any> {
+		send(message: T): Promise<void>;
+		sendBatch(messages: { body: T }[]): Promise<void>;
+	}
+	interface Fetcher {
+		fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
+	}
+	interface ImagesBinding {
+		info?(stream: ReadableStream): Promise<any>;
+		transform?(stream: ReadableStream, options: any): Promise<any>;
+	}
+	interface DurableObjectNamespace<T = any> {
+		idFromName(name: string): any;
+		get(id: any): any;
+	}
+	interface RateLimit {
+		limit(options: { key: string }): Promise<{ success: boolean }>;
+	}
+	interface Ai {
+		run(model: string, inputs: any): Promise<any>;
+	}
+	interface WebSocketPair {
+		0: any;
+		1: any;
+	}
+	var WebSocketPair: {
+		new (): WebSocketPair;
+	};
+}
+
 interface CloudflareEnv {
 	DB: D1Database;
 	/** Connection string for an external database (PostgreSQL, MySQL, libSQL, ...); unset keeps D1. See docs/databases.md. */
@@ -64,12 +119,13 @@ interface CloudflareEnv {
 	CF_TOKEN?: string;
 	CF_API_KEY?: string;
 	CF_EMAIL?: string;
-	TURNSTILE_SECRET_KEY?: string;
+	CAPTCHA_SECRET?: string;
 	GITHUB_UPDATE_TOKEN?: string;
 	GITHUB_UPDATE_REF?: string;
 	GITHUB_UPDATE_REPO?: string;
 	/** "node" when served by the self-hosted runtime in server/; unset on Workers. */
 	MAILFLARE_RUNTIME?: "node";
+	REPLYOT_RUNTIME?: "node";
 	/** Shared secret the Cloudflare email relay signs inbound webhooks with (self-hosted only). */
 	INBOUND_WEBHOOK_SECRET?: string;
 	/** "1" refuses relays that do not sign the header map with a timestamp (relay Worker v2). */

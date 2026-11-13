@@ -14,7 +14,15 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
 	  },
 	// Native and server-only packages used by the self-hosted runtime; never bundle them.
-	serverExternalPackages: ["better-sqlite3", "nodemailer", "smtp-server", "ws"],
+	serverExternalPackages: ["nodemailer", "smtp-server", "ws"],
+	async rewrites() {
+		return [
+			{ source: "/dash", destination: "/domains" },
+			{ source: "/dash/:path*", destination: "/:path*" },
+			{ source: "/mail", destination: "/inbox" },
+			{ source: "/mail/:path*", destination: "/:path*" },
+		];
+	},
 	async headers() {
 		return [
 			{

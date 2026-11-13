@@ -72,17 +72,17 @@ export const features: LandingItem[] = [
 	{ icon: ShieldCheck, titleKey: "Spam stays out", bodyKey: "Layered scoring checks authentication, reputation, impersonation and links, and learns from what you mark as spam." },
 	{ icon: Clock, titleKey: "Conversations, snooze and schedule", bodyKey: "Threaded conversations, snooze until later, schedule sends and a configurable undo window keep your inbox under control." },
 	{ icon: Bell, titleKey: "Never miss a reply", bodyKey: "Set a follow-up reminder when you send. If nobody answers, the message comes back to the top of your inbox." },
-	{ icon: FolderInput, titleKey: "Move in over lunch", bodyKey: "Import from any IMAP account or a Gmail export in the background, with folders, threads and contacts intact." },
+	{ icon: FolderInput, titleKey: "Move in over lunch", bodyKey: "Import from a Gmail export or email backup files in the background, with folders, threads and contacts intact." },
 ];
 
 export const steps: LandingItem[] = [
 	{ icon: Globe2, titleKey: "Pick a plan & verify DNS", bodyKey: "Choose Starter, Pro, or Business, enter your domain, and verify MX, SPF, and DMARC records before signup." },
 	{ icon: MailPlus, titleKey: "Create your workspace", bodyKey: "Once DNS is verified, create your owner account and provision mailboxes for your team." },
-	{ icon: Send, titleKey: "Send and receive", bodyKey: "Mail flows right away, on the web, as an installable app, or in your favourite JMAP mail client." },
+	{ icon: Send, titleKey: "Send and receive", bodyKey: "Mail flows right away on the web or as an installable app on phone and desktop." },
 ];
 
 export const securityPoints: LandingItem[] = [
-	{ icon: KeyRound, titleKey: "Passkeys and authenticator codes", bodyKey: "Sign in with a passkey, or add TOTP two-factor with recovery codes." },
+	{ icon: KeyRound, titleKey: "Two-step verification", bodyKey: "Protect your account with TOTP authenticator codes and emergency recovery codes." },
 	{ icon: EyeOff, titleKey: "Remote content blocked", bodyKey: "Tracking images stay off until you choose to load them, per message or per sender." },
 	{ icon: ListChecks, titleKey: "Audit logs and activity", bodyKey: "See who signed in, what changed and when, across every account." },
 	{ icon: DatabaseBackup, titleKey: "Scheduled backups", bodyKey: "Automatic backups of your mail and settings, ready to restore when you need them." },
@@ -91,16 +91,16 @@ export const securityPoints: LandingItem[] = [
 export const everywherePoints: Pick<LandingItem, "icon" | "titleKey">[] = [
 	{ icon: Bell, titleKey: "Instant push notifications" },
 	{ icon: Smartphone, titleKey: "Installable web app" },
-	{ icon: MailCheck, titleKey: "JMAP for native mail apps" },
+	{ icon: MailCheck, titleKey: "Ultra-fast search & keyboard nav" },
 	{ icon: Keyboard, titleKey: "Keyboard shortcuts throughout" },
 ];
 
 export const faqs: LandingFaq[] = [
-	{ questionKey: "Is there a free trial?", answerKey: "Yes. Every plan—Starter ($5/mo), Pro ($15/mo), and Business ($39/mo)—includes a 14-day free trial with full access to your plan's limits." },
+	{ questionKey: "What plans are available?", answerKey: "Choose between Starter ($5/mo), Pro ($15/mo), and Business ($39/mo) with transparent pricing and full access to your plan's limits." },
 	{ questionKey: "Why do I verify DNS before creating an account?", answerKey: "Verifying MX, SPF, and DMARC upfront proves domain ownership and prevents anyone else from claiming your domain on Replyot." },
 	{ questionKey: "Can several people share one mailbox?", answerKey: "Yes. Share a mailbox like support@ with teammates and choose per person: read-only, send as, send on behalf, or full access." },
 	{ questionKey: "What happens if my team hits a plan limit?", answerKey: "Your workspace tracks domains, mailboxes, S3 storage, and daily sends in real time. You can upgrade your plan anytime from the admin panel." },
-	{ questionKey: "Does it work on my phone?", answerKey: "Install the web app on your home screen for push notifications, or connect a mail client that speaks JMAP." },
+	{ questionKey: "Does it work on my phone?", answerKey: "Yes! Install the web app on your home screen for instant push notifications and an app-like experience." },
 ];
 
 export function getHomeActions(isLoggedIn: boolean): HomeAction[] {

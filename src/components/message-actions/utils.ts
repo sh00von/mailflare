@@ -76,22 +76,7 @@ export async function createTrashSenderRule({
 }: TrashSenderRuleInput) {
   const sender = getEmailAddress(senderAddress).trim().toLowerCase();
   if (!sender) throw new Error("Sender address is required");
-
-  const response = await authFetch("/api/routing-rules", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      mailboxId,
-      matchField: "email",
-      matchOperator: "exact",
-      matchValue: sender,
-      destination: "trash",
-      priority: 0,
-    }),
-  });
-  const data = (await response.json()) as { error?: string };
-  if (!response.ok)
-    throw new Error(data.error ?? "Unable to create trash rule");
+  await blockMessageContact({ mailboxId, senderAddress });
 }
 
 export async function blockMessageContact({

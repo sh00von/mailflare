@@ -16,7 +16,7 @@ export type PlanDefinition = {
 };
 
 const GIB = 1024 ** 3;
-export const TRIAL_DAYS = 14;
+export const TRIAL_DAYS = 0;
 
 export const PLANS: Record<PlanId, PlanDefinition> = {
 	starter: {

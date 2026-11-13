@@ -4,10 +4,9 @@ import { eq } from "drizzle-orm";
 import { getEnv } from "@/lib/cloudflare";
 import { getDb } from "@/db";
 import { domains, mailboxes, users, workspaces } from "@/db/schema";
-import { hashPassword, PASSWORDLESS_PASSWORD_HASH } from "@/lib/auth/password";
+import { hashPassword } from "@/lib/auth/password";
 import { hasAdminAccount } from "@/lib/auth/setup";
 import { createSession, SESSION_COOKIE } from "@/lib/auth/session";
-import { createEnrollmentGrant, SETUP_COOKIE } from "@/lib/auth/webauthn/grants";
 import { newId } from "@/lib/ids";
 import { firstRunRegisterSchema } from "@/lib/validators";
 import { addDomainForUser } from "@/lib/domains/service";
@@ -17,13 +16,14 @@ import { ensureEmailRoutingRuleToWorker } from "@/lib/cloudflare-api";
 import { ensureMailboxDomainRouting } from "@/lib/mailboxes/domain-addresses";
 import { readJsonBody } from "@/lib/http/request";
 import { RequestBodyTooLargeError } from "@/lib/http/errors";
-import { verifyTurnstileToken } from "@/lib/auth/turnstile";
+import { verifyCaptcha } from "@/lib/auth/captcha";
 import { allowLoginAttempt } from "@/lib/auth/rate-limit";
 import { getDomainProvisioningError } from "@/lib/domains/errors";
 import { auditDomainDns } from "@/lib/domains/dns-audit";
 import { ensureOutboundSendingDomain } from "@/lib/email/resend-domain-setup";
 import { resolvePlanId } from "@/lib/plans/catalog";
 import { createWorkspaceForOwner } from "@/lib/plans/usage";
+import { isStripeConfigured, createStripeCustomer, createStripeCheckoutSession } from "@/lib/billing/stripe";
 
 export async function POST(request: Request) {
 	const env = getEnv();
@@ -44,15 +44,15 @@ export async function POST(request: Request) {
 	if (!firstRunParsed.success) {
 		return NextResponse.json({ error: firstRunParsed.error.flatten() }, { status: 400 });
 	}
-	if (!(await verifyTurnstileToken(env, request, (body as Record<string, unknown>).turnstileToken))) {
-		return NextResponse.json({ error: "Verification failed. Please try again." }, { status: 400 });
+	const reqBody = body as Record<string, unknown>;
+	if (!verifyCaptcha(reqBody.captchaAnswer, reqBody.captchaToken)) {
+		return NextResponse.json({ error: "Invalid security code. Please try again." }, { status: 400 });
 	}
 
 	const domainName = firstRunParsed.data.domain.toLowerCase().trim();
 	const username = firstRunParsed.data.username.toLowerCase().trim();
 	const email = `${username}@${domainName}`;
 	const password = firstRunParsed.data.password;
-	const usePasskey = !!firstRunParsed.data.usePasskey;
 	const name = username;
 
 	const [existing] = await db.select().from(users).where(eq(users.email, email)).limit(1);
@@ -96,7 +96,7 @@ export async function POST(request: Request) {
 		ownerUserId: userId,
 		name: rawOrgName || `${name}'s Workspace`,
 		plan: selectedPlan,
-		status: isFirstUser ? "active" : "trialing",
+		status: isStripeConfigured(env) ? "suspended" : "active",
 	});
 	await db.insert(users).values({
 		id: userId,
@@ -104,7 +104,7 @@ export async function POST(request: Request) {
 		remoteContentMode: "ask",
 		email,
 		resetEmail: firstRunParsed.data.resetEmail,
-		passwordHash: usePasskey ? PASSWORDLESS_PASSWORD_HASH : hashPassword(password!),
+		passwordHash: hashPassword(password!),
 		name,
 		role: "admin",
 		isPrimaryAdmin: isFirstUser,
@@ -113,20 +113,6 @@ export async function POST(request: Request) {
 		canManageMailboxes: true,
 		workspaceId,
 	});
-
-	// Create the setup grant before touching DNS. If it cannot be written, the
-	// account has no usable sign-in method and registration is already closed,
-	// so remove it rather than leaving an unreachable administrator behind.
-	let setupToken: string | null = null;
-	if (usePasskey) {
-		try {
-			setupToken = await createEnrollmentGrant(env, { userId, kind: "setup" });
-		} catch (error) {
-			console.error("Could not create the first-run passkey setup grant", error);
-			await db.delete(users).where(eq(users.id, userId)).catch(() => undefined);
-			return NextResponse.json({ error: "Could not start passkey setup. Try again.", code: "passkey_unavailable" }, { status: 500 });
-		}
-	}
 
 	// Tracks what the attempt changed on the Cloudflare zone so a failure can undo
 	// precisely that. The DB is not a reliable source for this: the same errors that
@@ -175,24 +161,31 @@ export async function POST(request: Request) {
 
 	const adminAppUrl = process.env.ADMIN_APP_URL?.trim().replace(/\/+$/, "") || process.env.MAIL_APP_URL?.trim().replace(/\/+$/, "") || "";
 	const cookieDomain = process.env.COOKIE_DOMAIN?.trim() || undefined;
-	const sessionToken = setupToken ? null : await createSession(env, userId);
+	const sessionToken = await createSession(env, userId);
+
+	if (isStripeConfigured(env)) {
+		try {
+			const customerId = await createStripeCustomer(env, {
+				email,
+				name,
+				workspaceId,
+			});
+			await db.update(workspaces).set({ stripeCustomerId: customerId }).where(eq(workspaces.id, workspaceId));
+		} catch (err) {
+			console.error("Failed to initialize Stripe customer on registration:", err);
+		}
+	}
+
+	const finalRedirect = adminAppUrl
+		? `${adminAppUrl}/dash/domains`
+		: "/dash/domains";
+
 	const response = NextResponse.json({
 		ok: true,
-		redirect: setupToken ? "/setup/passkey" : `${adminAppUrl}/domains`,
-		...(setupToken ? { requiresPasskeySetup: true } : {}),
+		redirect: finalRedirect,
 	});
 	response.headers.set("Cache-Control", "no-store");
 	const isHttps = request.headers.get("x-forwarded-proto") === "https" || request.url.startsWith("https://");
-	if (setupToken) {
-		response.cookies.set(SETUP_COOKIE, setupToken, {
-			httpOnly: true,
-			secure: isHttps,
-			sameSite: "lax",
-			path: "/",
-			...(cookieDomain ? { domain: cookieDomain } : {}),
-			maxAge: 24 * 60 * 60,
-		});
-	}
 	if (sessionToken) {
 		response.cookies.set(SESSION_COOKIE, sessionToken, {
 			httpOnly: true,
@@ -201,15 +194,6 @@ export async function POST(request: Request) {
 			path: "/",
 			...(cookieDomain ? { domain: cookieDomain } : {}),
 			maxAge: 30 * 24 * 60 * 60,
-		});
-	} else {
-		response.cookies.set(SESSION_COOKIE, "", {
-			httpOnly: true,
-			secure: isHttps,
-			sameSite: "lax",
-			path: "/",
-			...(cookieDomain ? { domain: cookieDomain } : {}),
-			maxAge: 0,
 		});
 	}
 	return response;

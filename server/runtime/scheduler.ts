@@ -1,7 +1,6 @@
 import { runScheduledDatabaseBackup } from "@/lib/backups/runner";
 import { runTrashRetention } from "@/lib/email/trash-retention";
 import { runAccountRetention } from "@/lib/accounts/deletion";
-import { runJmapChangeRetention } from "@/lib/jmap/changes";
 import { runFollowUpReminders } from "@/lib/follow-ups/service";
 import { sweepImportJobs } from "@/lib/import/jobs";
 import { sweepOrphanedRawMail } from "@/lib/email/raw-sweeper";
@@ -19,7 +18,6 @@ export function startScheduler(env: CloudflareEnv) {
 		lastRunDay = day;
 		runScheduledDatabaseBackup(env, now).catch((error) => console.error("Scheduled backup failed", error));
 		runAccountRetention(env, now).catch((error) => console.error("Account retention failed", error));
-		runJmapChangeRetention(env, now).catch((error) => console.error("JMAP change retention failed", error));
 		sweepOrphanedRawMail(env, now).catch((error) => console.error("Raw mail sweep failed", error));
 	}, 60_000);
 	return () => clearInterval(timer);

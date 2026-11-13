@@ -5,8 +5,10 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     ports:
-      - "4008:4008" # Web app & JMAP
-      - "25:25"     # Inbound SMTP (open TCP 25 in Azure NSG)
+      - "4008:4008" # Web app
+      - "25:25"     # Inbound SMTP
+    env_file:
+      - .env.docker
     environment:
       PORT: 4008
       DATABASE_URL: ${DATABASE_URL}

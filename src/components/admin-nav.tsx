@@ -5,6 +5,7 @@ import {
   Globe2,
   Activity,
   Mail,
+  ExternalLink,
   Settings,
   Palette,
   BadgeDollarSign,
@@ -38,26 +39,26 @@ type AdminNavLink = {
 const sections: { id?: string; labelKey?: string; links: AdminNavLink[] }[] = [
   {
     // label: "Overview",
-    links: [{ href: "/admin", labelKey: "Overview", icon: Settings }],
+    links: [{ href: "/dash/domains", labelKey: "Overview", icon: Settings }],
   },
   {
     id: "Email",
     labelKey: "Email",
     links: [
-      { href: "/domains", labelKey: "Domains", icon: Globe2, permission: "domains" },
-      { href: "/spam-filter", labelKey: "Spam filter", icon: ShieldCheck, permission: "primary" },
+      { href: "/dash/domains", labelKey: "Domains", icon: Globe2, permission: "domains" },
+      { href: "/dash/spam-filter", labelKey: "Spam filter", icon: ShieldCheck, permission: "primary" },
     ],
   },
   {
     id: "Administration",
     labelKey: "Administration",
     links: [
-      { href: "/general", labelKey: "General", icon: Settings, permission: "primary" },
-      { href: "/accounts", labelKey: "Accounts", icon: Users },
-      { href: "/plan", label: "Plan & Usage", icon: BadgeDollarSign },
-      { href: "/workspaces", label: "Workspaces", icon: Globe2, permission: "primary" },
-      { href: "/activity", labelKey: "Activity", icon: Activity, permission: "primary" },
-      { href: "/backups", labelKey: "Backups", icon: DatabaseBackup, permission: "primary" },
+      { href: "/dash/general", labelKey: "General", icon: Settings, permission: "primary" },
+      { href: "/dash/accounts", labelKey: "Accounts", icon: Users },
+      { href: "/dash/plan", label: "Plan & Usage", icon: BadgeDollarSign },
+      { href: "/dash/workspaces", label: "Workspaces", icon: Globe2, permission: "primary" },
+      { href: "/dash/activity", labelKey: "Activity", icon: Activity, permission: "primary" },
+      { href: "/dash/backups", labelKey: "Backups", icon: DatabaseBackup, permission: "primary" },
     ],
   },
 ];
@@ -93,9 +94,29 @@ export function AdminNav({ className }: { className?: string }) {
     return user.isPrimaryAdmin || user.canManageUsers;
   }
 
+  const mailAppUrl = process.env.NEXT_PUBLIC_MAIL_APP_URL || "/mail/inbox";
+
   return (
-    <SidebarScaffold className={className} header={<SidebarHeader href="/inbox" label={"Admin"} />} footer={<SidebarFooter />}>
+    <SidebarScaffold className={className} header={<SidebarHeader href={mailAppUrl} label={"Admin"} />} footer={<SidebarFooter />}>
       <div className={cn("space-y-4", minimal && "space-y-2 pl-1")}>
+        <div className={cn("px-3 pb-1", minimal && "px-1")}>
+          <a
+            href={mailAppUrl}
+            className={cn(
+              "flex items-center gap-2.5 rounded-xl border border-neutral-200/80 bg-neutral-50 px-3 py-2 text-xs font-medium text-neutral-700 shadow-2xs transition-all hover:border-neutral-300 hover:bg-white hover:text-neutral-900",
+              minimal && "justify-center px-0 py-2.5 border-0 bg-transparent hover:bg-neutral-100"
+            )}
+            title="Open Webmail"
+          >
+            <Mail className="h-4 w-4 text-blue-600 shrink-0" />
+            {!minimal && (
+              <>
+                <span className="flex-1 truncate">Open Webmail</span>
+                <ExternalLink className="h-3 w-3 text-neutral-400 shrink-0" />
+              </>
+            )}
+          </a>
+        </div>
         {sections.map((section, sectionIndex) => {
           const links = section.links.filter(canSee).map(({ labelKey, label, ...link }): NavLink => ({ ...link, label: label ?? (labelKey ? labelKey : "") }));
           if (links.length === 0) return null;

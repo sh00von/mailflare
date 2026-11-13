@@ -1,4 +1,5 @@
 import { createServer } from "node:http";
+import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { parse } from "node:url";
 import next from "next";
@@ -10,9 +11,21 @@ import { processOutboundQueue, type OutboundQueueMessage } from "@/lib/email/sen
 import { processWebhookRetry, type WebhookRetryMessage } from "@/lib/email/webhooks";
 import { processImportJob } from "@/lib/import/jobs";
 import { applyPendingMigrations } from "@/lib/migrations/service";
-import { isImportJobMessage, isInboundQueueMessage, isWebhookRetryMessage } from "../worker-utils";
+import type { InboundQueueMessage } from "@/lib/email/inbound";
+import type { ImportJobMessage } from "@/lib/import/jobs-types";
 import { createNodeRuntime } from "./runtime/env";
-import { applyMigrations } from "./runtime/migrate";
+
+function isInboundQueueMessage(payload: unknown): payload is InboundQueueMessage {
+	return typeof payload === "object" && payload !== null && "rawR2Key" in payload && "from" in payload && "to" in payload;
+}
+
+function isWebhookRetryMessage(payload: unknown): payload is WebhookRetryMessage {
+	return typeof payload === "object" && payload !== null && (payload as { kind?: unknown }).kind === "webhook.retry";
+}
+
+function isImportJobMessage(payload: unknown): payload is ImportJobMessage {
+	return typeof payload === "object" && payload !== null && (payload as { kind?: unknown }).kind === "import.run";
+}
 import { startScheduler } from "./runtime/scheduler";
 import { startSmtpListener } from "./runtime/smtp";
 
@@ -22,16 +35,14 @@ import { startSmtpListener } from "./runtime/smtp";
  * schedule, the same jobs worker.ts spreads across Cloudflare products.
  */
 async function main() {
-	const port = Number(process.env.PORT ?? 3000);
+	const port = Number(process.env.PORT ?? 4008);
 	const host = process.env.HOST ?? "0.0.0.0";
 	const dev = process.env.NODE_ENV !== "production";
 	const runtime = createNodeRuntime();
 	const { env } = runtime;
 	globalThis.__replyotNodeEnv = env;
 
-	const migrated = runtime.database
-		? await applyMigrations(runtime.database, resolve(process.env.MIGRATIONS_DIR ?? join(process.cwd(), "drizzle", "migrations")))
-		: (await applyPendingMigrations(env.DB)).applied;
+	const migrated = (await applyPendingMigrations(env.DB)).applied;
 	if (migrated.length) console.log(`Applied ${migrated.length} migration(s): ${migrated.join(", ")}`);
 
 	runtime.inboundQueue.setConsumer(async (body) => {
@@ -67,7 +78,32 @@ async function main() {
 		delete request.headers["x-forwarded-for"];
 		delete request.headers["x-replyot-client-ip"];
 		if (clientIp) request.headers["x-replyot-client-ip"] = clientIp;
-		void handle(request, response, parse(request.url ?? "/", true));
+		const host = (request.headers["x-forwarded-host"] ?? request.headers.host ?? "").toString().toLowerCase();
+		const parsed = parse(request.url ?? "/", true);
+		const adminBase = process.env.ADMIN_APP_URL?.trim().replace(/\/+$/, "");
+		const mailBase = process.env.MAIL_APP_URL?.trim().replace(/\/+$/, "");
+		const adminHost = adminBase ? new URL(adminBase).host.toLowerCase() : "";
+		const mailHost = mailBase ? new URL(mailBase).host.toLowerCase() : "";
+
+		const isAdminHost = host.startsWith("app.") || host.startsWith("admin.") || (adminHost ? host === adminHost : false);
+		const isMailHost = host.startsWith("mail.") || host.startsWith("webmail.") || (mailHost ? host === mailHost : false);
+
+		if (parsed.pathname === "/") {
+			if (isAdminHost) {
+				parsed.pathname = "/domains";
+			} else if (isMailHost) {
+				parsed.pathname = "/inbox";
+			}
+		} else if (parsed.pathname === "/dash") {
+			parsed.pathname = "/domains";
+		} else if (parsed.pathname?.startsWith("/dash/")) {
+			parsed.pathname = parsed.pathname.slice("/dash".length) || "/domains";
+		} else if (parsed.pathname === "/mail") {
+			parsed.pathname = "/inbox";
+		} else if (parsed.pathname?.startsWith("/mail/")) {
+			parsed.pathname = parsed.pathname.slice("/mail".length) || "/inbox";
+		}
+		void handle(request, response, parsed);
 	});
 
 	const wss = new WebSocketServer({ noServer: true });
@@ -95,6 +131,23 @@ async function main() {
 		console.log(`Replyot listening on http://${host}:${port} (data in ${runtime.dataDir})`);
 	});
 
+	const defaultTls = (() => {
+		const candidates = [
+			{ key: "/data/key.pem", cert: "/data/cert.pem" },
+			{ key: join(process.cwd(), "key.pem"), cert: join(process.cwd(), "cert.pem") },
+		];
+		for (const cand of candidates) {
+			if (existsSync(cand.key) && existsSync(cand.cert)) {
+				return { keyPath: cand.key, certPath: cand.cert };
+			}
+		}
+		return null;
+	})();
+
+	const smtpTls = process.env.SMTP_TLS_KEY && process.env.SMTP_TLS_CERT
+		? { keyPath: process.env.SMTP_TLS_KEY, certPath: process.env.SMTP_TLS_CERT }
+		: defaultTls;
+
 	const smtpPort = Number(process.env.SMTP_INBOUND_PORT ?? 25);
 	if (smtpPort > 0) {
 		startSmtpListener(env, runtime.mailer, {
@@ -102,9 +155,10 @@ async function main() {
 			host: process.env.SMTP_INBOUND_HOST,
 			maxSize: Number(process.env.SMTP_MAX_SIZE ?? 36 * 1024 * 1024),
 			hostname: process.env.MAIL_HOSTNAME,
-			tls: process.env.SMTP_TLS_KEY && process.env.SMTP_TLS_CERT ? { keyPath: process.env.SMTP_TLS_KEY, certPath: process.env.SMTP_TLS_CERT } : null,
+			tls: smtpTls,
 		});
 	}
+
 	const stopScheduler = startScheduler(env);
 
 	const shutdown = () => {

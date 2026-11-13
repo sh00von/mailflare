@@ -6,7 +6,7 @@ import { users } from "@/db/schema";
 import { verifyPassword } from "@/lib/auth/password";
 import { loginSchema } from "@/lib/validators";
 import { allowLoginAttempt } from "@/lib/auth/rate-limit";
-import { verifyTurnstileToken } from "@/lib/auth/turnstile";
+import { verifyCaptcha } from "@/lib/auth/captcha";
 import { readJsonBody } from "@/lib/http/request";
 import { RequestBodyTooLargeError } from "@/lib/http/errors";
 import { createLoginChallenge } from "@/lib/auth/login-challenge";
@@ -29,7 +29,8 @@ export async function POST(request: Request) {
 	if (!(await allowLoginAttempt(env, request))) {
 		return authError("rate_limited", 429, { "Retry-After": "60" });
 	}
-	if (!(await verifyTurnstileToken(env, request, (body as Record<string, unknown>).turnstileToken))) {
+	const reqBody = body as Record<string, unknown>;
+	if (!verifyCaptcha(reqBody.captchaAnswer, reqBody.captchaToken)) {
 		return authError("verification_failed", 400);
 	}
 

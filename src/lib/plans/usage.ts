@@ -57,8 +57,8 @@ export async function createWorkspaceForOwner(
 ) {
 	const db = getDb(env);
 	const id = newId("ws");
-	const status: WorkspaceStatus = input.status ?? "trialing";
-	const trialEndsAt = status === "trialing" ? new Date(Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000) : null;
+	const status: WorkspaceStatus = input.status ?? "active";
+	const trialEndsAt = null;
 	await db.insert(workspaces).values({
 		id,
 		name: input.name,
@@ -96,7 +96,7 @@ export async function getOrEnsureWorkspaceForUser(
 
 	// Backfill a workspace for pre-existing accounts.
 	const plan: PlanId = user.isPrimaryAdmin ? "business" : "starter";
-	const status: WorkspaceStatus = user.isPrimaryAdmin ? "active" : "trialing";
+	const status: WorkspaceStatus = "active";
 	const newWorkspaceId = await createWorkspaceForOwner(env, {
 		ownerUserId: user.id,
 		name: `${user.name}'s Workspace`,

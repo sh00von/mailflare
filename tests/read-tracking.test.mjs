@@ -39,8 +39,8 @@ test("tokens are URL-safe and round-trip through the pixel path", () => {
 });
 
 test("APP_URL wins over the request origin and non-HTTP origins are refused", () => {
-	assert.equal(tracking.resolveTrackingOrigin("https://mail.example.com/app", "http://localhost:3000"), "https://mail.example.com");
-	assert.equal(tracking.resolveTrackingOrigin(undefined, "http://localhost:3000"), "http://localhost:3000");
+	assert.equal(tracking.resolveTrackingOrigin("https://mail.example.com/app", "http://localhost:4008"), "https://mail.example.com");
+	assert.equal(tracking.resolveTrackingOrigin(undefined, "http://localhost:4008"), "http://localhost:4008");
 	assert.equal(tracking.resolveTrackingOrigin("ftp://x", undefined), null);
 	assert.equal(tracking.resolveTrackingOrigin(" ", undefined), null);
 });

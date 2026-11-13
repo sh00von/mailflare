@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { AlertCircle, AlertTriangle, Check, CheckCircle2, Copy, Info, KeyRound, LoaderCircle, MailPlus, RefreshCw } from "@/components/icons";
+import { AlertCircle, AlertTriangle, Check, CheckCircle2, Copy, Info, LoaderCircle, MailPlus, RefreshCw } from "@/components/icons";
 import { useEffect, useState } from "react";
 import { AuthShell } from "@/components/auth/auth-shell";
 import {
@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { TurnstileField } from "@/components/auth/turnstile";
+import { CaptchaField } from "@/components/auth/captcha-field";
 import {
 	checkExistingMx,
 	submitPrimaryDomain,
@@ -37,8 +37,7 @@ export function RegisterClient() {
 	const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [loading, setLoading] = useState(false);
-	const [turnstileReset, setTurnstileReset] = useState(0);
-	const [usePasskey, setUsePasskey] = useState(false);
+	const [captchaReset, setCaptchaReset] = useState(0);
 
 	useEffect(() => {
 		if (typeof window !== "undefined") {
@@ -101,19 +100,17 @@ export function RegisterClient() {
 			});
 			if (!ok) {
 				setError(
-					data.code === "passkey_unavailable"
-						? "Passkey sign-in is unavailable."
-						: typeof data.error === "string"
-							? data.error
-							: "Registration failed",
+					typeof data.error === "string"
+						? data.error
+						: "Registration failed",
 				);
-				setTurnstileReset((v) => v + 1);
+				setCaptchaReset((v) => v + 1);
 				return;
 			}
-			window.location.assign(data.redirect ?? "/domains");
+			window.location.assign(data.redirect ?? "/dash/domains");
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "Registration failed");
-			setTurnstileReset((v) => v + 1);
+			setCaptchaReset((v) => v + 1);
 		} finally {
 			setLoading(false);
 		}
@@ -128,7 +125,7 @@ export function RegisterClient() {
 
 	const stepSubtitle =
 		step === 1
-			? "Pick a plan and enter your business domain. Every plan starts with a 14-day free trial."
+			? "Pick a plan and enter your business domain to begin."
 			: step === 2
 				? "Add these DNS records at your domain registrar so your team can send and receive mail."
 				: `Choose your first email address on ${domainName}.`;
@@ -322,11 +319,16 @@ export function RegisterClient() {
 								<RefreshCw className={`h-4 w-4 ${dnsChecking ? "animate-spin" : ""}`} />
 								{dnsChecking ? "Checking..." : "Check again"}
 							</Button>
-							<Button type="button" className={AUTH_PRIMARY_BUTTON_CLASS} disabled={!allDnsVerified || dnsChecking} onClick={() => setStep(3)}>
-								Next
+							<Button type="button" className={AUTH_PRIMARY_BUTTON_CLASS} onClick={() => setStep(3)}>
+								{allDnsVerified ? "Next" : "Continue to account"}
 							</Button>
 						</div>
 					</div>
+					{!allDnsVerified && (
+						<p className="text-center text-xs text-neutral-500">
+							DNS records can take a few minutes to propagate. You can continue creating your account now and verify DNS anytime in your dashboard.
+						</p>
+					)}
 				</div>
 			) : (
 				<form method="post" onSubmit={onAccountSubmit} className="space-y-6">
@@ -349,37 +351,18 @@ export function RegisterClient() {
 							</span>
 						</div>
 					</div>
-					<label className="flex cursor-pointer items-start gap-3 rounded-xl border border-neutral-200 px-4 py-3.5 transition hover:bg-neutral-50">
-						<Checkbox
-							name="usePasskey"
-							checked={usePasskey}
-							onChange={(event) => setUsePasskey(event.target.checked)}
-							className="mt-1"
+					<div className="space-y-2">
+						<Label htmlFor="password" className={AUTH_LABEL_CLASS}>Password</Label>
+						<PasswordInput
+							id="password"
+							name="password"
+							minLength={8}
+							autoComplete="new-password"
+							aria-describedby="password-hint"
+							required
 						/>
-						<span>
-							<span className="flex items-center gap-1.5 text-sm font-medium text-neutral-900">
-								<KeyRound className="h-4 w-4 text-blue-600" />
-								Use a passkey instead of a password
-							</span>
-							<span className="mt-1 block text-sm leading-6 text-neutral-500">
-								Sign in with your fingerprint, face or device PIN. You’ll create it on the next step.
-							</span>
-						</span>
-					</label>
-					{!usePasskey && (
-						<div className="space-y-2">
-							<Label htmlFor="password" className={AUTH_LABEL_CLASS}>Password</Label>
-							<PasswordInput
-								id="password"
-								name="password"
-								minLength={8}
-								autoComplete="new-password"
-								aria-describedby="password-hint"
-								required
-							/>
-							<p id="password-hint" className="text-sm text-neutral-500">Use 8 or more characters.</p>
-						</div>
-					)}
+						<p id="password-hint" className="text-sm text-neutral-500">Use 8 or more characters.</p>
+					</div>
 					<div className="space-y-2">
 						<Label htmlFor="resetEmail" className={AUTH_LABEL_CLASS}>Recovery email</Label>
 						<Input
@@ -394,7 +377,7 @@ export function RegisterClient() {
 						/>
 						<p id="recovery-hint" className="text-sm text-neutral-500">We’ll send password reset links here.</p>
 					</div>
-					<TurnstileField resetSignal={turnstileReset} />
+					<CaptchaField resetSignal={captchaReset} />
 					{errorBox}
 					<div className="flex items-center justify-between gap-3 pt-2">
 						<button type="button" className={AUTH_TEXT_BUTTON_CLASS} onClick={() => setStep(2)}>

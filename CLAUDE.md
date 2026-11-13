@@ -17,7 +17,7 @@ npm run db:generate:mysql      # same schema, MySQL -> drizzle/migrations-mysql
 npm run db:smoke -- <DATABASE_URL> [driver]   # exercises migrations + query shapes on any database (MAILFLARE_DB_DIALECT must match)
 npm run db:migrate:local       # wrangler d1 migrations apply DB --local
 npm run db:migrate:remote      # --remote (needs a concrete database_id in wrangler.jsonc)
-npm run db:seed                # POST /api/seed against localhost:3000
+npm run db:seed                # POST /api/seed against localhost:4008
 
 npm run deploy                 # vinext build + wrangler deploy
 npm run deploy                 # build and deploy; migrate later from Admin settings

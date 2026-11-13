@@ -23,11 +23,13 @@ export function serializeAccountTokens(tokens: string[]): string {
 }
 
 export function cookieOptions(maxAge = COOKIE_MAX_AGE) {
+	const cookieDomain = process.env.COOKIE_DOMAIN?.trim() || undefined;
 	return {
 		httpOnly: true,
 		secure: process.env.NODE_ENV === "production",
 		sameSite: "lax" as const,
 		path: "/",
+		...(cookieDomain ? { domain: cookieDomain } : {}),
 		maxAge,
 	};
 }

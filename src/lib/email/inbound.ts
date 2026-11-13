@@ -8,7 +8,6 @@ import { resolveInboundAddress, resolveInboxRuleDestination } from "@/lib/email/
 import { dispatchWebhooks } from "@/lib/email/webhooks";
 import { getMessageContactNames, upsertContactFromAddress } from "@/lib/contacts/service";
 import { getEmailAddress } from "@/lib/email/address";
-import { sendMailboxAutoReply } from "@/lib/email/auto-reply";
 import { getMailboxAccessLevel } from "@/lib/mailboxes/access";
 import { listMessageAttachments, storeMessageAttachments } from "@/lib/email/attachments";
 import { inboundAttachmentLimitReason } from "@/lib/email/inbound-attachments";
@@ -237,21 +236,6 @@ export async function processInboundMessage(
 	} catch (error) {
 		await db.delete(messages).where(eq(messages.id, messageId));
 		throw error;
-	}
-
-	if (status === "received") {
-		try {
-			await sendMailboxAutoReply(env, {
-				mailboxId: decision.mailbox.mailboxId,
-				userId: decision.mailbox.userId,
-				deliveredAddress,
-				fromAddress: fromAddr,
-				incomingMessageId: parsed.messageId,
-				headers: payload.headers,
-			});
-		} catch (error) {
-			console.error(`Auto-reply failed for mailbox ${decision.mailbox.mailboxId}`, error);
-		}
 	}
 
 	if (status === "spam" || status === "trash") {

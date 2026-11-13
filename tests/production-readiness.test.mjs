@@ -66,11 +66,9 @@ test("inbound mail intake checks workspace storage & suspension before S3 write"
 	assert.ok(putIdx !== -1 && checkIdx < putIdx, "checkCanReceiveStorage must run before env.BUCKET.put");
 });
 
-test("healthcheck and SES auto-provisioning modules exist", () => {
+test("healthcheck route exists", () => {
 	const health = readFileSync(join(root, "src/app/api/health/route.ts"), "utf8");
 	assert.match(health, /SELECT 1/);
-	const ses = readFileSync(join(root, "src/lib/email/ses-domain-setup.ts"), "utf8");
-	assert.match(ses, /ensureSesSendingDomain/);
 });
 
 test("verifyStripeWebhookSignature validates HMAC-SHA256 signatures and timestamps", async () => {

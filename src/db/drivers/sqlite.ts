@@ -40,25 +40,9 @@ export function openLibsql({ url, authToken }: OpenOptions): SqlExecutor {
 	});
 }
 
-/** A local SQLite file through better-sqlite3 (Node only). */
+/** A local SQLite file through better-sqlite3 (disabled). */
 export function openBetterSqlite3({ url }: OpenOptions): SqlExecutor {
-	return lazyExecutor("sqlite", async () => {
-		const name = "better-sqlite3";
-		const Database = ((await import(/* @vite-ignore */ name)) as { default: new (path: string) => import("better-sqlite3").Database }).default;
-		const path = url.replace(/^(file|sqlite):(\/\/)?/i, "") || ":memory:";
-		const db = new Database(path);
-		db.pragma("journal_mode = WAL");
-		db.pragma("foreign_keys = ON");
-		return syncSqliteExecutor((sql, values, mode) => {
-			const statement = db.prepare(sql);
-			if (statement.reader) {
-				const rows = mode === "array" ? (statement.raw(true).all(...values) as unknown[]) : (statement.raw(false).all(...values) as unknown[]);
-				return { rows, affectedRows: 0 };
-			}
-			const info = statement.run(...values);
-			return { rows: [], affectedRows: info.changes, insertId: Number(info.lastInsertRowid) };
-		}, async () => void db.close());
-	});
+	throw new Error("SQLite is disabled. Please configure DATABASE_URL with PostgreSQL.");
 }
 
 /** A local SQLite file through bun:sqlite (Bun runtime only). */

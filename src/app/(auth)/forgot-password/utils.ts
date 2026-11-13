@@ -3,7 +3,11 @@ export async function requestPasswordReset(form: FormData): Promise<{ ok: boolea
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
 		signal: AbortSignal.timeout(20_000),
-		body: JSON.stringify({ email: form.get("email"), turnstileToken: form.get("turnstileToken") }),
+		body: JSON.stringify({
+			email: form.get("email"),
+			captchaAnswer: form.get("captchaAnswer"),
+			captchaToken: form.get("captchaToken"),
+		}),
 	});
 	const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
 	return { ok: res.ok, error: typeof data.error === "string" ? data.error : undefined };

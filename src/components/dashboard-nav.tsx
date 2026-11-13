@@ -14,9 +14,11 @@ import {
   MailPlus,
   Plus,
   Send,
+  Settings,
   ShieldAlert,
   Star,
   Trash2,
+  ExternalLink,
 } from "@/components/icons";
 import { useSelectedMailbox } from "@/components/mailbox-provider";
 import { Button } from "@/components/ui/button";
@@ -31,6 +33,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useMessageCounts } from "@/hooks/use-message-counts";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import { AUTH_SESSION_CHANGED_EVENT, authFetch } from "@/lib/auth/client";
 import { getMailboxFolders, invalidateFolderCache } from "@/lib/folders/client";
 import {
@@ -56,26 +59,26 @@ import { SidebarScaffold } from "./sidebar-scaffold";
 import { useSidebar } from "./sidebar-state";
 
 const links = [
-  { href: "/compose", labelKey: "Compose", icon: MailPlus, primary: true },
-  { href: "/inbox", labelKey: "Inbox", icon: Inbox, preloadMessages: true },
-  { href: "/starred", labelKey: "Starred", icon: Star, preloadMessages: true },
-  { href: "/snoozed", labelKey: "Snoozed", icon: Clock, preloadMessages: true },
-  { href: "/sent", labelKey: "Sent", icon: Send, preloadMessages: true },
-  { href: "/scheduled", labelKey: "Scheduled", icon: CalendarClock, preloadMessages: true },
-  { href: "/drafts", labelKey: "Drafts", icon: FileText, preloadMessages: true },
+  { href: "/mail/compose", labelKey: "Compose", icon: MailPlus, primary: true },
+  { href: "/mail/inbox", labelKey: "Inbox", icon: Inbox, preloadMessages: true },
+  { href: "/mail/starred", labelKey: "Starred", icon: Star, preloadMessages: true },
+  { href: "/mail/snoozed", labelKey: "Snoozed", icon: Clock, preloadMessages: true },
+  { href: "/mail/sent", labelKey: "Sent", icon: Send, preloadMessages: true },
+  { href: "/mail/scheduled", labelKey: "Scheduled", icon: CalendarClock, preloadMessages: true },
+  { href: "/mail/drafts", labelKey: "Drafts", icon: FileText, preloadMessages: true },
   {
-    href: "/archived",
+    href: "/mail/archived",
     labelKey: "Archived",
     icon: Archive,
     preloadMessages: true,
   },
-  { href: "/spam", labelKey: "Spam", icon: ShieldAlert, preloadMessages: true },
-  { href: "/trash", labelKey: "Trash", icon: Trash2, preloadMessages: true },
+  { href: "/mail/spam", labelKey: "Spam", icon: ShieldAlert, preloadMessages: true },
+  { href: "/mail/trash", labelKey: "Trash", icon: Trash2, preloadMessages: true },
 ] satisfies (Omit<NavLink, "label"> & { labelKey: string })[];
 
 
 // Drafts, Archived, Spam and Trash start tucked under "More...".
-const MORE_LINK_HREFS = ["/drafts", "/archived", "/spam", "/trash"];
+const MORE_LINK_HREFS = ["/mail/drafts", "/mail/archived", "/mail/spam", "/mail/trash", "/drafts", "/archived", "/spam", "/trash"];
 const MAX_VISIBLE_FOLDERS = 3;
 const MORE_OPEN_KEY = "replyot:nav:more-open";
 const FOLDERS_OPEN_KEY = "replyot:nav:folders-open";
@@ -95,6 +98,9 @@ function NavToggle({ expanded, onClick, collapsedLabel, expandedLabel }: { expan
 
 export function DashboardNav({ className }: { className?: string }) {
   const { minimal, mobile } = useSidebar();
+  const user = useCurrentUser();
+  const isAdmin = Boolean(user?.role === "admin" || user?.isPrimaryAdmin || user?.canManageDomains || user?.canManageUsers);
+  const adminAppUrl = process.env.NEXT_PUBLIC_ADMIN_APP_URL || "/dash";
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
   const [foldersOpen, setFoldersOpen] = useState(false);
@@ -175,7 +181,11 @@ export function DashboardNav({ className }: { className?: string }) {
     setFoldersOpen(!foldersOpen);
   }
 
-  const isActiveHref = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+  const isActiveHref = (href: string) => {
+    const normP = pathname.replace(/^\/mail/, "") || "/inbox";
+    const normH = href.replace(/^\/mail/, "") || "/inbox";
+    return pathname === href || pathname.startsWith(`${href}/`) || normP === normH || (normH !== "/" && normP.startsWith(`${normH}/`));
+  };
   const composeLink = linksWithCounts.find((link) => link.href === "/compose");
   const mainLinks = linksWithCounts.filter((link) => link.href !== "/compose" && !MORE_LINK_HREFS.includes(link.href!));
   const moreLinks = linksWithCounts.filter((link) => MORE_LINK_HREFS.includes(link.href!));
@@ -233,7 +243,27 @@ export function DashboardNav({ className }: { className?: string }) {
   }
 
   return (
-    <SidebarScaffold className={className} header={<SidebarHeader href="/inbox" />} footer={<SidebarFooter />}>
+    <SidebarScaffold className={className} header={<SidebarHeader href="/mail/inbox" />} footer={<SidebarFooter />}>
+      {isAdmin && (
+        <div className={cn("px-3 pb-2 pt-0.5", minimal && "px-1")}>
+          <a
+            href={adminAppUrl}
+            className={cn(
+              "flex items-center gap-2.5 rounded-xl border border-neutral-200/80 bg-neutral-50 px-3 py-2 text-xs font-medium text-neutral-700 shadow-2xs transition-all hover:border-neutral-300 hover:bg-white hover:text-neutral-900",
+              minimal && "justify-center px-0 py-2.5 border-0 bg-transparent hover:bg-neutral-100"
+            )}
+            title="Admin Console"
+          >
+            <Settings className="h-4 w-4 text-purple-600 shrink-0" />
+            {!minimal && (
+              <>
+                <span className="flex-1 truncate">Admin Console</span>
+                <ExternalLink className="h-3 w-3 text-neutral-400 shrink-0" />
+              </>
+            )}
+          </a>
+        </div>
+      )}
       {composeLink && !mobile && <NavItem labelClassName="font-medium" link={composeLink} />}
       {minimal && <hr className="mx-6 my-2 border-neutral-200/70" />}
       <ReorderableList
@@ -333,7 +363,7 @@ export function DashboardNav({ className }: { className?: string }) {
           visibleIds: (ordered) => {
             if (!foldersOverflow || foldersOpen) return ordered;
             const first = ordered.slice(0, MAX_VISIBLE_FOLDERS);
-            const active = ordered.slice(MAX_VISIBLE_FOLDERS).find((id) => isActiveHref(`/folders/${id}`));
+            const active = ordered.slice(MAX_VISIBLE_FOLDERS).find((id) => isActiveHref(`/mail/folders/${id}`) || isActiveHref(`/folders/${id}`));
             return active ? [...first, active] : first;
           },
           items: folders.map((folder) => ({
@@ -342,7 +372,7 @@ export function DashboardNav({ className }: { className?: string }) {
               <NavItem
                 wrap
                 link={{
-                  href: `/folders/${folder.id}`,
+                  href: `/mail/folders/${folder.id}`,
                   label: folder.name,
                   icon: Folder,
                   preloadMessages: true,

@@ -16,10 +16,6 @@ export const settingsNavSections: SettingsNavSection[] = [
 				href: "/settings/security",
 				labelKey: "Security",
 			},
-			{
-				href: "/settings/app-passwords",
-				labelKey: "App passwords",
-			},
 		],
 	},
 	{

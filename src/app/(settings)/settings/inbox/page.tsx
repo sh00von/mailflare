@@ -5,7 +5,6 @@ import { RecipientAddressSettings } from "@/components/settings/recipient-addres
 import { ComposeDefaultsSettings } from "@/components/settings/compose-defaults-settings";
 import { InboxReadingLayoutSettings } from "@/components/settings/inbox-reading-layout-settings";
 import { InboxShortcutsSettings } from "@/components/settings/inbox-shortcuts-settings";
-import { MailboxAutoReplyForm } from "@/components/settings/mailbox-auto-reply-form";
 import { SpamFilterSettings } from "@/components/settings/spam-filter-settings";
 import { TrashRetentionSettings } from "@/components/settings/trash-retention-settings";
 import { PushNotificationSettings } from "@/components/settings/push-notification-settings";
@@ -101,15 +100,6 @@ export default async function SettingsInboxPage() {
 							<p className="mt-1 text-sm text-neutral-500">Choose how long deleted and spam messages are kept.</p>
 						</div>
 						<TrashRetentionSettings />
-					</div>
-					<div className="py-6 first:pt-0 last:pb-0">
-						<div className="mb-4">
-							<h3 className="text-base font-semibold text-neutral-900">Automatic response</h3>
-							<p className="mt-1 text-sm text-neutral-500">
-								Configure the subject and message for the inbox currently selected above.
-							</p>
-						</div>
-						<MailboxAutoReplyForm />
 					</div>
 				</div>
 			</section>

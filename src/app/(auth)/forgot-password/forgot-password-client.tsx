@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { KeyRound } from "@/components/icons";
 import { AuthShell } from "@/components/auth/auth-shell";
-import { TurnstileField } from "@/components/auth/turnstile";
+import { CaptchaField } from "@/components/auth/captcha-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +14,7 @@ export function ForgotPasswordClient() {
 	const [error, setError] = useState<string | null>(null);
 	const [loading, setLoading] = useState(false);
 	const [sent, setSent] = useState(false);
-	const [turnstileReset, setTurnstileReset] = useState(0);
+	const [captchaReset, setCaptchaReset] = useState(0);
 
 	async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
 		event.preventDefault();
@@ -24,13 +24,13 @@ export function ForgotPasswordClient() {
 			const result = await requestPasswordReset(new FormData(event.currentTarget));
 			if (!result.ok) {
 				setError(result.error ?? "Something went wrong. Please try again.");
-				setTurnstileReset((value) => value + 1);
+				setCaptchaReset((value) => value + 1);
 				return;
 			}
 			setSent(true);
 		} catch {
 			setError("Unable to reach the server. Please try again.");
-			setTurnstileReset((value) => value + 1);
+			setCaptchaReset((value) => value + 1);
 		} finally {
 			setLoading(false);
 		}
@@ -60,7 +60,7 @@ export function ForgotPasswordClient() {
 					{error && (
 						<p role="alert" className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</p>
 					)}
-					<TurnstileField resetSignal={turnstileReset} />
+					<CaptchaField resetSignal={captchaReset} />
 					<Button type="submit" className="h-11 w-full rounded-full px-6 active:scale-[0.98]" disabled={loading}>
 						{loading ? "Sending..." : "Send reset link"}
 					</Button>

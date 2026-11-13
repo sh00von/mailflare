@@ -7,9 +7,8 @@ export const inboxFolderConfig: MessageFolderConfig = {
 	titleKey: "Inbox",
 	emptyTextKey: "No emails",
 	emptyText: "No emails",
-	hrefPrefix: "/inbox",
+	hrefPrefix: "/mail/inbox",
 	icon: Star,
-	// headerIcons: [MailOpen, Clock],
 	showRowBadge: false,
 };
 
@@ -19,7 +18,7 @@ export const starredFolderConfig: MessageFolderConfig = {
 	titleKey: "Starred",
 	emptyTextKey: "No starred emails",
 	emptyText: "No starred emails",
-	hrefPrefix: "/starred",
+	hrefPrefix: "/mail/starred",
 	icon: Star,
 	badgeVariant: "outline",
 };
@@ -30,7 +29,7 @@ export const snoozedFolderConfig: MessageFolderConfig = {
 	titleKey: "Snoozed",
 	emptyTextKey: "No snoozed emails",
 	emptyText: "No snoozed emails",
-	hrefPrefix: "/snoozed",
+	hrefPrefix: "/mail/snoozed",
 	icon: Clock,
 	badgeVariant: "outline",
 };
@@ -41,9 +40,8 @@ export const sentFolderConfig: MessageFolderConfig = {
 	titleKey: "Sent",
 	emptyTextKey: "No emails",
 	emptyText: "No emails",
-	hrefPrefix: "/sent",
+	hrefPrefix: "/mail/sent",
 	icon: Send,
-	// headerIcons: [MailOpen, Clock],
 	badgeVariant: "outline",
 };
 
@@ -53,7 +51,7 @@ export const scheduledFolderConfig: MessageFolderConfig = {
 	titleKey: "Scheduled",
 	emptyTextKey: "No scheduled emails",
 	emptyText: "No scheduled emails",
-	hrefPrefix: "/scheduled",
+	hrefPrefix: "/mail/scheduled",
 	icon: CalendarClock,
 	badgeVariant: "outline",
 };
@@ -64,7 +62,7 @@ export const archivedFolderConfig: MessageFolderConfig = {
 	titleKey: "Archived",
 	emptyTextKey: "No archived emails",
 	emptyText: "No archived emails",
-	hrefPrefix: "/archived",
+	hrefPrefix: "/mail/archived",
 	icon: Archive,
 	badgeVariant: "outline",
 };
@@ -75,7 +73,7 @@ export const spamFolderConfig: MessageFolderConfig = {
 	titleKey: "Spam",
 	emptyTextKey: "No spam",
 	emptyText: "No spam",
-	hrefPrefix: "/spam",
+	hrefPrefix: "/mail/spam",
 	icon: ShieldAlert,
 	badgeVariant: "outline",
 };
@@ -86,7 +84,7 @@ export const trashFolderConfig: MessageFolderConfig = {
 	titleKey: "Trash",
 	emptyTextKey: "No emails in trash",
 	emptyText: "No emails in trash",
-	hrefPrefix: "/trash",
+	hrefPrefix: "/mail/trash",
 	icon: Trash2,
 	badgeVariant: "outline",
 };

@@ -75,8 +75,8 @@ export async function POST(request: Request) {
 		customerId,
 		workspaceId: workspace.id,
 		plan: parsed.data.plan,
-		successUrl: `${baseUrl}/plan?billing=success`,
-		cancelUrl: `${baseUrl}/plan?billing=canceled`,
+		successUrl: `${baseUrl}/dash/plan?billing=success&session_id={CHECKOUT_SESSION_ID}`,
+		cancelUrl: `${baseUrl}/dash/plan?billing=canceled`,
 	});
 
 	return NextResponse.json({ url: session.url });

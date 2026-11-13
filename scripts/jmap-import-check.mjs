@@ -7,10 +7,10 @@
  *   node scripts/jmap-import-check.mjs
  *
  * Pass a key with the `jmap` scope in JMAP_KEY, or let the script sign in with
- * the seeded demo account and mint one. BASE_URL overrides http://localhost:3000.
+ * the seeded demo account and mint one. BASE_URL overrides http://localhost:4008.
  */
 
-const BASE = (process.env.BASE_URL ?? "http://localhost:3000").replace(/\/$/, "");
+const BASE = (process.env.BASE_URL ?? "http://localhost:4008").replace(/\/$/, "");
 const DEMO = { email: "admin@example.com", password: "demo-password-change-me" };
 
 let passed = 0;

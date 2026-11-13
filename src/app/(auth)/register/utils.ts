@@ -67,14 +67,16 @@ export async function submitRegistration(
 						password: form.get("usePasskey") === "on" ? undefined : form.get("password"),
 						usePasskey: form.get("usePasskey") === "on",
 						resetEmail: form.get("resetEmail"),
-						turnstileToken: form.get("turnstileToken"),
+						captchaAnswer: form.get("captchaAnswer"),
+						captchaToken: form.get("captchaToken"),
 					}
 				: {
 						username: form.get("username"),
 						password: form.get("usePasskey") === "on" ? undefined : form.get("password"),
 						usePasskey: form.get("usePasskey") === "on",
 						resetEmail: form.get("resetEmail"),
-						turnstileToken: form.get("turnstileToken"),
+						captchaAnswer: form.get("captchaAnswer"),
+						captchaToken: form.get("captchaToken"),
 					},
 		),
 	});

@@ -7,7 +7,6 @@ import { openMailer, type Mailer, type MailerConfig } from "./mailer";
 import { openAssets, openRateLimiter } from "./misc";
 import { openQueue, type InProcessQueue } from "./queue";
 import { RealtimeHubRegistry } from "./realtime";
-import { openSqliteDatabase, type SqliteDatabase } from "./sqlite-database";
 import type { NodeRuntime } from "./types";
 
 function optional(name: string): string | undefined {
@@ -33,8 +32,8 @@ export function createNodeRuntime(): NodeRuntime {
 	const dataDir = resolve(optional("DATA_DIR") ?? "./data");
 	mkdirSync(join(dataDir, "blobs"), { recursive: true });
 
-	// DATABASE_URL moves the data to PostgreSQL, MySQL or libSQL; otherwise it lives in a local SQLite file.
-	const database = getDatabaseConfig({}).driver === "d1" ? openSqliteDatabase(join(dataDir, "replyot.sqlite")) : undefined;
+	// DATABASE_URL configures PostgreSQL
+	const database = undefined;
 	const bucket = openFileBucket(join(dataDir, "blobs"));
 	const mailer = openMailer(mailerConfig());
 	const inboundQueue = openQueue("replyot-inbound");
@@ -85,7 +84,7 @@ export function createNodeRuntime(): NodeRuntime {
 		STRIPE_PRICE_STARTER: optional("STRIPE_PRICE_STARTER"),
 		STRIPE_PRICE_PRO: optional("STRIPE_PRICE_PRO"),
 		STRIPE_PRICE_BUSINESS: optional("STRIPE_PRICE_BUSINESS"),
-		TURNSTILE_SECRET_KEY: optional("TURNSTILE_SECRET_KEY"),
+		CAPTCHA_SECRET: optional("CAPTCHA_SECRET"),
 		GITHUB_UPDATE_TOKEN: optional("GITHUB_UPDATE_TOKEN"),
 		GITHUB_UPDATE_REF: optional("GITHUB_UPDATE_REF"),
 		GITHUB_UPDATE_REPO: optional("GITHUB_UPDATE_REPO"),
@@ -103,7 +102,7 @@ export function createNodeRuntime(): NodeRuntime {
 	return {
 		env: storageEnv,
 		dataDir,
-		database: database as unknown as SqliteDatabase | undefined,
+		database: undefined,
 		mailer: mailer as unknown as Mailer,
 		inboundQueue: inboundQueue as unknown as InProcessQueue,
 		outboundQueue: outboundQueue as unknown as InProcessQueue,

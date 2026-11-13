@@ -6,7 +6,7 @@ Install Chromium once with `npx playwright install chromium`, then run:
 npm run test:e2e -- tests/e2e/passkeys.spec.ts
 ```
 
-By default, Playwright starts the development server on port 3000 and refuses
+By default, Playwright starts the development server on port 4008 and refuses
 to reuse an existing server. To explicitly select a running test instance:
 
 ```sh

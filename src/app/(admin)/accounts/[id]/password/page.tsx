@@ -105,6 +105,37 @@ export default function AccountPasswordPage() {
 				</div>
 			)}
 
+			{account?.editable && (
+				<div className="space-y-3 rounded-3xl border border-neutral-100 bg-white p-6">
+					<div>
+						<h2 className="text-lg font-semibold text-neutral-900">Reset Two-Factor Authentication</h2>
+						<p className="mt-1 text-sm text-neutral-500">
+							If this team member lost access to their authenticator app or phone, you can reset their two-factor authentication so they can sign in with their password.
+						</p>
+					</div>
+					<Button
+						type="button"
+						variant="outline"
+						className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+						onClick={async () => {
+							if (!confirm(`Are you sure you want to reset 2FA for ${account?.name ?? "this account"}?`)) return;
+							try {
+								const res = await authFetch(`/api/accounts/${id}/mfa`, { method: "DELETE" });
+								if (res.ok) {
+									alert("Two-factor authentication has been reset.");
+								} else {
+									alert("Failed to reset two-factor authentication.");
+								}
+							} catch {
+								alert("Unable to reach server.");
+							}
+						}}
+					>
+						Reset 2FA for this user
+					</Button>
+				</div>
+			)}
+
 			<Dialog open={recoveryOpen} onOpenChange={setRecoveryOpen}>
 				<DialogContent className="sm:max-w-[440px]">
 					<DialogHeader>

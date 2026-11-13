@@ -280,7 +280,7 @@ export function ComposeForm({
 				draftIdRef.current = data.draft.id;
 				setDraftId(data.draft.id);
 				const pending = attachments.filter((attachment) => !uploadedFiles.current.has(attachment.file) && !rejectedFiles.current.has(attachment.file));
-				if (agentRevisionRef.current !== null || pending.length === 0) return;
+				if (pending.length === 0) return;
 				const form = new FormData();
 				for (const attachment of pending) form.append("attachments", attachment.file);
 				const uploaded = await authFetch(`/api/drafts/${data.draft.id}/attachments`, { method: "POST", body: form });
@@ -433,7 +433,7 @@ export function ComposeForm({
 			dismiss();
 			return;
 		}
-		router.push("/sent");
+		router.push("/mail/sent");
 	}
 
 	/**
@@ -451,7 +451,7 @@ export function ComposeForm({
 		countdown: boolean,
 	): { message: string; parts: SendNoticeParts } {
 		const template = SEND_NOTICE_TEMPLATES[kind];
-		const href = kind === "sent" ? `/sent/${messageId}` : `/scheduled/${messageId}`;
+		const href = kind === "sent" ? `/mail/sent/${messageId}` : `/mail/scheduled/${messageId}`;
 		const parts: SendNoticeParts = {
 			...splitSendTemplate(template, countdown),
 			link: { label: subjectLabel, href },
@@ -597,7 +597,7 @@ export function ComposeForm({
 			return;
 		}
 		setDeletingDraft(false);
-		router.push("/inbox");
+		router.push("/mail/inbox");
 	}
 
 	async function removeStoredAttachment(attachmentId: string) {

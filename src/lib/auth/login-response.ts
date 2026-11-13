@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { eq } from "drizzle-orm";
+import { getDb } from "@/db";
+import { users } from "@/db/schema";
 import { ACCOUNTS_COOKIE, rememberLogin } from "@/lib/auth/accounts";
 import { createSession, SESSION_COOKIE } from "@/lib/auth/session";
 import { recordAuthActivity } from "@/lib/auth/activity";
@@ -17,10 +20,23 @@ export async function completeLogin(
 ): Promise<NextResponse> {
 	const token = await createSession(env, userId);
 	await recordAuthActivity(env, { action: options.activity ?? "auth.login", userId, request });
+
+	let redirectUrl = "/mail/inbox";
+	try {
+		const [userRow] = await getDb(env)
+			.select({ role: users.role, isPrimaryAdmin: users.isPrimaryAdmin })
+			.from(users)
+			.where(eq(users.id, userId))
+			.limit(1);
+		if (userRow?.role === "admin" || userRow?.isPrimaryAdmin) {
+			redirectUrl = "/dash";
+		}
+	} catch {}
+
 	const response = NextResponse.json({
 		ok: true,
 		token,
-		redirect: "/inbox",
+		redirect: redirectUrl,
 		...options.body,
 	});
 	const isHttps = request.headers.get("x-forwarded-proto") === "https" || request.url.startsWith("https://");

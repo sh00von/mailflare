@@ -248,7 +248,7 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 	async function logout() {
 		const switched = await logoutClientSession();
 		setOpen(false);
-		router.replace(switched ? "/inbox" : "/login");
+		router.replace(switched ? "/mail/inbox" : "/login");
 		router.refresh();
 	}
 
@@ -259,7 +259,7 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 			router.push("/login?add=1");
 			return;
 		}
-		router.replace("/inbox");
+		router.replace("/mail/inbox");
 		router.refresh();
 	}
 
@@ -290,7 +290,7 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 				</button>
 			) : (
 				<Link
-					href="/inbox"
+					href="/mail/inbox"
 					className="inline-flex rounded-full p-1 transition-colors hover:bg-neutral-200"
 					aria-label={"Inbox"}
 				>
@@ -331,7 +331,7 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 							<Check className="h-5 w-5 shrink-0 text-blue-600" />
 						</div>
 						<Link
-							href="/inbox"
+							href="/mail/inbox"
 							onClick={() => setOpen(false)}
 							className="mt-4 flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-row-hover"
 						>
@@ -368,7 +368,7 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 											onSelect={() => {
 												setSelectedMailbox(mailbox);
 												setOpen(false);
-												router.push("/inbox");
+												router.push("/mail/inbox");
 											}}
 										/>
 									);
@@ -407,7 +407,7 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 					<div className="mt-2 overflow-hidden rounded-[22px] bg-white">
 						{user?.role === "admin" && (
 							<Link
-								href="/admin"
+								href="/dash"
 								onClick={() => setOpen(false)}
 								className={`flex items-center gap-3 border-t border-neutral-100 px-5 py-4 text-sm font-medium text-neutral-800 hover:bg-row-hover ${adminActive ? "bg-blue-50" : ""}`}
 							>

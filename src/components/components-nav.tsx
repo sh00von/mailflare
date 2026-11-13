@@ -38,7 +38,13 @@ export function NavItem({ link, iconClassName, labelClassName, wrap }: Props) {
 
   const Icon = link.icon;
   if (!Icon) return null;
-  const active = pathname === link.href || pathname.startsWith(`${link.href}/`);
+  const normPath = pathname.replace(/^\/(dash|mail)/, "") || "/inbox";
+  const normHref = link.href.replace(/^\/(dash|mail)/, "") || "/inbox";
+  const active =
+    pathname === link.href ||
+    pathname.startsWith(`${link.href}/`) ||
+    normPath === normHref ||
+    (normHref !== "/" && normPath.startsWith(`${normHref}/`));
   const classes = cn(
     "flex h-9 items-center gap-3 rounded-r-full text-sm text-neutral-700 transition-colors max-md:min-h-11 max-md:text-base",
     minimal && "relative mx-auto w-10 justify-center rounded-full px-0",
@@ -68,7 +74,7 @@ export function NavItem({ link, iconClassName, labelClassName, wrap }: Props) {
     }
     : {};
 
-  if (link.href === "/compose") {
+  if (link.primary || link.href === "/compose" || link.href === "/mail/compose") {
     const composeButton = (
       <button
         type="button"

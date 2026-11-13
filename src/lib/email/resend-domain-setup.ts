@@ -49,19 +49,7 @@ export async function ensureOutboundSendingDomain(
 	env: CloudflareEnv,
 	hostname: string,
 	options?: { createIfMissing?: boolean },
-): Promise<{ provider: "resend" | "ses"; verified: boolean; records: ResendChecklistRecord[] } | null> {
-	const mode = (
-		(env as { OUTBOUND_PROVIDER?: string }).OUTBOUND_PROVIDER ??
-		process.env.OUTBOUND_PROVIDER ??
-		"auto"
-	).trim().toLowerCase();
-
-	if (mode === "ses") {
-		const { ensureSesSendingDomain } = await import("@/lib/email/ses-domain-setup");
-		const ses = await ensureSesSendingDomain(env, hostname, options);
-		return ses ? { provider: "ses", ...ses } : null;
-	}
-
+): Promise<{ provider: "resend"; verified: boolean; records: ResendChecklistRecord[] } | null> {
 	try {
 		const resend = await ensureResendSendingDomain(env, hostname, options);
 		if (resend) {
@@ -72,14 +60,7 @@ export async function ensureOutboundSendingDomain(
 			};
 		}
 	} catch (err) {
-		if (mode === "resend") throw err;
-		console.warn("[outbound-setup] Resend provisioning failed, attempting SES fallback:", err);
-	}
-
-	if (mode === "auto") {
-		const { ensureSesSendingDomain } = await import("@/lib/email/ses-domain-setup");
-		const ses = await ensureSesSendingDomain(env, hostname, options);
-		if (ses) return { provider: "ses", ...ses };
+		console.warn("[outbound-setup] Resend provisioning failed:", err);
 	}
 
 	return null;

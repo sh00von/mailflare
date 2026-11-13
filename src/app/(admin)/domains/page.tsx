@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { mobilePrimaryActionClass } from "@/components/page-header-utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
@@ -58,6 +59,17 @@ export default function DomainsPage() {
       };
     },
   });
+
+  const { data: planData } = useQuery({
+    queryKey: ["workspace-plan"],
+    queryFn: async () => {
+      const res = await authFetch("/api/workspace/plan");
+      if (!res.ok) return null;
+      return (await res.json()) as { workspace?: { status?: string } };
+    },
+  });
+
+  const isWorkspaceActive = planData?.workspace?.status === "active";
 
   const create = useMutation({
     mutationFn: async () => {
@@ -273,9 +285,7 @@ export default function DomainsPage() {
         <div>
           <h1 className="text-2xl md:text-3xl font-medium">Domains</h1>
           <p className="mt-1 text-sm text-neutral-500">
-            {managesDns
-              ? "Domains must be on your Cloudflare account, which manages their DNS. Choose per domain whether Cloudflare, Resend or Amazon SES receives and sends its mail."
-              : "Add the domains this server receives mail for. Open DNS on a domain to see the MX, SPF and DMARC records to create."}
+            Connect your custom domain to send and receive business email. Open DNS on any domain to view your copyable MX, SPF, DKIM, and DMARC records.
           </p>
         </div>
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
@@ -343,6 +353,23 @@ export default function DomainsPage() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {!isWorkspaceActive && (
+        <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-blue-950">
+              Activate Full Workspace Features
+            </p>
+            <p className="text-xs sm:text-sm text-blue-800/80">
+              Choose your plan to activate outbound deliverability, add team mailboxes, and unlock cloud storage.
+            </p>
+          </div>
+          <Button asChild size="sm" className="bg-blue-600 hover:bg-blue-700 text-white shrink-0">
+            <Link href="/dash/plan">View Plans &amp; Activate &rarr;</Link>
+          </Button>
+        </div>
+      )}
+
       <section className="space-y-3">
         {/* <div className="flex items-center justify-between">
 					<span className="text-sm text-neutral-500">{(data?.domains ?? []).length} total</span>

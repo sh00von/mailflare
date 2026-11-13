@@ -42,15 +42,15 @@ export async function generateMetadata(): Promise<Metadata> {
 const PRODUCT_TILES = [
 	{ icon: Globe2, tone: "bg-blue-50 text-blue-600", title: "Your own domain", body: "Connect your company domain with guided MX, SPF and DMARC checks, then hand out addresses in seconds." },
 	{ icon: Users, tone: "bg-green-50 text-green-700", title: "Shared team inboxes", body: "Let teammates work support@ or sales@ together, with read-only, send-as or full access per person." },
-	{ icon: ShieldCheck, tone: "bg-red-50 text-red-600", title: "Spam and security", body: "Layered spam scoring, passkeys, two-step sign-in and audit logs keep your mail and your team safe." },
+	{ icon: ShieldCheck, tone: "bg-red-50 text-red-600", title: "Spam and security", body: "Layered spam scoring, two-step sign-in and audit logs keep your mail and your team safe." },
 	{ icon: HardDrive, tone: "bg-amber-50 text-amber-700", title: "Cloud storage", body: "Every workspace gets generous attachment storage with clear, predictable limits." },
 	{ icon: Clock, tone: "bg-purple-50 text-purple-600", title: "Schedule and snooze", body: "Threaded conversations, scheduled sends, undo send and snooze keep the inbox under control." },
-	{ icon: FolderInput, tone: "bg-cyan-50 text-cyan-700", title: "Easy migration", body: "Import from any IMAP account or a Gmail export in the background, folders and threads intact." },
+	{ icon: FolderInput, tone: "bg-cyan-50 text-cyan-700", title: "Easy migration", body: "Import from a Gmail export in the background, folders and threads intact." },
 ];
 
 const HIGHLIGHTS = [
 	{ icon: Bell, title: "Instant push notifications", body: "Know the moment an important message arrives." },
-	{ icon: Smartphone, title: "Works on every device", body: "Install the web app on your phone or desktop, or use any JMAP mail client." },
+	{ icon: Smartphone, title: "Works on every device", body: "Install the web app on your phone or desktop for an ultra-fast, modern inbox." },
 	{ icon: ShieldCheck, title: "Private by default", body: "Remote images stay blocked until you choose to load them." },
 ];
 
@@ -69,6 +69,8 @@ export default async function HomePage() {
 				name: sessionUser.name,
 				role: sessionUser.role,
 				hasAvatar: !!sessionUser.avatarKey,
+				calendarEnabled: false,
+				driveEnabled: false,
 			}
 		: null;
 	const iconSrc = branding.hasCustomIcon ? "/api/branding/icon" : "/icon-96.png";
@@ -122,7 +124,7 @@ export default async function HomePage() {
 							<div className="mt-10">
 								<HomeHeroActions />
 							</div>
-							<p className="mt-5 text-sm text-neutral-500">14-day free trial · No credit card required</p>
+							<p className="mt-5 text-sm text-neutral-500">Fast setup · Cloud storage · Built-in security</p>
 
 							<div className="relative mx-auto mt-14 max-w-5xl">
 								<div
@@ -187,7 +189,7 @@ export default async function HomePage() {
 									Choose the plan that’s right for you
 								</h2>
 								<p className="mt-4 text-base leading-7 text-neutral-500 sm:text-lg">
-									Every plan includes a 14-day free trial, cloud storage and guided domain setup.
+									Every plan includes cloud storage and guided domain setup.
 								</p>
 							</div>
 
@@ -229,7 +231,7 @@ export default async function HomePage() {
 														: "border border-neutral-300 text-blue-600 hover:border-blue-100 hover:bg-blue-50"
 												}`}
 											>
-												{signedIn ? "Manage plan" : "Start free trial"}
+												{signedIn ? "Manage plan" : "Get started"}
 											</Link>
 											<ul className="mt-8 space-y-3.5 border-t border-neutral-200 pt-8 text-[15px] text-neutral-700">
 												{bullets.map((item) => (

@@ -190,3 +190,52 @@ export function resolvePlanFromStripePriceOrMetadata(
 	return null;
 }
 
+export async function retrieveStripeCheckoutSession(
+	env: CloudflareEnv,
+	sessionId: string,
+): Promise<{
+	id: string;
+	customer: string | null;
+	subscription: string | null;
+	metadata: Record<string, string>;
+	payment_status: string;
+	status: string;
+}> {
+	const config = getStripeConfig(env);
+	if (!config) throw new Error("Stripe is not configured");
+	const response = await fetch(`${STRIPE_API}/checkout/sessions/${encodeURIComponent(sessionId)}`, {
+		headers: { Authorization: `Bearer ${config.secretKey}` },
+	});
+	if (!response.ok) throw new Error(`Failed to retrieve checkout session (${response.status})`);
+	return response.json();
+}
+
+export type StripeInvoice = {
+	id: string;
+	number: string | null;
+	created: number;
+	amount_paid: number;
+	currency: string;
+	status: string;
+	invoice_pdf: string | null;
+	hosted_invoice_url: string | null;
+	period_start: number;
+	period_end: number;
+};
+
+export async function listStripeInvoices(
+	env: CloudflareEnv,
+	customerId: string,
+	limit = 10,
+): Promise<StripeInvoice[]> {
+	const config = getStripeConfig(env);
+	if (!config) return [];
+	const response = await fetch(`${STRIPE_API}/invoices?customer=${encodeURIComponent(customerId)}&limit=${limit}`, {
+		headers: { Authorization: `Bearer ${config.secretKey}` },
+	});
+	if (!response.ok) return [];
+	const data = (await response.json()) as { data?: StripeInvoice[] };
+	return data.data ?? [];
+}
+
+

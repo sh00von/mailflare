@@ -52,7 +52,7 @@ export async function POST(request: Request, { params }: AccountRouteParams) {
 	});
 	const origin = getPublicOrigin(access.env, request);
 	return NextResponse.json(
-		{ ok: true, link: `${origin}/setup/passkey?token=${encodeURIComponent(token)}`, expiresInMinutes: 30 },
+		{ ok: true, link: `${origin}/reset-password?token=${encodeURIComponent(token)}`, expiresInMinutes: 30 },
 		{ headers: { "Cache-Control": "no-store" } },
 	);
 }

@@ -98,7 +98,7 @@ export async function exportDatabaseRecords(db: D1Database, excludedGroups: Back
 		// Backups hold SQLite-style values whichever database wrote them, so they restore anywhere.
 		tables[table] = dialect === "sqlite" ? result.results : result.results.map(toPortableRecord);
 	}
-	const document: DatabaseBackupDocument = { format: "mailflare-database-backup", version: 2, createdAt: new Date().toISOString(), includedTables, tables };
+	const document: DatabaseBackupDocument = { format: "replyot-database-backup", version: 2, createdAt: new Date().toISOString(), includedTables, tables };
 	return new TextEncoder().encode(JSON.stringify(document));
 }
 
@@ -145,11 +145,9 @@ export async function restoreDatabaseRecords(db: D1Database, content: ArrayBuffe
 		for (let index = 0; index < rows.length; index += INSERT_BATCH_SIZE) {
 			const columns = table === "users"
 				? userColumns
-				: table === "booking_events"
-					? bookingColumns
-					: table === "passkey_credentials"
-						? passkeyColumns
-						: null;
+				: table === "passkey_credentials"
+					? passkeyColumns
+					: null;
 			const statements = rows.slice(index, index + INSERT_BATCH_SIZE).map((row) => createInsertStatement(db, dialect, table, row, columns));
 			// MySQL checks foreign keys per statement, so the batch suspends them for its own connection.
 			if (statements.length > 0) await db.batch(dialect === "mysql" ? [db.prepare("SET FOREIGN_KEY_CHECKS = 0"), ...statements, db.prepare("SET FOREIGN_KEY_CHECKS = 1")] : statements);
@@ -167,7 +165,7 @@ function parseDatabaseBackup(content: ArrayBuffer): DatabaseBackupDocument {
 function isDatabaseBackupDocument(value: unknown): value is DatabaseBackupDocument {
 	if (!value || typeof value !== "object") return false;
 	const document = value as Partial<DatabaseBackupDocument>;
-	if (document.format !== "mailflare-database-backup" || typeof document.version !== "number" || ![1, 2].includes(document.version) || !document.tables) return false;
+	if ((document.format !== "replyot-database-backup" && document.format !== "mailflare-database-backup") || typeof document.version !== "number" || ![1, 2].includes(document.version) || !document.tables) return false;
 	if (document.includedTables) {
 		if (!Array.isArray(document.includedTables) || !document.includedTables.length || new Set(document.includedTables).size !== document.includedTables.length) return false;
 		if (!document.includedTables.every((table) => BACKUP_TABLES.includes(table) && Array.isArray(document.tables?.[table]))) return false;
@@ -190,9 +188,6 @@ function createInsertStatement(db: D1Database, dialect: DatabaseDialect, table: 
 function fillMissingBackupTables(document: DatabaseBackupDocument): void {
 	for (const table of BACKUP_TABLES) {
 		if (!document.tables[table]) document.tables[table] = [];
-	}
-	for (const row of document.tables.booking_events ?? []) {
-		if (row.slug === undefined && typeof row.id === "string") row.slug = Array.from(new TextEncoder().encode(row.id)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
 	}
 	// `require_second_factor` was added after TOTP already existed. A backup from
 	// before that column restores with the default false unless it is derived,

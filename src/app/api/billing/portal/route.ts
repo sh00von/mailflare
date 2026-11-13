@@ -38,7 +38,7 @@ export async function POST(request: Request) {
 	const baseUrl = resolveAdminBaseUrl(request);
 	const session = await createStripePortalSession(env, {
 		customerId: wsRow.stripeCustomerId,
-		returnUrl: `${baseUrl}/plan`,
+		returnUrl: `${baseUrl}/dash/plan`,
 	});
 
 	return NextResponse.json({ url: session.url });

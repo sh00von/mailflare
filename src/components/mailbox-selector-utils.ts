@@ -14,11 +14,17 @@ export function getAccountInitial(value: string): string {
 
 export function isAdminPath(pathname: string): boolean {
 	return (
+		pathname.startsWith("/dash") ||
 		pathname === "/admin" ||
 		pathname.startsWith("/mailboxes") ||
 		pathname.startsWith("/domains") ||
 		pathname.startsWith("/api-keys") ||
 		pathname.startsWith("/activity") ||
-		pathname.startsWith("/backups")
+		pathname.startsWith("/backups") ||
+		pathname.startsWith("/plan") ||
+		pathname.startsWith("/workspaces") ||
+		pathname.startsWith("/general") ||
+		pathname.startsWith("/accounts") ||
+		pathname.startsWith("/spam-filter")
 	);
 }

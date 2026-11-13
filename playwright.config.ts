@@ -7,7 +7,7 @@ export default defineConfig({
 	retries: 0,
 	reporter: [["list"]],
 	use: {
-		baseURL: process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000",
+		baseURL: process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:4008",
 		trace: "retain-on-failure",
 	},
 	projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
@@ -15,7 +15,7 @@ export default defineConfig({
 		? undefined
 		: {
 				command: "npm run dev -- --strictPort",
-				url: "http://localhost:3000/login",
+				url: "http://localhost:4008/login",
 				// Use PLAYWRIGHT_BASE_URL explicitly when targeting an existing dev server.
 				reuseExistingServer: false,
 				timeout: 180_000,

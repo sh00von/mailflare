@@ -1,32 +1,26 @@
 # syntax=docker/dockerfile:1
-# Mailflare self-hosted image: Next.js app, SMTP listener, job queues and
-# backups in one Node process. Data lives in /data (mount a volume).
+# Replyot self-hosted image: Next.js app, SMTP listener, job queues and
+# backups in one Node process.
 FROM node:22-bookworm-slim AS base
 WORKDIR /app
-ENV NEXT_TELEMETRY_DISABLED=1 MAILFLARE_RUNTIME=node
+ENV NEXT_TELEMETRY_DISABLED=1 REPLYOT_RUNTIME=node MAILFLARE_RUNTIME=node
 
-# better-sqlite3 ships prebuilt binaries for this image; the toolchain is only
-# a fallback for platforms without one.
 FROM base AS deps
-RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@12.3.4 --activate
 COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --ignore-scripts && pnpm rebuild better-sqlite3
+RUN pnpm install --ignore-scripts
 
 FROM deps AS build
 COPY . .
-ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY
-ENV NEXT_PUBLIC_TURNSTILE_SITE_KEY=$NEXT_PUBLIC_TURNSTILE_SITE_KEY
 RUN --mount=type=cache,target=/app/.next-node/cache pnpm run build:node
 
-# Production dependencies only. The Workers toolchain arrives as transitive
-# dependencies of the Cloudflare adapter and is never loaded here, so it goes.
-FROM deps AS prod-deps
+# Production dependencies only.
+FROM build AS prod-deps
 RUN pnpm prune --prod --ignore-scripts \
-	&& rm -rf node_modules/wrangler node_modules/miniflare node_modules/workerd node_modules/@cloudflare node_modules/cloudflare node_modules/@aws-sdk node_modules/esbuild node_modules/@esbuild node_modules/typescript
+	&& rm -rf node_modules/wrangler node_modules/miniflare node_modules/workerd node_modules/@cloudflare node_modules/cloudflare node_modules/@aws-sdk node_modules/esbuild node_modules/@esbuild node_modules/typescript node_modules/better-sqlite3
 
 FROM base AS runtime
-ENV NODE_ENV=production DATA_DIR=/data PORT=3000 SMTP_INBOUND_PORT=25
+ENV NODE_ENV=production DATA_DIR=/data PORT=4008 SMTP_INBOUND_PORT=25
 COPY --chown=node:node --from=prod-deps /app/node_modules ./node_modules
 COPY --chown=node:node --from=build /app/.next-node ./.next-node
 COPY --chown=node:node --from=build /app/dist ./dist
@@ -37,6 +31,6 @@ COPY --chown=node:node --from=build /app/src/lib/security/headers.ts ./src/lib/s
 RUN mkdir -p /data && chown node:node /data
 USER node
 VOLUME ["/data"]
-EXPOSE 3000 25
-HEALTHCHECK --interval=30s --timeout=5s --start-period=30s CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+EXPOSE 4008 25
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||4008)+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 CMD ["node", "dist/server.mjs"]

@@ -9,6 +9,7 @@ export type SessionUser = {
 	name: string;
 	timeZone: string | null;
 	role: UserRole;
+	workspaceId: string | null;
 	isPrimaryAdmin: boolean;
 	disabled: boolean;
 	canManageMailboxes: boolean;

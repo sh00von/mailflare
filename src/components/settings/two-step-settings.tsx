@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Copy, KeyRound, Smartphone } from "@/components/icons";
+import { Copy, Smartphone } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -39,11 +39,6 @@ function RecoveryCodesList({ codes }: { codes: string[] }) {
 	);
 }
 
-/**
- * Controls the extra step after a password sign-in. Passkeys are one possible
- * second step; an authenticator app is the other. Direct passkey sign-in never
- * needs an additional step.
- */
 export function TwoStepSettings() {
 	const { status, error: loadFailed } = useSecurityStatus();
 	const [pending, setPending] = useState<PendingAction | null>(null);
@@ -59,14 +54,14 @@ export function TwoStepSettings() {
 			<div className="space-y-5">
 				<div>
 					<h2 className="text-lg font-semibold text-neutral-900">Two-step verification</h2>
-					<p className="mt-1 text-sm text-neutral-500">Add an extra step after password sign-in. Passkeys and authenticator apps both qualify; signing in directly with a passkey never needs another step.</p>
+					<p className="mt-1 text-sm text-neutral-500">Require an authenticator app code after password sign-in.</p>
 				</div>
 				{loadFailed ? <p role="alert" className="text-sm text-neutral-500">Failed to load</p> : <FormSkeleton rows={1} />}
 			</div>
 		);
 	}
 
-	const hasAnyFactor = status.passkeys.length > 0 || status.totpEnabled;
+	const hasAnyFactor = status.totpEnabled;
 	const actionForPending = pending === "enroll"
 		? "mfa.enroll"
 		: pending === "disable"
@@ -114,74 +109,80 @@ export function TwoStepSettings() {
 		<div className="space-y-5">
 			<div>
 				<div className="flex items-center justify-between gap-4">
-					<h2 className="text-lg font-semibold text-neutral-900">Two-step verification</h2>
+					<div className="flex items-center gap-2.5">
+						<h2 className="text-lg font-semibold text-neutral-900">Two-step verification (2FA)</h2>
+						<span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] font-medium text-neutral-600">
+							Optional
+						</span>
+					</div>
 					{status.passwordSet && (
-						<Switch
-							checked={status.requireSecondFactor}
-							disabled={busy || (!hasAnyFactor && !status.requireSecondFactor)}
-							onCheckedChange={(enabled) => setPending(enabled ? "toggle-on" : "toggle-off")}
-							aria-label={"Require a second step after password sign-in"}
-						/>
+						<div className="flex items-center gap-2">
+							<span className="text-xs font-medium text-neutral-500 hidden sm:inline">
+								{status.requireSecondFactor ? "2FA Required" : "2FA Optional (Off)"}
+							</span>
+							<Switch
+								checked={status.requireSecondFactor}
+								disabled={busy || (!hasAnyFactor && !status.requireSecondFactor)}
+								onCheckedChange={(enabled) => setPending(enabled ? "toggle-on" : "toggle-off")}
+								aria-label={"Require an authenticator code after password sign-in"}
+							/>
+						</div>
 					)}
 				</div>
-				<p className="mt-1 text-sm text-neutral-500">{status.passwordSet ? "Add an extra step after password sign-in. Passkeys and authenticator apps both qualify; signing in directly with a passkey never needs another step." : "This account has no password. Passkeys sign you in directly, so no extra step is needed."}</p>
+				<p className="mt-1 text-sm text-neutral-500">
+					Add an extra layer of security with Google Authenticator, Microsoft Authenticator, Authy, or 1Password. When enabled, signing in requires your password and a 6-digit code from your phone.
+				</p>
 			</div>
 
-			{status.passwordSet && !hasAnyFactor && (
-				<p className="text-xs leading-5 text-neutral-500">Add a passkey or an authenticator app to turn this on.</p>
-			)}
-
-			{/* An enabled authenticator stays visible on a passwordless account so it can be turned off. */}
-			{(status.passwordSet || status.totpEnabled) && (
-				<div className="divide-y divide-neutral-100 rounded-2xl border border-neutral-100">
-					{status.passwordSet && (
-						<div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-							<div className="flex items-start gap-3">
-								<KeyRound className={`mt-0.5 h-5 w-5 shrink-0 ${status.passkeys.length > 0 ? "text-green-600" : "text-neutral-400"}`} />
-								<div>
-									<h3 className="text-sm font-semibold text-neutral-900">Passkey</h3>
-									<p className="mt-1 text-sm text-neutral-500">
-										{status.passkeys.length > 0 ? (status.passkeys.length === 1 ? `${status.passkeys.length} passkey can confirm a password sign-in.` : `${status.passkeys.length} passkeys can confirm a password sign-in.`) : "No passkeys enrolled."}
-									</p>
-								</div>
+			<div className="rounded-2xl border border-neutral-100 p-4 bg-neutral-50/50">
+				<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+					<div className="flex items-start gap-3">
+						<Smartphone className={`mt-0.5 h-5 w-5 shrink-0 ${status.totpEnabled ? "text-emerald-600" : "text-neutral-400"}`} />
+						<div>
+							<div className="flex items-center gap-2">
+								<h3 className="text-sm font-semibold text-neutral-900">Authenticator App (TOTP)</h3>
+								{status.totpEnabled ? (
+									status.requireSecondFactor ? (
+										<span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+											Enforced on Login
+										</span>
+									) : (
+										<span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20">
+											Configured · Optional
+										</span>
+									)
+								) : (
+									<span className="inline-flex items-center rounded-md bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-600">
+										Not set up
+									</span>
+								)}
 							</div>
-							<Button asChild variant="outline" size="sm" className="w-fit">
-								<a href="#passkeys">Manage passkeys</a>
-							</Button>
-						</div>
-					)}
-					<div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-						<div className="flex items-start gap-3">
-							<Smartphone className={`mt-0.5 h-5 w-5 shrink-0 ${status.totpEnabled ? "text-green-600" : "text-neutral-400"}`} />
-							<div>
-								<h3 className="text-sm font-semibold text-neutral-900">Authenticator app</h3>
-								<p className="mt-1 text-sm text-neutral-500">
-									{status.totpEnabled
-										? (status.recoveryCodesLeft === 1 ? `Set up · ${status.recoveryCodesLeft} recovery code left.` : `Set up · ${status.recoveryCodesLeft} recovery codes left.`)
-										: "Not set up."}
-								</p>
-							</div>
-						</div>
-						<div className="flex flex-wrap items-center gap-2">
-							{status.totpEnabled ? (
-								<>
-									<Button variant="outline" size="sm" onClick={() => setPending("codes")} disabled={busy}>New recovery codes</Button>
-									<Button variant="ghost" size="sm" onClick={() => setPending("disable")} disabled={busy}>Turn off</Button>
-								</>
-							) : (
-								<Button size="sm" onClick={() => setPending("enroll")} disabled={busy}>Add authenticator app</Button>
-							)}
+							<p className="mt-1 text-xs sm:text-sm text-neutral-500">
+								{status.totpEnabled
+									? `Configured with ${status.recoveryCodesLeft ?? 0} emergency recovery codes available.`
+									: "Scan a QR code with your authenticator app to enable."}
+							</p>
 						</div>
 					</div>
+					<div className="flex flex-wrap items-center gap-2">
+						{status.totpEnabled ? (
+							<>
+								<Button variant="outline" size="sm" onClick={() => setPending("codes")} disabled={busy}>New recovery codes</Button>
+								<Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => setPending("disable")} disabled={busy}>Remove 2FA</Button>
+							</>
+						) : (
+							<Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => setPending("enroll")} disabled={busy}>Add authenticator app</Button>
+						)}
+					</div>
 				</div>
-			)}
+			</div>
 
 			{error && <p role="alert" className="text-sm text-red-600">{error}</p>}
 
 			<StepUpDialog
 				open={!!pending}
 				hasPassword={status.passwordSet}
-				hasPasskey={status.passkeys.length > 0}
+				hasPasskey={false}
 				requireSecondFactor={status.requireSecondFactor}
 				totpEnabled={status.totpEnabled}
 				action={actionForPending}
