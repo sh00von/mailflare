@@ -22,8 +22,20 @@ export function serializeAccountTokens(tokens: string[]): string {
 	return tokens.join(".");
 }
 
-export function cookieOptions(maxAge = COOKIE_MAX_AGE) {
-	const cookieDomain = process.env.COOKIE_DOMAIN?.trim() || undefined;
+export function cookieOptions(maxAge = COOKIE_MAX_AGE, request?: Request) {
+	let cookieDomain: string | undefined;
+	const rawCookieDomain = process.env.COOKIE_DOMAIN?.trim();
+	if (rawCookieDomain && request) {
+		const cleanDomain = rawCookieDomain.replace(/^\./, "").toLowerCase();
+		const reqHost = (
+			request.headers.get("x-forwarded-host") ??
+			request.headers.get("host") ??
+			new URL(request.url).host
+		).toLowerCase().split(":")[0];
+		if (reqHost === cleanDomain || reqHost.endsWith(`.${cleanDomain}`)) {
+			cookieDomain = rawCookieDomain.startsWith(".") ? rawCookieDomain : `.${rawCookieDomain}`;
+		}
+	}
 	return {
 		httpOnly: true,
 		secure: process.env.NODE_ENV === "production",
@@ -105,9 +117,10 @@ export async function rememberLogin(
 	existing: string | undefined,
 	token: string,
 	previousActive?: string,
+	request?: Request,
 ): Promise<void> {
 	try {
-		response.cookies.set(ACCOUNTS_COOKIE, await addAccountToken(env, existing, token, previousActive), cookieOptions());
+		response.cookies.set(ACCOUNTS_COOKIE, await addAccountToken(env, existing, token, previousActive), cookieOptions(undefined, request));
 	} catch (error) {
 		console.error("Could not record signed-in account", error);
 	}

@@ -40,7 +40,19 @@ export async function completeLogin(
 		...options.body,
 	});
 	const isHttps = request.headers.get("x-forwarded-proto") === "https" || request.url.startsWith("https://");
-	const cookieDomain = process.env.COOKIE_DOMAIN?.trim() || undefined;
+	let cookieDomain: string | undefined;
+	const rawCookieDomain = process.env.COOKIE_DOMAIN?.trim();
+	if (rawCookieDomain) {
+		const cleanDomain = rawCookieDomain.replace(/^\./, "").toLowerCase();
+		const reqHost = (
+			request.headers.get("x-forwarded-host") ??
+			request.headers.get("host") ??
+			new URL(request.url).host
+		).toLowerCase().split(":")[0];
+		if (reqHost === cleanDomain || reqHost.endsWith(`.${cleanDomain}`)) {
+			cookieDomain = rawCookieDomain.startsWith(".") ? rawCookieDomain : `.${rawCookieDomain}`;
+		}
+	}
 	response.headers.set("Cache-Control", "no-store");
 	response.cookies.set(SESSION_COOKIE, token, {
 		httpOnly: true,
@@ -51,6 +63,6 @@ export async function completeLogin(
 		maxAge: 60 * 60 * 24 * 30,
 	});
 	const accountsJar = await cookies();
-	await rememberLogin(env, response, accountsJar.get(ACCOUNTS_COOKIE)?.value, token, accountsJar.get(SESSION_COOKIE)?.value);
+	await rememberLogin(env, response, accountsJar.get(ACCOUNTS_COOKIE)?.value, token, accountsJar.get(SESSION_COOKIE)?.value, request);
 	return response;
 }

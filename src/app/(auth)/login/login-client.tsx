@@ -34,9 +34,8 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
   const [code, setCode] = useState("");
 
   const finish = useCallback((redirect?: string) => {
-    router.replace(redirect ?? "/mail/inbox");
-    router.refresh();
-  }, [router]);
+    window.location.assign(redirect ?? "/mail/inbox");
+  }, []);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

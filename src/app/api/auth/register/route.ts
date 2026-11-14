@@ -135,7 +135,19 @@ export async function POST(request: Request) {
 		);
 	}
 
-	const cookieDomain = process.env.COOKIE_DOMAIN?.trim() || undefined;
+	let cookieDomain: string | undefined;
+	const rawCookieDomain = process.env.COOKIE_DOMAIN?.trim();
+	if (rawCookieDomain) {
+		const cleanDomain = rawCookieDomain.replace(/^\./, "").toLowerCase();
+		const reqHost = (
+			request.headers.get("x-forwarded-host") ??
+			request.headers.get("host") ??
+			new URL(request.url).host
+		).toLowerCase().split(":")[0];
+		if (reqHost === cleanDomain || reqHost.endsWith(`.${cleanDomain}`)) {
+			cookieDomain = rawCookieDomain.startsWith(".") ? rawCookieDomain : `.${rawCookieDomain}`;
+		}
+	}
 	const sessionToken = await createSession(env, userId);
 
 	if (isStripeConfigured(env)) {
