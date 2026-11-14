@@ -38,8 +38,8 @@ export default function DomainsPage() {
   const [domainCheck, setDomainCheck] = useState<DomainPreflight | null>(null);
   const [domainChecking, setDomainChecking] = useState(false);
   const [skipDns, setSkipDns] = useState(false);
-  const [sendingProvider, setSendingProvider] = useState<SendingProvider>("cloudflare");
-  const [receivingProvider, setReceivingProvider] = useState<ReceivingProvider>("cloudflare");
+  const [sendingProvider, setSendingProvider] = useState<SendingProvider>("postfix");
+  const [receivingProvider, setReceivingProvider] = useState<ReceivingProvider>("postfix");
   const [domainCheckError, setDomainCheckError] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [setupRecord, setSetupRecord] = useState<DnsAuthRecord | null>(null);
@@ -74,21 +74,8 @@ export default function DomainsPage() {
   const create = useMutation({
     mutationFn: async () => {
       const normalized = hostname.toLowerCase().trim();
-      let checkedDomain = domainCheck;
-      if (skipDns) {
-        checkedDomain = { hostname: normalized, zone: { id: "manual", name: normalized } };
-      } else if (checkedDomain?.hostname !== normalized) {
-        const result = await checkDomain(normalized);
-        if (!result.ok || !result.domain) {
-          throw new Error(result.error ?? "Domain check failed");
-        }
-        checkedDomain = result.domain;
-        setDomainCheck(result.domain);
-      }
-      if (!checkedDomain) throw new Error("Domain check failed");
-
       return createDomain({
-        hostname: checkedDomain.hostname,
+        hostname: normalized,
         enableRouting: true,
       });
     },
@@ -96,8 +83,8 @@ export default function DomainsPage() {
       setHostname("");
       setDomainCheck(null);
       setSkipDns(false);
-      setSendingProvider("cloudflare");
-      setReceivingProvider("cloudflare");
+      setSendingProvider("postfix");
+      setReceivingProvider("postfix");
       setDomainCheckError(null);
       setCreateOpen(false);
       qc.invalidateQueries({ queryKey: ["domains"] });
@@ -318,23 +305,8 @@ export default function DomainsPage() {
                 </p>
               )}
               {create.isError && (
-                <div className="space-y-3 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
+                <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
                   <p>{(create.error as Error).message}</p>
-                  {!isMxConflictError(create.error) && (
-                    <div className="space-y-2">
-                      <p className="font-medium">
-                        Check that your Cloudflare API token has these permissions:
-                      </p>
-                      <ul className="list-disc space-y-1 pl-5">
-                        <li>
-                          All accounts — DNS Settings:Edit, Email Routing Addresses:Edit; Email Sending:Edit for outbound mail
-                        </li>
-                        <li>
-                          All zones — DNS Settings:Edit, Email Routing Rules:Edit, Zone Settings:Edit, DNS:Edit
-                        </li>
-                      </ul>
-                    </div>
-                  )}
                 </div>
               )}
               <Button

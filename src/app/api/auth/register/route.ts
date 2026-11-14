@@ -20,7 +20,6 @@ import { allowLoginAttempt } from "@/lib/auth/rate-limit";
 import { getDomainProvisioningError } from "@/lib/domains/errors";
 import { auditDomainDns } from "@/lib/domains/dns-audit";
 import { checkDomainOwnershipDns } from "@/lib/domains/ownership";
-import { ensureOutboundSendingDomain } from "@/lib/email/resend-domain-setup";
 import { resolvePlanId } from "@/lib/plans/catalog";
 import { createWorkspaceForOwner } from "@/lib/plans/usage";
 import { isStripeConfigured, createStripeCustomer, createStripeCheckoutSession } from "@/lib/billing/stripe";
@@ -126,7 +125,7 @@ export async function POST(request: Request) {
 		const domain = added.domain;
 		changes = added.changes;
 		await db.update(domains).set({ workspaceId }).where(eq(domains.id, domain.id));
-		if (domain.zoneId !== "manual") {
+		if (domain.zoneId !== "manual" && domain.zoneId !== "self-hosted") {
 			await ensureEmailRoutingRuleToWorker(env, domain.zoneId, email);
 			changes.createdAddressRules.push(email);
 		}

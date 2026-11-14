@@ -16,10 +16,11 @@ export async function POST(request: Request) {
 		return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 	}
 
-	try {
-		return NextResponse.json({ domain: await preflightDomain(env, parsed.data.hostname) });
-	} catch (error) {
-		const message = error instanceof Error ? error.message : "Domain check failed";
-		return NextResponse.json({ error: message }, { status: 502 });
-	}
+	const hostname = parsed.data.hostname.toLowerCase().trim();
+	return NextResponse.json({
+		domain: {
+			hostname,
+			zone: { id: "self-hosted", name: hostname },
+		},
+	});
 }

@@ -18,6 +18,7 @@
 *.pem
 *.key
 *.cert
+scripts/empty-db.mjs
 
 # Production & Build outputs
 /.next/

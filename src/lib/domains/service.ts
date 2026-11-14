@@ -56,71 +56,37 @@ export async function addDomainForUser(
 	if (claimedHostname && claimedHostname.userId !== userId) {
 		throw new Error("Domain is already registered");
 	}
-	// Without Cloudflare zone access the domain is recorded as manual and goes live at once,
-	// so ownership has to be proven from public DNS first (re-saving an owned domain is exempt).
-	if (!hasCloudflareCredentials(env) && !claimedHostname) {
-		const ownership = await checkDomainOwnershipDns(normalizedHostname);
-		if (!ownership.ok) throw new DomainOwnershipError(ownership);
-	}
-	if (!options?.skipDns && hasCloudflareCredentials(env)) {
-		const { zone } = await preflightDomain(env, normalizedHostname);
-		const [claimedZone] = await db.select({ userId: domains.userId }).from(domains).where(and(
-			eq(domains.zoneId, zone.id),
-			ne(domains.userId, userId),
-		)).limit(1);
-		if (claimedZone) {
-			throw new Error("Cloudflare zone is already registered to another account");
-		}
-	}
-	// Email Routing is Cloudflare's way of receiving; another provider brings its own MX,
-	// which its setup in the domain page creates once credentials exist.
-	// A skipped-DNS domain is recorded only: nothing receives or sends until the operator picks providers.
+
 	const skipDns = options?.skipDns === true;
-	const outboundSetup = !skipDns && !options?.sendingProvider && (options?.enableSending ?? true)
-		? await ensureOutboundSendingDomain(env, hostname).catch((err) => {
-			console.error("[domains/service] Outbound domain setup failed:", err);
-			return null;
-		})
-		: null;
-	const defaultSendingProvider = outboundSetup?.provider ?? "postfix";
+	const defaultSendingProvider = "postfix";
 	const receivingProvider = skipDns ? "none" : (options?.receivingProvider ?? "postfix");
-	// Cloudflare's sending subdomain is only provisioned when Cloudflare is the sender.
 	const requestedSending = skipDns ? "none" : (options?.sendingProvider ?? (options?.enableSending === false ? "none" : defaultSendingProvider));
-	const provisioned = await provisionDomainOnCloudflare(env, hostname, {
-		...options,
-		enableSending: requestedSending === "cloudflare",
-		enableRouting: receivingProvider === "cloudflare" ? (options?.enableRouting ?? true) : false,
-		replaceMxRecords: receivingProvider === "cloudflare" ? options?.replaceMxRecords : false,
-	});
+
 	let insertedDomainId: string | null = null;
 	let domain: typeof domains.$inferSelect;
 
 	try {
-		const [existing] = await db.select().from(domains).where(eq(domains.hostname, provisioned.hostname)).limit(1);
+		const [existing] = await db.select().from(domains).where(eq(domains.hostname, normalizedHostname)).limit(1);
 		if (existing && existing.userId !== userId) {
 			throw new Error("Domain is already registered");
 		}
 
 		const domainId = existing?.id ?? newId("dom");
-		const isManual = provisioned.zone.id === "manual";
-		// A manual zone goes live at once only when ownership was proven above (no Cloudflare credentials).
-		// "Set up later" on a Cloudflare-connected server stays pending until its zone is adopted and set up.
-		const liveManual = isManual && !(skipDns && hasCloudflareCredentials(env));
 		const dkim = (!existing || !existing.dkimPrivateKey) ? generateDkimKeyPair() : null;
 		const values = {
 			id: domainId,
 			userId,
-			hostname: provisioned.hostname,
-			zoneId: provisioned.zone.id,
-			status: liveManual || (!skipDns && (provisioned.routingEnabled || provisioned.sendingEnabled || receivingProvider !== "cloudflare")) ? ("active" as const) : ("pending" as const),
-			receivingProvider: isManual ? ("none" as const) : receivingProvider,
-			routingStatus: provisioned.routingStatus ?? null,
-			sendingSubdomainTag: provisioned.sendingSubdomainTag,
-			sendingRequested: liveManual ? true : skipDns ? false : provisioned.sendingRequested,
-			...(skipDns ? { sendingProvider: "none" as const } : options?.sendingProvider ? { sendingProvider: options.sendingProvider } : existing && existing.sendingProvider !== "none" ? {} : { sendingProvider: requestedSending !== "none" ? requestedSending : provisioned.sendingRequested ? ("postfix" as const) : ("none" as const) }),
-			sendingEnabled: liveManual ? true : skipDns ? false : provisioned.sendingEnabled,
-			routingEnabled: liveManual ? true : skipDns ? false : provisioned.routingEnabled,
-			dnsSkipped: isManual ? false : options?.skipDns === true,
+			hostname: normalizedHostname,
+			zoneId: "self-hosted",
+			status: "active" as const,
+			receivingProvider,
+			routingStatus: "active",
+			sendingSubdomainTag: null,
+			sendingRequested: true,
+			sendingProvider: requestedSending !== "none" ? requestedSending : ("postfix" as const),
+			sendingEnabled: true,
+			routingEnabled: true,
+			dnsSkipped: false,
 			...(dkim ? { dkimPrivateKey: dkim.privateKey, dkimPublicKey: dkim.publicKey, dkimSelector: dkim.selector } : {}),
 		};
 
@@ -145,43 +111,46 @@ export async function addDomainForUser(
 
 		const [row] = await db.select().from(domains).where(eq(domains.id, domainId)).limit(1);
 		domain = row!;
+
+		return {
+			domain,
+			dns: {
+				routing: { records: [], missing: [], status: "active" },
+				sending: [],
+				sendingEnabled: true,
+			},
+			changes: {
+				createdZone: false,
+				createdAddressRules: [],
+				createdCatchAll: false,
+				createdSendingSubdomain: null,
+				createdMxRecords: [],
+				createdDnsRecords: [],
+			},
+		};
 	} catch (err) {
-		// The zone was already provisioned above. Anything that fails after that —
-		// a hostname owned by another user, an unmigrated D1 schema — would otherwise
-		// strand Email Routing and the sending subdomain with nothing referencing them.
-		await rollbackDomainProvisioning(env, provisioned.changes);
 		if (insertedDomainId) {
 			try {
 				await db.delete(domains).where(eq(domains.id, insertedDomainId));
-			} catch (cleanupError) {
-				console.warn("addDomainForUser: failed to remove partial domain row", cleanupError);
+			} catch (cleanupErr) {
+				console.warn("Failed to clean up domain row after failure:", cleanupErr);
 			}
 		}
 		throw err;
 	}
-
-	// Read the DNS view outside the rollback scope: the domain is fully set up by
-	// now, so a failed status read must not tear it back down or make registration
-	// delete the account that now owns the completed Cloudflare configuration.
-	let dns: DomainDnsView;
-	try {
-		dns = await getDomainDns(env, domain);
-	} catch (error) {
-		console.warn("addDomainForUser: failed to read DNS status after provisioning", error);
-		dns = {
-			routing: { records: [], missing: [], status: provisioned.routingStatus },
-			sending: [],
-			sendingEnabled: provisioned.sendingEnabled,
-		};
-	}
-	return { domain, dns, changes: provisioned.changes };
 }
 
 export async function getDomainDns(
 	env: CloudflareEnv,
 	domain: typeof domains.$inferSelect,
 ): Promise<DomainDnsView> {
-	if (isManualZone(domain.zoneId)) return getManualDomainDns(env, domain.hostname);
+	if (domain.zoneId === "self-hosted" || domain.zoneId === "manual" || isManualZone(domain.zoneId)) {
+		return {
+			routing: { records: [], missing: [], status: "active" },
+			sending: [],
+			sendingEnabled: true,
+		};
+	}
 	// Read the zone's actual sending state rather than trusting `sendingRequested`,
 	// which goes stale when sending is enabled outside Replyot (or when the row
 	// was written before the subdomain existed). A missing Email Sending permission

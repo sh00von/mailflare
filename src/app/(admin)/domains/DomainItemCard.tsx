@@ -68,49 +68,30 @@ export default function DomainItemCard({
               <StatusIcon ok={item.status === "active"} className="h-3 w-3" />
               {item.status === "active" ? "active" : item.status === "pending" ? "pending" : item.status}
             </Badge>
-            {item.receivingProvider === "postfix" ? (
-              <Badge variant="outline" className="gap-1 border-blue-200 bg-blue-50 text-blue-700">
-                <StatusIcon ok className="h-3 w-3" />
-                Postfix Inbound (Port 25)
-              </Badge>
-            ) : item.receivingProvider === "cloudflare" ? (
+            {item.receivingProvider !== "none" ? (
               <Badge
-                variant={item.routingEnabled ? "outline" : "secondary"}
-                className={cn("gap-1", !item.routingEnabled && "opacity-50")}
+                variant={item.routingEnabled || item.receivingProvider === "postfix" ? "outline" : "secondary"}
+                className={cn("gap-1", !item.routingEnabled && item.receivingProvider !== "postfix" && "opacity-50")}
               >
-                <StatusIcon ok={item.routingEnabled} className="h-3 w-3" />
-                routing
+                <StatusIcon ok={item.routingEnabled || item.receivingProvider === "postfix"} className="h-3 w-3" />
+                inbound
               </Badge>
-            ) : item.receivingProvider === "none" ? (
+            ) : (
               <Badge variant="secondary" className="gap-1 opacity-50">
                 sending only
               </Badge>
-            ) : (
-              <Badge variant="outline" className="gap-1">
-                {`receiving via ${item.receivingProvider === "ses" ? "Amazon SES" : "Resend"}`}
-              </Badge>
             )}
-            {item.sendingProvider === "postfix" ? (
-              <Badge variant="outline" className="gap-1 border-emerald-200 bg-emerald-50 text-emerald-700">
-                <StatusIcon ok className="h-3 w-3" />
-                Postfix Outbound (DKIM)
+            {item.sendingProvider !== "none" ? (
+              <Badge
+                variant={item.sendingEnabled || item.sendingProvider === "postfix" ? "outline" : "secondary"}
+                className={cn("gap-1", !item.sendingEnabled && item.sendingProvider !== "postfix" && "opacity-50")}
+              >
+                <StatusIcon ok={item.sendingEnabled || item.sendingProvider === "postfix"} className="h-3 w-3" />
+                outbound
               </Badge>
-            ) : item.sendingProvider === "resend" || item.sendingProvider === "ses" ? (
-              <Badge variant="outline" className="gap-1">
-                <StatusIcon ok className="h-3 w-3" />
-                {`sending via ${item.sendingProvider === "ses" ? "Amazon SES" : "Resend"}`}
-              </Badge>
-            ) : item.sendingProvider === "none" ? (
+            ) : (
               <Badge variant="secondary" className="gap-1 opacity-50">
                 receiving only
-              </Badge>
-            ) : (
-              <Badge
-                variant={item.sendingEnabled ? "outline" : "secondary"}
-                className={cn("gap-1", !item.sendingEnabled && "opacity-50")}
-              >
-                <StatusIcon ok={item.sendingEnabled} className="h-3 w-3" />
-                sending
               </Badge>
             )}
           </div>

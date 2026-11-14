@@ -46,3 +46,4 @@ export function formatDkimDnsRecord(selector: string, domain: string, cleanPubli
 		value: `v=DKIM1; k=rsa; p=${cleanPublicKey}`,
 	};
 }
+

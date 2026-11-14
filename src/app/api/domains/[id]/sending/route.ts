@@ -20,7 +20,7 @@ import { MxConflictError } from "@/lib/domains/receiving-dns";
 
 type Params = { params: Promise<{ id: string }> };
 
-const schema = z.object({ provider: z.enum(["none", "cloudflare", "resend", "ses"]), replaceMx: z.boolean().optional() });
+const schema = z.object({ provider: z.enum(["none", "cloudflare", "resend", "ses", "postfix"]), replaceMx: z.boolean().optional() });
 
 /**
  * Chooses what sends mail for this domain. Receiving is unaffected, except that

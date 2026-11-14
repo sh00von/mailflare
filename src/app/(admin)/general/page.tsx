@@ -60,7 +60,7 @@ export default function GeneralSettingsPage() {
 			<CardHeader className="py-0"><CardTitle>File attachments</CardTitle></CardHeader>
 			<CardContent className="pt-6"><form onSubmit={save} className="space-y-4">
 				<div className="space-y-2"><Label htmlFor="attachment-limit">Maximum attachments per email (MB)</Label><Input id="attachment-limit" type="number" min="1" max="25" step="1" value={maxMb} onChange={(event) => setMaxMb(Number(event.target.value))} disabled={!loaded || saving} className="max-w-40" required /><p className="text-sm text-neutral-500">Applies to each file and all files combined. Maximum: 25 MB; up to 10 files.</p></div>
-				<div className="space-y-2 rounded-xl bg-neutral-50 p-4 text-sm text-neutral-700"><p>Outbound attachments are sent directly via Postfix and stored in your storage bucket up to each workspace plan&apos;s limit (15 MB on Starter, 25 MB on Pro and Business).</p></div>
+				<div className="space-y-2 rounded-xl bg-neutral-50 p-4 text-sm text-neutral-700"><p>Outbound attachments are sent directly and stored in your storage bucket up to each workspace plan&apos;s limit (15 MB on Starter, 25 MB on Pro and Business).</p></div>
 				{status && <p role="status" className="text-sm text-neutral-700">{status}</p>}
 				<Button type="submit" disabled={!loaded || saving || !Number.isInteger(maxMb) || maxMb < 1 || maxMb > 25}>{saving ? "Saving..." : "Save settings"}</Button>
 			</form></CardContent>
