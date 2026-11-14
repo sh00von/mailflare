@@ -8,7 +8,7 @@ import { readJsonBody } from "@/lib/http/request";
 import { RequestBodyTooLargeError } from "@/lib/http/errors";
 import { recordAuthActivity } from "@/lib/auth/activity";
 import { consumeLoginChallenge, getLoginChallengeUserId } from "@/lib/auth/login-challenge";
-import { canAttemptSecondFactor, clearSecondFactorFailures, recordSecondFactorFailure } from "@/lib/auth/mfa-attempts";
+import { clearSecondFactorFailures, reserveSecondFactorAttempt } from "@/lib/auth/mfa-attempts";
 import { hashSessionToken } from "@/lib/auth/session";
 import { verifySecondFactor } from "@/lib/auth/mfa";
 import { completeLogin } from "@/lib/auth/login-response";
@@ -38,15 +38,15 @@ export async function POST(request: Request) {
 	if (!user || user.disabled || user.deletedAt) return authError("account_disabled", 403);
 	// Keyed by the challenge's hash so the raw token is not kept in memory.
 	const challengeKey = await hashSessionToken(parsed.data.challengeToken);
-	if (!canAttemptSecondFactor(user.id, challengeKey)) {
+	// Reserved before verifying (no await in between), so concurrent guesses cannot exceed the cap.
+	const attempt = reserveSecondFactorAttempt(user.id, challengeKey);
+	if (!attempt.allowed) {
 		await consumeLoginChallenge(env, parsed.data.challengeToken);
 		return authError("rate_limited", 429, { "Retry-After": "900" });
 	}
 	const method = await verifySecondFactor(env, user, parsed.data.code);
 	if (!method) {
-		if (recordSecondFactorFailure(user.id, challengeKey)) {
-			await consumeLoginChallenge(env, parsed.data.challengeToken);
-		}
+		if (attempt.challengeExhausted) await consumeLoginChallenge(env, parsed.data.challengeToken);
 		return authError("code_mismatch", 401);
 	}
 	clearSecondFactorFailures(user.id, challengeKey);

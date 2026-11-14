@@ -101,19 +101,22 @@ export async function addDomainForUser(
 
 		const domainId = existing?.id ?? newId("dom");
 		const isManual = provisioned.zone.id === "manual";
+		// A manual zone goes live at once only when ownership was proven above (no Cloudflare credentials).
+		// "Set up later" on a Cloudflare-connected server stays pending until its zone is adopted and set up.
+		const liveManual = isManual && !(skipDns && hasCloudflareCredentials(env));
 		const values = {
 			id: domainId,
 			userId,
 			hostname: provisioned.hostname,
 			zoneId: provisioned.zone.id,
-			status: isManual || (!skipDns && (provisioned.routingEnabled || provisioned.sendingEnabled || receivingProvider !== "cloudflare")) ? ("active" as const) : ("pending" as const),
+			status: liveManual || (!skipDns && (provisioned.routingEnabled || provisioned.sendingEnabled || receivingProvider !== "cloudflare")) ? ("active" as const) : ("pending" as const),
 			receivingProvider: isManual ? ("none" as const) : receivingProvider,
 			routingStatus: provisioned.routingStatus ?? null,
 			sendingSubdomainTag: provisioned.sendingSubdomainTag,
-			sendingRequested: isManual ? true : skipDns ? false : provisioned.sendingRequested,
+			sendingRequested: liveManual ? true : skipDns ? false : provisioned.sendingRequested,
 			...(skipDns ? { sendingProvider: "none" as const } : options?.sendingProvider ? { sendingProvider: options.sendingProvider } : existing && existing.sendingProvider !== "none" ? {} : { sendingProvider: requestedSending !== "none" ? requestedSending : provisioned.sendingRequested ? ("cloudflare" as const) : ("none" as const) }),
-			sendingEnabled: isManual ? true : skipDns ? false : provisioned.sendingEnabled,
-			routingEnabled: isManual ? true : skipDns ? false : provisioned.routingEnabled,
+			sendingEnabled: liveManual ? true : skipDns ? false : provisioned.sendingEnabled,
+			routingEnabled: liveManual ? true : skipDns ? false : provisioned.routingEnabled,
 			dnsSkipped: isManual ? false : options?.skipDns === true,
 		};
 

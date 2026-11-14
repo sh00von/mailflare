@@ -36,15 +36,18 @@ function bump(map: Map<string, Counter>, key: string, now: number): number {
 	return count;
 }
 
-/** Whether another code may be tried for this account and challenge. */
-export function canAttemptSecondFactor(userId: string, challengeKey: string, now = Date.now()): boolean {
-	return read(byUser, userId, now) < MAX_FAILURES_PER_USER && read(byChallenge, challengeKey, now) < MAX_FAILURES_PER_CHALLENGE;
-}
-
-/** Records a wrong code; returns true when the challenge is now exhausted and should be discarded. */
-export function recordSecondFactorFailure(userId: string, challengeKey: string, now = Date.now()): boolean {
+/**
+ * Reserve one attempt before checking a code. Counting happens synchronously, before any await, so parallel
+ * requests cannot all pass the limit check first. Returns whether the attempt may proceed and whether this
+ * attempt used up the challenge (the caller then discards it). A correct code clears the counts.
+ */
+export function reserveSecondFactorAttempt(userId: string, challengeKey: string, now = Date.now()): { allowed: boolean; challengeExhausted: boolean } {
+	if (read(byUser, userId, now) >= MAX_FAILURES_PER_USER || read(byChallenge, challengeKey, now) >= MAX_FAILURES_PER_CHALLENGE) {
+		return { allowed: false, challengeExhausted: true };
+	}
 	bump(byUser, userId, now);
-	return bump(byChallenge, challengeKey, now) >= MAX_FAILURES_PER_CHALLENGE;
+	const challengeCount = bump(byChallenge, challengeKey, now);
+	return { allowed: true, challengeExhausted: challengeCount >= MAX_FAILURES_PER_CHALLENGE };
 }
 
 /** A correct code clears the account's failure count. */

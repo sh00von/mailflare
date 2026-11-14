@@ -65,6 +65,10 @@ export async function POST(request: Request) {
 	}
 
 	const ownership = await checkDomainOwnershipDns(domainName);
+	if (ownership.unconfigured) {
+		console.error("Sign-up refused: MAIL_HOSTNAME is not set, so domain ownership cannot be verified.");
+		return NextResponse.json({ error: "Sign-up is not available right now. Please try again later." }, { status: 503 });
+	}
 	if (!ownership.ok) {
 		return NextResponse.json(
 			{ error: "Your domain isn't connected yet. Add the settings from the previous step, then try again." },

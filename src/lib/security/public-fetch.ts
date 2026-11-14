@@ -1,4 +1,5 @@
 import { lookup, type LookupAddress, type LookupAllOptions } from "node:dns";
+import { isIP } from "node:net";
 import type { LookupFunction } from "node:net";
 import { Agent, fetch as undiciFetch } from "undici";
 import { isPublicAddress } from "@/lib/remote-images/fetch";
@@ -23,7 +24,13 @@ const publicOnlyAgent = new Agent({
 	},
 });
 
-/** `fetch` that can only connect to public addresses. Redirects should stay manual so each hop is re-validated. */
-export function publicOnlyFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-	return undiciFetch(input as string | URL, { ...(init as Parameters<typeof undiciFetch>[1]), dispatcher: publicOnlyAgent }) as unknown as Promise<Response>;
+/**
+ * `fetch` that can only connect to public addresses. An IP-literal URL skips the DNS lookup the agent checks,
+ * so literals are validated here; redirects are never followed, so callers re-validate each hop themselves.
+ */
+export async function publicOnlyFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+	const url = new URL(typeof input === "string" || input instanceof URL ? input : input.url);
+	const host = url.hostname.replace(/^\[|\]$/g, "");
+	if (isIP(host) && !isPublicAddress(host)) throw Object.assign(new Error(`Refusing non-public address ${host}`), { code: "ENOTPUBLIC" });
+	return undiciFetch(url, { ...(init as Parameters<typeof undiciFetch>[1]), redirect: "manual", dispatcher: publicOnlyAgent }) as unknown as Promise<Response>;
 }
