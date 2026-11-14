@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { notify } from "@/lib/notify";
 import { loadComposePreferences, updateComposePreferences } from "@/components/compose/compose-preferences-utils";
 import { Select } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -21,7 +22,7 @@ export function ComposeDefaultsSettings() {
 				if (active) setPreferences(loaded);
 			})
 			.catch(() => {
-				if (active) setError("Composer settings could not be saved.");
+				if (active) setError("Composer settings could not be loaded.");
 			})
 			.finally(() => {
 				if (active) setLoading(false);
@@ -35,12 +36,11 @@ export function ComposeDefaultsSettings() {
 		const previous = preferences;
 		setPreferences({ ...preferences, ...patch });
 		setSaving(true);
-		setError(null);
 		void updateComposePreferences(patch)
 			.then(setPreferences)
 			.catch((saveError) => {
 				setPreferences(previous);
-				setError(saveError instanceof Error && saveError.message === "MIGRATION_REQUIRED" ? "Run “Update database” in Admin first." : "Composer settings could not be saved.");
+				notify.error(saveError instanceof Error && saveError.message === "MIGRATION_REQUIRED" ? "Run “Update database” in Admin first." : "Composer settings could not be saved.");
 			})
 			.finally(() => setSaving(false));
 	}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { notify } from "@/lib/notify";
 import { Switch } from "@/components/ui/switch";
 import {
 	areBrowserNotificationsEnabled,
@@ -10,7 +11,6 @@ import {
 export function BrowserNotificationSettings() {
 	const [permission, setPermission] = useState<NotificationPermission | "unsupported">("unsupported");
 	const [enabled, setEnabled] = useState(false);
-	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
 		const refresh = () => {
@@ -39,13 +39,12 @@ export function BrowserNotificationSettings() {
 					checked={permission === "granted" && enabled}
 					disabled={permission === "unsupported" || permission === "denied"}
 					onCheckedChange={(nextEnabled) => {
-						setError(null);
 						if (!nextEnabled) {
 							try {
 								setBrowserNotificationsEnabled(false);
 								setEnabled(false);
 							} catch {
-								setError("Could not save the notification preference in this browser.");
+								notify.error("Could not save the notification preference in this browser.");
 							}
 							return;
 						}
@@ -57,7 +56,7 @@ export function BrowserNotificationSettings() {
 								setBrowserNotificationsEnabled(true);
 								setEnabled(true);
 							} catch {
-								setError("Could not enable browser notifications.");
+								notify.error("Could not enable browser notifications.");
 							}
 						})();
 					}}
@@ -70,7 +69,6 @@ export function BrowserNotificationSettings() {
 			{permission === "unsupported" && (
 				<p className="mt-2 px-4 text-sm text-neutral-500">Browser notifications are unavailable here.</p>
 			)}
-			{error && <p role="alert" className="mt-2 px-4 text-sm text-red-600">{error}</p>}
 		</div>
 	);
 }

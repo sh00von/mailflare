@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { notify } from "@/lib/notify";
 import {
 	loadRemoteContentPolicy,
 	updateRemoteContentMode,
@@ -23,7 +24,7 @@ export function RemoteContentSettings() {
 		let cancelled = false;
 		loadRemoteContentPolicy()
 			.then((policy) => { if (!cancelled) setMode(policy.mode); })
-			.catch((loadError) => { if (!cancelled) setError(loadError instanceof Error ? loadError.message : "Failed to update remote content settings"); })
+			.catch((loadError) => { if (!cancelled) setError(loadError instanceof Error ? loadError.message : "Could not load remote content settings"); })
 			.finally(() => { if (!cancelled) setLoading(false); });
 		return () => { cancelled = true; };
 		// eslint-disable-next-line react-hooks/exhaustive-deps
@@ -38,7 +39,7 @@ export function RemoteContentSettings() {
 			.then(setMode)
 			.catch((updateError) => {
 				setMode(previous);
-				setError(updateError instanceof Error ? updateError.message : "Failed to update remote content settings");
+				notify.error(updateError, "Could not update remote content settings");
 			})
 			.finally(() => setSaving(false));
 	};

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { notify } from "@/lib/notify";
 import { authFetch } from "@/lib/auth/client";
 import { Switch } from "@/components/ui/switch";
 
@@ -36,7 +37,7 @@ export function SpamFilterSettings() {
 			setEnabled(data.enabled !== false);
 		} catch (nextError) {
 			setEnabled(previous);
-			setError(nextError instanceof Error ? nextError.message : "Failed to update spam filter settings");
+			notify.error(nextError, "Could not update spam filter settings");
 		} finally {
 			setLoading(false);
 		}

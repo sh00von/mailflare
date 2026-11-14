@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { notify } from "@/lib/notify";
 import { useSelectedMailbox } from "@/components/mailbox-provider";
 import { isHtmlSignature } from "@/components/compose/rich-text-utils";
 import { EmailHtmlRenderer } from "@/components/messages/email-html-renderer";
@@ -14,29 +15,26 @@ export function MailboxSignatureForm() {
 	const { selectedMailbox, setSelectedMailbox, isLoading } = useSelectedMailbox();
 	const [signature, setSignature] = useState("");
 	const [savedSignature, setSavedSignature] = useState("");
-	const [status, setStatus] = useState<string | null>(null);
 	const [saving, setSaving] = useState(false);
 
 	useEffect(() => {
 		const nextSignature = selectedMailbox?.signature ?? "";
 		setSignature(nextSignature);
 		setSavedSignature(nextSignature);
-		setStatus(null);
 	}, [selectedMailbox?.id, selectedMailbox?.signature]);
 
 	async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
 		event.preventDefault();
 		if (!selectedMailbox) return;
 		setSaving(true);
-		setStatus(null);
 		try {
 			const saved = await updateMailboxSignature(selectedMailbox.id, signature);
 			setSignature(saved);
 			setSavedSignature(saved);
 			setSelectedMailbox({ ...selectedMailbox, signature: saved });
-			setStatus("Saved");
+			notify.success("Signature saved");
 		} catch (error) {
-			setStatus(error instanceof Error ? error.message : "Failed to update signature");
+			notify.error(error, "Could not save signature");
 		} finally {
 			setSaving(false);
 		}
@@ -78,7 +76,6 @@ export function MailboxSignatureForm() {
 					{saving ? "Saving..." : "Save signature"}
 				</Button>
 				{!canManage && <p className="text-sm text-neutral-500">Full access is required to edit this signature.</p>}
-				{status && <p role="status" className="text-sm text-neutral-500">{status}</p>}
 			</div>
 		</form>
 	);

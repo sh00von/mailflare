@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { notify } from "@/lib/notify";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,13 +16,11 @@ export function PasswordSettings() {
 	const [currentPassword, setCurrentPassword] = useState("");
 	const [newPassword, setNewPassword] = useState("");
 	const [confirmPassword, setConfirmPassword] = useState("");
-	const [message, setMessage] = useState<string | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
 
 	async function change(event: React.FormEvent) {
 		event.preventDefault();
-		setMessage(null);
 		setError(null);
 		if (newPassword !== confirmPassword) {
 			setError("New passwords do not match");
@@ -33,7 +32,7 @@ export function PasswordSettings() {
 			setCurrentPassword("");
 			setNewPassword("");
 			setConfirmPassword("");
-			setMessage("Password changed successfully");
+			notify.success("Password changed");
 			await refreshSecurityStatus(true);
 		} catch (err) {
 			setError(authErrorText(err instanceof ClientRequestError ? err.code : undefined, "Failed to change password"));
@@ -64,7 +63,6 @@ export function PasswordSettings() {
 				</div>
 			</form>
 
-			{message && <p role="status" className="text-sm text-green-600 font-medium">{message}</p>}
 			{error && <p role="alert" className="text-sm text-red-600">{error}</p>}
 		</div>
 	);

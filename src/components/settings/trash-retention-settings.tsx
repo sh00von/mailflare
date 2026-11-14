@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { notify } from "@/lib/notify";
 import { authFetch } from "@/lib/auth/client";
 import { TRASH_RETENTION_OPTIONS, describeTrashRetention } from "@/lib/email/trash-retention-utils";
 import type { TrashRetentionSettingsResponse } from "@/app/api/settings/trash-retention/types";
@@ -37,7 +38,7 @@ export function TrashRetentionSettings() {
 			setDays(data.days ?? null);
 		} catch (nextError) {
 			setDays(previous);
-			setError(nextError instanceof Error ? nextError.message : "Failed to update clean-up settings");
+			notify.error(nextError, "Could not update clean-up settings");
 		} finally {
 			setLoading(false);
 		}

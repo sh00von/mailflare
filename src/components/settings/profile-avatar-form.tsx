@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { notify } from "@/lib/notify";
 import { Camera, LoaderCircle, User } from "@/components/icons";
 import { authFetch } from "@/lib/auth/client";
 import { getAvatarColorStyle } from "@/lib/avatar-colors";
@@ -82,7 +83,7 @@ export function ProfileAvatarForm({
 				dispatchProfileAvatarChanged(nextAvatarUrl);
 			}
 		} catch (error) {
-			setStatus(error instanceof Error ? error.message : "Upload failed");
+			notify.error(error, "Could not upload the picture");
 			setBusy(false);
 		}
 	}

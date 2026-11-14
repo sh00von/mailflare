@@ -1,6 +1,7 @@
 "use client";
 
 import type { FormEvent } from "react";
+import { notify } from "@/lib/notify";
 import { useState } from "react";
 import { Upload } from "@/components/icons";
 import { useSelectedMailbox } from "@/components/mailbox-provider";
@@ -16,20 +17,18 @@ export function ImportMessages({ destination, sourceLabel }: ImportMessagesProps
 	const [files, setFiles] = useState<File[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [result, setResult] = useState<ImportMessagesResult | null>(null);
-	const [error, setError] = useState<string | null>(null);
 
 	async function onSubmit(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault();
 		if (!selectedMailbox?.id || files.length === 0) return;
 
 		setLoading(true);
-		setError(null);
 		setResult(null);
 		try {
 			const nextResult = await importMessageFiles(selectedMailbox.id, files, destination);
 			setResult(nextResult);
 		} catch (err) {
-			setError(err instanceof Error ? err.message : "Import failed");
+			notify.error(err, "Could not import the files");
 		} finally {
 			setLoading(false);
 		}
@@ -73,11 +72,6 @@ export function ImportMessages({ destination, sourceLabel }: ImportMessagesProps
 						</p>
 					)}
 
-					{error && (
-						<p className="rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
-							{error}
-						</p>
-					)}
 				</form>
 			</CardContent>
 		</Card>

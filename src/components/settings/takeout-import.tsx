@@ -1,6 +1,7 @@
 "use client";
 
 import type { FormEvent } from "react";
+import { notify } from "@/lib/notify";
 import { useEffect, useRef, useState } from "react";
 import { Upload } from "@/components/icons";
 import { useSelectedMailbox } from "@/components/mailbox-provider";
@@ -134,7 +135,7 @@ export function TakeoutImport() {
 			}
 			setResult({ mode, summary: total });
 		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
+			notify.error(caught, "Could not import the archive");
 		} finally {
 			controllerRef.current = null;
 			liveRef.current = null;

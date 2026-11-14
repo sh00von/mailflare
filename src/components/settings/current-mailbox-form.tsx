@@ -1,6 +1,7 @@
 "use client";
 
 import type { FormEvent } from "react";
+import { notify } from "@/lib/notify";
 import { useEffect, useState } from "react";
 import { Save } from "@/components/icons";
 import { useSelectedMailbox } from "@/components/mailbox-provider";
@@ -16,14 +17,12 @@ export function CurrentMailboxForm() {
 	const { selectedMailbox, setSelectedMailbox, isLoading } = useSelectedMailbox();
 	const [displayName, setDisplayName] = useState("");
 	const [savedDisplayName, setSavedDisplayName] = useState("");
-	const [status, setStatus] = useState<string | null>(null);
 	const [saving, setSaving] = useState(false);
 
 	useEffect(() => {
 		const nextName = selectedMailbox?.displayName ?? "";
 		setDisplayName(nextName);
 		setSavedDisplayName(nextName);
-		setStatus(null);
 	}, [selectedMailbox?.id, selectedMailbox?.displayName]);
 
 	async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -31,15 +30,14 @@ export function CurrentMailboxForm() {
 		if (!selectedMailbox) return;
 
 		setSaving(true);
-		setStatus(null);
 		try {
 			const updated = await updateCurrentMailboxName(selectedMailbox.id, displayName);
 			setSelectedMailbox(updated);
 			setSavedDisplayName(updated.displayName ?? "");
 			setDisplayName(updated.displayName ?? "");
-			setStatus("Saved");
+			notify.success("Mailbox updated");
 		} catch (err) {
-			setStatus(err instanceof Error ? err.message : "Failed to update mailbox");
+			notify.error(err, "Could not update mailbox");
 		} finally {
 			setSaving(false);
 		}
@@ -106,7 +104,6 @@ export function CurrentMailboxForm() {
 								<Save className="h-4 w-4" />
 								{saving ? "Saving..." : "Save changes"}
 							</Button>
-							{status && <p role="status" className="text-sm text-neutral-500">{status}</p>}
 						</div>
 					</form>
 				</CardContent>
