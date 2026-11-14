@@ -1,4 +1,4 @@
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq, ne, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db";
 import { domains, mailboxAliases, mailboxes } from "@/db/schema";
@@ -64,12 +64,21 @@ export async function GET(request: Request, { params }: MailboxRouteParams) {
 	const ownerId = await getDomainOwnerId(db, mailbox.domainId);
 	const [aliases, availableDomains] = await Promise.all([
 		listMailboxAliases(db, id),
-		ownerId
-			? db
-					.select({ id: domains.id, hostname: domains.hostname })
-					.from(domains)
-					.where(and(eq(domains.userId, ownerId), eq(domains.status, "active")))
-			: Promise.resolve([]),
+		db
+			.select({ id: domains.id, hostname: domains.hostname })
+			.from(domains)
+			.where(
+				and(
+					eq(domains.status, "active"),
+					workspace?.id
+						? or(
+								eq(domains.workspaceId, workspace.id),
+								ownerId ? eq(domains.userId, ownerId) : undefined,
+								eq(domains.userId, user.id),
+						  )
+						: or(ownerId ? eq(domains.userId, ownerId) : undefined, eq(domains.userId, user.id)),
+				),
+			),
 	]);
 
 	return NextResponse.json({ aliases, availableDomains });
@@ -92,17 +101,23 @@ export async function POST(request: Request, { params }: MailboxRouteParams) {
 	if (!mailbox) return NextResponse.json({ error: "Mailbox not found" }, { status: 404 });
 
 	const ownerId = await getDomainOwnerId(db, mailbox.domainId);
-	const [domain] = ownerId
-		? await db
-				.select({ id: domains.id, hostname: domains.hostname, zoneId: domains.zoneId })
-				.from(domains)
-				.where(and(
-					eq(domains.id, parsed.data.domainId),
-					eq(domains.userId, ownerId),
-					eq(domains.status, "active"),
-				))
-				.limit(1)
-		: [];
+	const [domain] = await db
+		.select({ id: domains.id, hostname: domains.hostname, zoneId: domains.zoneId })
+		.from(domains)
+		.where(
+			and(
+				eq(domains.id, parsed.data.domainId),
+				eq(domains.status, "active"),
+				workspace?.id
+					? or(
+							eq(domains.workspaceId, workspace.id),
+							ownerId ? eq(domains.userId, ownerId) : undefined,
+							eq(domains.userId, user.id),
+					  )
+					: or(ownerId ? eq(domains.userId, ownerId) : undefined, eq(domains.userId, user.id)),
+			),
+		)
+		.limit(1);
 	if (!domain) return NextResponse.json({ error: "Domain not found" }, { status: 404 });
 
 	const { localPart } = parsed.data;
@@ -144,7 +159,7 @@ export async function POST(request: Request, { params }: MailboxRouteParams) {
 		console.error("ensureEmailRoutingRuleToWorker", error);
 		await db.delete(mailboxAliases).where(eq(mailboxAliases.id, aliasId));
 		return NextResponse.json(
-			{ error: "Failed to create the Cloudflare Email Routing rule for this alias. Please try again." },
+			{ error: "Failed to configure routing for this alias. Please try again." },
 			{ status: 502 },
 		);
 	}
@@ -200,7 +215,7 @@ export async function DELETE(request: Request, { params }: MailboxRouteParams) {
 		} catch (error) {
 			console.error("deleteEmailRoutingRuleForAddress", error);
 			return NextResponse.json(
-				{ error: "Failed to remove the Cloudflare Email Routing rule for this alias. Please try again." },
+				{ error: "Failed to remove the alias routing rule. Please try again." },
 				{ status: 502 },
 			);
 		}

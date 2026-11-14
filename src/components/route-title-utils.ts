@@ -14,11 +14,7 @@ const staticRouteTitles: Array<[string, string]> = [
 	["/activity", "Activity"],
 	["/backups", "Backups"],
 	["/branding", "Branding"],
-	["/licenses", "Licenses"],
 	["/ai-usage", "AI Usage"],
-	["/calendar", "Calendar"],
-	["/booking", "Bookings"],
-	["/drive", "Drive"],
 	["/compose", "Compose"],
 ];
 

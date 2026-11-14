@@ -9,7 +9,8 @@ import { MailSearchProvider } from "@/components/mail-search/mail-search-context
 import { MailboxProvider } from "@/components/mailbox-provider";
 import { MailboxSelector } from "@/components/mailbox-selector";
 import { DnsSkippedBanner } from "@/components/dns-skipped-banner";
-import { LicenseIndicator } from "@/components/license-indicator";
+import { TrialStatusBanner } from "@/components/trial-status-banner";
+import { AdminHeaderButton } from "@/components/admin-header-button";
 import { DashboardNav } from "@/components/dashboard-nav";
 import { SidebarProvider } from "@/components/sidebar-state";
 import { SidebarAside, MobileMenuButton } from "@/components/sidebar-aside";
@@ -45,10 +46,11 @@ export default function DashboardLayout({
                     <header className="flex h-16 w-full shrink-0 items-center gap-3 pr-4 text-sm">
                       <MobileMenuButton className="ml-2" />
                       <MailSearchInput mobileEnd />
-                      <LicenseIndicator />
+                      <AdminHeaderButton />
                       <MailboxSelector />
                     </header>
                     <DnsSkippedBanner />
+                    <TrialStatusBanner />
                     <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
                       <main id="main-content" tabIndex={-1} className="focus:outline-none min-h-0 min-w-0 flex-1 overflow-y-auto rounded-t-3xl bg-white overscroll-contain md:mb-4 md:mr-4 md:rounded-2xl scrollbar-gutter-stable">
                         {children}

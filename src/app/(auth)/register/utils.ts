@@ -48,9 +48,26 @@ export async function checkExistingMx(hostname: string): Promise<{ ok: boolean; 
 	};
 }
 
+export async function sendRegisterVerificationCode(
+	email: string,
+	captchaAnswer?: string,
+	captchaToken?: string,
+): Promise<{ ok: boolean; error?: string }> {
+	const res = await fetch("/api/auth/register/send-code", {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ email, captchaAnswer, captchaToken }),
+	});
+	const data = (await res.json().catch(() => ({}))) as { error?: string };
+	if (!res.ok) {
+		return { ok: false, error: data.error || "Failed to send verification code" };
+	}
+	return { ok: true };
+}
+
 export async function submitRegistration(
 	form: FormData,
-	payload: { firstRun: boolean; domain: string; plan?: string; enableSending?: boolean; replaceMxRecords?: boolean; skipDns?: boolean },
+	payload: { firstRun: boolean; domain: string; orgName?: string; plan?: string; enableSending?: boolean; replaceMxRecords?: boolean; skipDns?: boolean; verificationCode?: string },
 ): Promise<{ ok: boolean; data: RegisterResult }> {
 	const res = await fetch("/api/auth/register", {
 		method: "POST",
@@ -59,6 +76,7 @@ export async function submitRegistration(
 			payload.firstRun
 				? {
 						domain: payload.domain,
+						orgName: payload.orgName,
 						plan: payload.plan,
 						enableSending: payload.enableSending,
 						replaceMxRecords: payload.replaceMxRecords,
@@ -67,6 +85,7 @@ export async function submitRegistration(
 						password: form.get("usePasskey") === "on" ? undefined : form.get("password"),
 						usePasskey: form.get("usePasskey") === "on",
 						resetEmail: form.get("resetEmail"),
+						verificationCode: (form.get("verificationCode") as string) || payload.verificationCode,
 						captchaAnswer: form.get("captchaAnswer"),
 						captchaToken: form.get("captchaToken"),
 					}
@@ -75,6 +94,7 @@ export async function submitRegistration(
 						password: form.get("usePasskey") === "on" ? undefined : form.get("password"),
 						usePasskey: form.get("usePasskey") === "on",
 						resetEmail: form.get("resetEmail"),
+						verificationCode: (form.get("verificationCode") as string) || payload.verificationCode,
 						captchaAnswer: form.get("captchaAnswer"),
 						captchaToken: form.get("captchaToken"),
 					},

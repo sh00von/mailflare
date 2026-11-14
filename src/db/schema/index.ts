@@ -145,9 +145,7 @@ export const mailboxes = sqliteTable(
 		localPart: text("local_part").notNull(),
 		displayName: text("display_name"),
 		signature: text("signature"),
-		autoReplyEnabled: bool("auto_reply_enabled").notNull().default(false),
-		autoReplySubject: text("auto_reply_subject").notNull().default("Out of office"),
-		autoReplyBody: text("auto_reply_body").notNull().default(""),
+		defaultFrom: text("default_from"),
 		avatarKey: text("avatar_key"),
 		type: text("type", { enum: ["personal", "shared"] }).notNull().default("personal"),
 		useAllDomains: bool("use_all_domains").notNull().default(true),
@@ -177,22 +175,6 @@ export const mailboxAliases = sqliteTable(
 	(t) => [
 		uniqueIndex("mailbox_aliases_address_idx").on(t.domainId, t.localPart),
 		index("mailbox_aliases_mailbox_idx").on(t.mailboxId),
-	],
-);
-
-export const autoReplyDeliveries = sqliteTable(
-	"auto_reply_deliveries",
-	{
-		id: text("id").primaryKey(),
-		mailboxId: text("mailbox_id")
-			.notNull()
-			.references(() => mailboxes.id, { onDelete: "cascade" }),
-		recipient: text("recipient").notNull(),
-		sentAt: timestamp("sent_at").notNull(),
-	},
-	(t) => [
-		uniqueIndex("auto_reply_deliveries_mailbox_recipient_idx").on(t.mailboxId, t.recipient),
-		index("auto_reply_deliveries_sent_idx").on(t.sentAt),
 	],
 );
 
@@ -1076,7 +1058,6 @@ export const schema = {
 	domains,
 	mailboxes,
 	mailboxAliases,
-	autoReplyDeliveries,
 	mailboxAccess,
 	contacts,
 	folders,

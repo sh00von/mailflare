@@ -2,6 +2,7 @@ import {
 	deleteEmailRoutingRule,
 	listEmailRoutingRules,
 } from "@/lib/cloudflare-api";
+import { hasCloudflareCredentials } from "@/lib/runtime";
 
 function routesToDomain(ruleValue: string | undefined, hostname: string): boolean {
 	if (!ruleValue) return false;
@@ -15,7 +16,7 @@ export async function deleteEmailRoutingRulesForDomain(
 	zoneId: string,
 	hostname: string,
 ): Promise<void> {
-	if (zoneId === "manual") return;
+	if (zoneId === "manual" || zoneId === "self-hosted" || !hasCloudflareCredentials(env)) return;
 	const normalizedHostname = hostname.toLowerCase();
 	const rules = await listEmailRoutingRules(env, zoneId);
 	const linkedRules = rules.filter((rule) =>

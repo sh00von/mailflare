@@ -27,6 +27,8 @@ export async function getAuthorizedSenderAddress(
 		hostname: domains.hostname,
 		domainId: mailboxes.domainId,
 		useAllDomains: mailboxes.useAllDomains,
+		domainStatus: domains.status,
+		sendingEnabled: domains.sendingEnabled,
 			id: mailboxes.id,
 		})
 		.from(mailboxes)
@@ -36,6 +38,9 @@ export async function getAuthorizedSenderAddress(
 		.limit(1);
 
 	if (!mailbox) throw new Error("Mailbox not found");
+	if (mailbox.domainStatus !== "active") {
+		throw new Error("Outbound sending is disabled until your domain status is active.");
+	}
 	const [actor] = await db.select().from(users).where(eq(users.id, input.userId)).limit(1);
 	if (!actor || actor.disabled) throw new Error("Sender account not found");
 

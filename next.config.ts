@@ -18,7 +18,6 @@ const nextConfig: NextConfig = {
 	serverExternalPackages: ["nodemailer", "smtp-server", "ws", "undici"],
 	async rewrites() {
 		return [
-			{ source: "/admin", destination: "/domains" },
 			{ source: "/admin/domains", destination: "/domains" },
 			{ source: "/admin/mailboxes", destination: "/accounts" },
 			{ source: "/admin/mailboxes/:path*", destination: "/accounts/:path*" },

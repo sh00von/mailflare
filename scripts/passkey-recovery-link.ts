@@ -39,9 +39,9 @@ if (!process.env.DATABASE_URL?.trim()) {
 	const target = `(SELECT id FROM users WHERE email = '${emailSql}' AND is_primary_admin = 1)`;
 	const revoke = `UPDATE passkey_enrollment_grants SET used_at = strftime('%s','now') WHERE used_at IS NULL AND user_id IN ${target};`;
 	const insert = `INSERT INTO passkey_enrollment_grants (id, user_id, token_hash, kind, created_by_user_id, expires_at, used_at, created_at) SELECT '${id}', id, '${tokenHash}', 'admin', NULL, strftime('%s','now') + 1800, NULL, strftime('%s','now') FROM users WHERE email = '${emailSql}' AND is_primary_admin = 1;`;
-	console.log("No DATABASE_URL: run these two statements against the D1 database, in order, then send the link below.");
-	console.log(`npx wrangler d1 execute DB --remote --command "${revoke}"`);
-	console.log(`npx wrangler d1 execute DB --remote --command "${insert}"`);
+	console.log("No DATABASE_URL set. Please run these two statements against your database:");
+	console.log(revoke);
+	console.log(insert);
 	console.log("The insert affects 0 rows if the address is not the primary administrator.");
 	console.log(`Recovery link (valid 30 minutes, single use): ${origin}/setup/passkey?token=${encodeURIComponent(token)}`);
 	process.exit(0);

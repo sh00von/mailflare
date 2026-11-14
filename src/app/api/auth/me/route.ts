@@ -4,6 +4,7 @@ import { getEnv } from "@/lib/cloudflare";
 import { hasPrimaryDomain, userHasMailboxes } from "@/lib/user";
 import { getLicenseEntitlements } from "@/lib/licenses/service";
 import { hasCloudflareCredentials, isNodeRuntime } from "@/lib/runtime";
+import { getOrEnsureWorkspaceForUser } from "@/lib/plans/usage";
 
 export async function GET(request: Request) {
 	const env = getEnv();
@@ -12,13 +13,14 @@ export async function GET(request: Request) {
 		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	}
 
-	const [entitlements, setup] = await Promise.all([
+	const [entitlements, setup, workspace] = await Promise.all([
 		getLicenseEntitlements(env),
 		// Authentication remains valid when optional mailbox/setup metadata is unavailable.
 		Promise.all([
 			userHasMailboxes(env, user.id),
 			hasPrimaryDomain(env),
 		]).catch((): [boolean, boolean] => [false, true]),
+		getOrEnsureWorkspaceForUser(env, user).catch(() => null),
 	]);
 	const [hasMailboxes, isSetup] = setup;
 	return NextResponse.json({
@@ -47,5 +49,11 @@ export async function GET(request: Request) {
 		managesDns: hasCloudflareCredentials(env),
 		hasMailboxes,
 		isSetup,
+		workspace: workspace ? {
+			status: workspace.status,
+			daysLeftInTrial: workspace.daysLeftInTrial,
+			trialExpired: workspace.trialExpired,
+			plan: workspace.plan,
+		} : null,
 	});
 }

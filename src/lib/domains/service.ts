@@ -120,12 +120,12 @@ export async function addDomainForUser(
 				sendingEnabled: true,
 			},
 			changes: {
-				createdZone: false,
+				zoneId: domain.zoneId || "",
+				enabledEmailRouting: false,
+				createdSendingSubdomainTag: null,
+				previousCatchAll: null,
 				createdAddressRules: [],
-				createdCatchAll: false,
-				createdSendingSubdomain: null,
-				createdMxRecords: [],
-				createdDnsRecords: [],
+				deletedMxRecords: [],
 			},
 		};
 	} catch (err) {
@@ -149,6 +149,7 @@ export async function getDomainDns(
 			routing: { records: [], missing: [], status: "active" },
 			sending: [],
 			sendingEnabled: true,
+			dkimSelector: domain.dkimSelector ?? undefined,
 		};
 	}
 	// Read the zone's actual sending state rather than trusting `sendingRequested`,
@@ -201,29 +202,31 @@ export async function removeDomainForUser(
 		.limit(1);
 	if (!domain) throw new Error("Domain not found");
 
-	try {
-		await deleteEmailRoutingRulesForDomain(env, domain.zoneId, domain.hostname);
-	} catch (err) {
-		console.warn("deleteEmailRoutingRulesForDomain", err);
-	}
-
-	const [otherDomainOnZone] = await db.select({ id: domains.id }).from(domains).where(and(
-		eq(domains.zoneId, domain.zoneId),
-		ne(domains.id, domainId),
-	)).limit(1);
-	if (domain.routingEnabled && !otherDomainOnZone) {
+	if (domain.zoneId !== "manual" && domain.zoneId !== "self-hosted") {
 		try {
-			await disableEmailRouting(env, domain.zoneId);
+			await deleteEmailRoutingRulesForDomain(env, domain.zoneId, domain.hostname);
 		} catch (err) {
-			console.warn("disableEmailRouting", err);
+			console.warn("deleteEmailRoutingRulesForDomain", err);
 		}
-	}
 
-	if (domain.sendingSubdomainTag) {
-		try {
-			await deleteSendingSubdomain(env, domain.zoneId, domain.sendingSubdomainTag);
-		} catch (err) {
-			console.warn("deleteSendingSubdomain", err);
+		const [otherDomainOnZone] = await db.select({ id: domains.id }).from(domains).where(and(
+			eq(domains.zoneId, domain.zoneId),
+			ne(domains.id, domainId),
+		)).limit(1);
+		if (domain.routingEnabled && !otherDomainOnZone) {
+			try {
+				await disableEmailRouting(env, domain.zoneId);
+			} catch (err) {
+				console.warn("disableEmailRouting", err);
+			}
+		}
+
+		if (domain.sendingSubdomainTag) {
+			try {
+				await deleteSendingSubdomain(env, domain.zoneId, domain.sendingSubdomainTag);
+			} catch (err) {
+				console.warn("deleteSendingSubdomain", err);
+			}
 		}
 	}
 

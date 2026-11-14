@@ -64,6 +64,7 @@ export const firstRunRegisterSchema = z
 		/** Create the first account with a passkey only; the password may be omitted. */
 		usePasskey: z.boolean().optional(),
 		resetEmail: z.string().email(),
+		verificationCode: z.string().trim().length(6, "Please enter the 6-digit verification code").optional(),
 	})
 	.refine((value) => value.usePasskey || !!value.password, { message: "Enter a password or choose a passkey", path: ["password"] });
 
@@ -305,9 +306,7 @@ export const accountMailboxSchema = z.object({
 export const updateMailboxSchema = z.object({
 	displayName: z.string().max(100).nullable().optional(),
 	signature: z.string().max(10_000).nullable().optional(),
-	autoReplyEnabled: z.boolean().optional(),
-	autoReplySubject: z.string().trim().max(200).optional(),
-	autoReplyBody: z.string().max(10_000).optional(),
+	defaultFrom: z.string().max(255).nullable().optional(),
 	useAllDomains: z.boolean().optional(),
 });
 

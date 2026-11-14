@@ -45,18 +45,12 @@ export function proxy(request: NextRequest) {
 	const appBase = process.env.APP_URL?.trim().replace(/\/+$/, "");
 	const appHost = appBase ? new URL(appBase).host.toLowerCase() : "";
 
-	// 1. Customer Branded Webmail CNAME (e.g. mail.company.com)
-	const isCustomerCname =
-		appHost &&
-		host !== appHost &&
-		!host.endsWith(`.${appHost}`) &&
-		(host.startsWith("mail.") || host.startsWith("webmail."));
-
-	if (isCustomerCname && pathname === "/") {
-		return NextResponse.rewrite(new URL(`/inbox${search}`, request.url));
+	// If a foreign or custom domain hits the service, redirect to canonical app
+	if (appBase && appHost && host !== appHost && !host.endsWith(`.${appHost}`)) {
+		return NextResponse.redirect(new URL(`${appBase}${pathname}${search}`), 308);
 	}
 
-	// 2. Legacy Direct Redirects (Canonical namespace enforcement)
+	// Legacy Direct Redirects (Canonical namespace enforcement)
 	if (LEGACY_REDIRECTS[pathname]) {
 		return NextResponse.redirect(new URL(`${LEGACY_REDIRECTS[pathname]}${search}`, request.url), 308);
 	}

@@ -2,7 +2,7 @@ import { and, count, eq, gte, inArray, isNull, ne, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import { domains, mailboxes, messageAttachments, messages, users, workspaces } from "@/db/schema";
 import { newId } from "@/lib/ids";
-import { getPlanDefinition, resolvePlanId, TRIAL_DAYS, type BillingCycle, type PlanDefinition, type PlanId, type WorkspaceStatus } from "./catalog";
+import { getPlanDefinition, resolveBillingCycle, resolvePlanId, TRIAL_DAYS, type BillingCycle, type PlanDefinition, type PlanId, type WorkspaceStatus } from "./catalog";
 
 export type WorkspaceSummary = {
 	id: string;
@@ -32,25 +32,28 @@ export type WorkspaceWithUsage = {
 };
 
 function toSummary(row: typeof workspaces.$inferSelect): WorkspaceSummary {
-	const plan = resolvePlanId(row.plan);
+	const rawPlan = resolvePlanId(row.plan);
 	const now = Date.now();
 	const trialEndsMs = row.trialEndsAt ? row.trialEndsAt.getTime() : null;
-	const trialExpired = row.status === "trialing" && trialEndsMs !== null && trialEndsMs < now;
+	const isTrial = row.status === "trialing";
+	const trialExpired = isTrial && trialEndsMs !== null && trialEndsMs < now;
 	const daysLeftInTrial =
-		row.status === "trialing" && trialEndsMs !== null
+		isTrial && trialEndsMs !== null
 			? Math.max(0, Math.ceil((trialEndsMs - now) / (24 * 60 * 60 * 1000)))
 			: null;
 
-	const maxMailboxes = typeof row.maxMailboxes === "number" && row.maxMailboxes >= 5 ? row.maxMailboxes : 5;
-	const billingCycle = ((row.billingCycle as BillingCycle | undefined) || "12m");
+	// If trial expired and user hasn't subscribed, gracefully fall back to Free plan
+	const plan: PlanId = trialExpired ? "free" : isTrial ? "pro" : rawPlan;
 	const basePlan = getPlanDefinition(plan);
 
-	const planDetails: PlanDefinition = {
-		...basePlan,
-		maxMailboxes,
-		storageLimitBytes: maxMailboxes * (1024 ** 3),
-		storageLabel: `${maxMailboxes} GB NVMe`,
-	};
+	const planDetails: PlanDefinition = isTrial && !trialExpired
+		? {
+				...getPlanDefinition("pro"),
+				tagline: "14-Day Free Pro Trial (All team features included)",
+		  }
+		: basePlan;
+
+	const billingCycle = resolveBillingCycle(row.billingCycle);
 
 	return {
 		id: row.id,
@@ -62,24 +65,24 @@ function toSummary(row: typeof workspaces.$inferSelect): WorkspaceSummary {
 		trialEndsAt: row.trialEndsAt ? row.trialEndsAt.toISOString() : null,
 		trialExpired,
 		daysLeftInTrial,
-		maxMailboxes,
+		maxMailboxes: planDetails.maxMailboxes,
 		billingCycle,
 	};
 }
 
 export async function createWorkspaceForOwner(
 	env: CloudflareEnv,
-	input: { ownerUserId: string; name: string; plan: PlanId; status?: WorkspaceStatus },
+	input: { ownerUserId: string; name: string; plan: PlanId; status?: WorkspaceStatus; trialEndsAt?: Date | null },
 ) {
 	const db = getDb(env);
 	const id = newId("ws");
-	const status: WorkspaceStatus = input.status ?? "active";
-	const trialEndsAt = null;
+	const status: WorkspaceStatus = input.status ?? "trialing";
+	const trialEndsAt = input.trialEndsAt !== undefined ? input.trialEndsAt : (status === "trialing" ? new Date(Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000) : null);
 	await db.insert(workspaces).values({
 		id,
 		name: input.name,
 		ownerUserId: input.ownerUserId,
-		plan: input.plan,
+		plan: (input.plan === "free" ? "starter" : input.plan) as "starter" | "pro" | "business",
 		status,
 		trialEndsAt,
 	});
@@ -88,7 +91,7 @@ export async function createWorkspaceForOwner(
 
 export async function getOrEnsureWorkspaceForUser(
 	env: CloudflareEnv,
-	user: { id: string; name: string; workspaceId?: string | null; isPrimaryAdmin?: boolean; createdByUserId?: string | null },
+	user: { id: string; name: string; email?: string; workspaceId?: string | null; isPrimaryAdmin?: boolean; createdByUserId?: string | null },
 ): Promise<WorkspaceSummary> {
 	const db = getDb(env);
 	let workspaceId = user.workspaceId ?? null;
@@ -110,12 +113,24 @@ export async function getOrEnsureWorkspaceForUser(
 		if (existing) return toSummary(existing);
 	}
 
+	// Look up if a workspace already exists for this owner before creating a duplicate
+	const [existingForOwner] = await db
+		.select()
+		.from(workspaces)
+		.where(eq(workspaces.ownerUserId, user.id))
+		.limit(1);
+	if (existingForOwner) {
+		await db.update(users).set({ workspaceId: existingForOwner.id }).where(eq(users.id, user.id));
+		return toSummary(existingForOwner);
+	}
+
 	// Backfill a workspace for pre-existing accounts.
-	const plan: PlanId = user.isPrimaryAdmin ? "business" : "starter";
-	const status: WorkspaceStatus = "active";
+	const plan: PlanId = user.isPrimaryAdmin ? "business" : "pro";
+	const status: WorkspaceStatus = user.isPrimaryAdmin ? "active" : "trialing";
+	const fallbackName = (user.name && user.name.trim()) ? user.name.trim() : (user.email ? user.email.split("@")[0] : "My");
 	const newWorkspaceId = await createWorkspaceForOwner(env, {
 		ownerUserId: user.id,
-		name: `${user.name}'s Workspace`,
+		name: `${fallbackName}'s Workspace`,
 		plan,
 		status,
 	});
@@ -206,7 +221,7 @@ export function checkWorkspaceActive(workspace: WorkspaceSummary): string | null
 		return "This workspace is suspended. Contact support or reactivate your plan.";
 	}
 	if (workspace.trialExpired) {
-		return `Your ${workspace.planDetails.name} 14-day trial has ended. Upgrade or activate your plan in Plan & Usage.`;
+		return `Your ${workspace.planDetails.name} 7-day trial has ended. Upgrade or activate your plan in Plan & Usage.`;
 	}
 	return null;
 }
@@ -218,10 +233,13 @@ export async function checkCanAddDomain(
 	const { workspace, usage } = await getWorkspaceWithUsage(env, user);
 	const inactive = checkWorkspaceActive(workspace);
 	if (inactive) return { ok: false, error: inactive };
-	if (usage.domainsUsed >= workspace.planDetails.maxDomains) {
+	const maxDomains = workspace.status === "trialing" ? 1 : workspace.planDetails.maxDomains;
+	if (usage.domainsUsed >= maxDomains) {
 		return {
 			ok: false,
-			error: `${workspace.planDetails.name} plan allows up to ${workspace.planDetails.maxDomains} domain(s). Upgrade your plan to add more domains.`,
+			error: workspace.status === "trialing"
+				? "Your 7-day free trial allows 1 domain. Upgrade your plan in Plan & Usage to add more domains."
+				: `${workspace.planDetails.name} plan allows up to ${workspace.planDetails.maxDomains} domain(s). Upgrade your plan to add more domains.`,
 		};
 	}
 	return { ok: true, workspace };
@@ -234,10 +252,13 @@ export async function checkCanAddMailbox(
 	const { workspace, usage } = await getWorkspaceWithUsage(env, user);
 	const inactive = checkWorkspaceActive(workspace);
 	if (inactive) return { ok: false, error: inactive };
-	if (usage.mailboxesUsed >= workspace.planDetails.maxMailboxes) {
+	const maxMailboxes = workspace.status === "trialing" ? 1 : workspace.planDetails.maxMailboxes;
+	if (usage.mailboxesUsed >= maxMailboxes) {
 		return {
 			ok: false,
-			error: `${workspace.planDetails.name} plan allows up to ${workspace.planDetails.maxMailboxes} mailbox(es). Upgrade your plan to add more team members.`,
+			error: workspace.status === "trialing"
+				? "Your 7-day free trial allows 1 mailbox. Upgrade your plan in Plan & Usage to add more team members."
+				: `${workspace.planDetails.name} plan allows up to ${workspace.planDetails.maxMailboxes} mailbox(es). Upgrade your plan to add more team members.`,
 		};
 	}
 	return { ok: true, workspace };
@@ -265,13 +286,17 @@ export async function checkCanSendEmail(
 	if (usage.hourlySentCount >= workspace.planDetails.hourlySendLimit) {
 		return {
 			ok: false,
-			error: `Hourly sending limit reached (${workspace.planDetails.hourlySendLimit} emails/hour on ${workspace.planDetails.name}). Please try again later or upgrade for higher volume.`,
+			error: workspace.status === "trialing"
+				? `Free trial hourly sending limit reached (${workspace.planDetails.hourlySendLimit} emails/hour). Upgrade your plan in Plan & Usage for higher volume.`
+				: `Hourly sending limit reached (${workspace.planDetails.hourlySendLimit} emails/hour on ${workspace.planDetails.name}). Please try again later or upgrade for higher volume.`,
 		};
 	}
 	if (usage.dailySentCount >= workspace.planDetails.dailySendLimit) {
 		return {
 			ok: false,
-			error: `Daily sending limit reached (${workspace.planDetails.dailySendLimit} emails/day on ${workspace.planDetails.name}). Upgrade your plan for higher daily limits.`,
+			error: workspace.status === "trialing"
+				? `Free trial daily sending limit reached (${workspace.planDetails.dailySendLimit} emails/day). Upgrade your plan in Plan & Usage for higher daily limits.`
+				: `Daily sending limit reached (${workspace.planDetails.dailySendLimit} emails/day on ${workspace.planDetails.name}). Upgrade your plan for higher daily limits.`,
 		};
 	}
 	if (usage.storageUsedBytes + attachmentBytes > workspace.planDetails.storageLimitBytes) {

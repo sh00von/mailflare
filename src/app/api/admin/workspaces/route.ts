@@ -29,14 +29,39 @@ export async function GET(request: Request) {
 	const owners = await db.select({ id: users.id, email: users.email, name: users.name }).from(users);
 	const ownerMap = new Map(owners.map((owner) => [owner.id, owner]));
 
+	// Deduplicate multiple workspaces created for the same owner (e.g. from prior backfills)
+	const filteredRows: typeof rows = [];
+	const seenOwnerIds = new Set<string>();
+
+	for (const row of rows) {
+		if (row.ownerUserId) {
+			if (seenOwnerIds.has(row.ownerUserId)) {
+				const usage = await getWorkspaceUsage(env, row.id);
+				if (usage.domainsUsed === 0) {
+					// Clean up empty duplicate workspace
+					void db.delete(workspaces).where(eq(workspaces.id, row.id)).catch(() => {});
+					continue;
+				}
+			}
+			seenOwnerIds.add(row.ownerUserId);
+		}
+		filteredRows.push(row);
+	}
+
 	const items = await Promise.all(
-		rows.map(async (row) => {
+		filteredRows.map(async (row) => {
 			const plan = resolvePlanId(row.plan);
 			const usage = await getWorkspaceUsage(env, row.id);
 			const owner = row.ownerUserId ? ownerMap.get(row.ownerUserId) ?? null : null;
+			let name = row.name;
+			if (!name || name === "'s Workspace" || name.startsWith("'s")) {
+				const ownerLabel = owner?.name?.trim() || owner?.email?.split("@")[0] || "Customer";
+				name = `${ownerLabel}'s Workspace`;
+				void db.update(workspaces).set({ name }).where(eq(workspaces.id, row.id)).catch(() => {});
+			}
 			return {
 				id: row.id,
-				name: row.name,
+				name,
 				ownerEmail: owner?.email ?? null,
 				ownerName: owner?.name ?? null,
 				plan,

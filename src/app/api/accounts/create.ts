@@ -90,7 +90,7 @@ export async function createAccountResponse(env: CloudflareEnv, actor: AccountAd
 			...(inserted ? [db.delete(users).where(eq(users.id, userId))] : []),
 		]);
 		if (cleanup.some((result) => result.status === "rejected")) {
-			return NextResponse.json({ error: "Account creation failed and cleanup could not finish. Check the account and Cloudflare routing before retrying." }, { status: 502 });
+			return NextResponse.json({ error: "Account creation failed and cleanup could not finish. Please try again." }, { status: 502 });
 		}
 		if (isUniqueConstraintError(error)) {
 			return NextResponse.json({ error: "An email address is already assigned" }, { status: 409 });

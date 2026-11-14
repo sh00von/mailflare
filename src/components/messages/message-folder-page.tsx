@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notify } from "@/lib/notify";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent } from "react";
-import { Archive, ChevronLeft, ChevronRight, Inbox, ListFilter, Mail, MailOpen, Search, Trash2 } from "@/components/icons";
+import { Archive, ChevronLeft, ChevronRight, Columns2, Inbox, ListFilter, Mail, MailOpen, Paperclip, Search, Star, Trash2 } from "@/components/icons";
 import { MessageListSkeleton } from "@/components/page-skeletons";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -334,6 +334,21 @@ export function MessageFolderPage({
 		Array<{ id: string; read: boolean }>
 	>([]);
 	const [internalUnreadOnly, setInternalUnreadOnly] = useState(false);
+	const [filterTag, setFilterTag] = useState<"all" | "unread" | "starred" | "attachments">("all");
+	const [density, setDensity] = useState<"comfortable" | "compact">(() => {
+		if (typeof window !== "undefined") {
+			return (localStorage.getItem("mailflare-density") as "comfortable" | "compact") || "comfortable";
+		}
+		return "comfortable";
+	});
+
+	function toggleDensity() {
+		setDensity((prev) => {
+			const next = prev === "compact" ? "comfortable" : "compact";
+			if (typeof window !== "undefined") localStorage.setItem("mailflare-density", next);
+			return next;
+		});
+	}
 	const [pendingBulkAction, setPendingBulkAction] = useState(false);
 	const [emptyingFolder, setEmptyingFolder] = useState(false);
 	const [openingMessageId, setOpeningMessageId] = useState<string | null>(null);
@@ -364,6 +379,12 @@ export function MessageFolderPage({
 		read: unreadOnly ? "unread" : "all",
 		group: grouped ? "thread" : undefined,
 	}, !mailboxesLoading, config.folderId);
+
+	const displayMessages = useMemo(() => {
+		if (filterTag === "starred") return messages.filter((m) => m.starred);
+		if (filterTag === "attachments") return messages.filter((m) => Boolean(m.hasAttachments || (m as { attachmentCount?: number }).attachmentCount));
+		return messages;
+	}, [messages, filterTag]);
 	const { counts } = useMessageCounts(selectedMailbox?.id, !mailboxesLoading);
 	usePageLoading(mailboxesLoading || isLoading, true);
 	const headerIcons = config.headerIcons ?? [];
@@ -622,10 +643,78 @@ export function MessageFolderPage({
 				)}
 			</div>
 
+			{config.folder === "inbox" && !config.folderId && (
+				<div className="flex items-center gap-1.5 px-4 py-2 border-b border-neutral-100 bg-neutral-50/50 text-xs overflow-x-auto scrollbar-none">
+					<button
+						type="button"
+						aria-pressed={!unreadOnly && filterTag === "all"}
+						onClick={() => { setUnreadOnly(false); setFilterTag("all"); }}
+						className={`inline-flex items-center gap-1 rounded-full px-3 py-1 font-medium cursor-pointer transition-all duration-150 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500 ${
+							!unreadOnly && filterTag === "all"
+								? "bg-blue-600 text-white shadow-2xs font-semibold"
+								: "bg-white text-neutral-600 border border-neutral-200 hover:bg-neutral-100 hover:text-neutral-900"
+						}`}
+					>
+						All
+					</button>
+					<button
+						type="button"
+						aria-pressed={unreadOnly}
+						onClick={() => { setUnreadOnly(true); setFilterTag("unread"); }}
+						className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-medium cursor-pointer transition-all duration-150 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500 ${
+							unreadOnly
+								? "bg-blue-600 text-white shadow-2xs font-semibold"
+								: "bg-white text-neutral-600 border border-neutral-200 hover:bg-neutral-100 hover:text-neutral-900"
+						}`}
+					>
+						<span className={`inline-block h-1.5 w-1.5 rounded-full ${unreadOnly ? "bg-white" : "bg-blue-600"}`} />
+						Unread
+					</button>
+					<button
+						type="button"
+						aria-pressed={filterTag === "starred"}
+						onClick={() => { setUnreadOnly(false); setFilterTag(filterTag === "starred" ? "all" : "starred"); }}
+						className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-medium cursor-pointer transition-all duration-150 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-amber-500 ${
+							filterTag === "starred"
+								? "bg-amber-500 text-white shadow-2xs font-semibold"
+								: "bg-white text-neutral-600 border border-neutral-200 hover:bg-neutral-100 hover:text-neutral-900"
+						}`}
+					>
+						<Star className={`h-3.5 w-3.5 ${filterTag === "starred" ? "fill-white text-white" : "fill-amber-400 text-amber-500"}`} />
+						Starred
+					</button>
+					<button
+						type="button"
+						aria-pressed={filterTag === "attachments"}
+						onClick={() => { setUnreadOnly(false); setFilterTag(filterTag === "attachments" ? "all" : "attachments"); }}
+						className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-medium cursor-pointer transition-all duration-150 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-indigo-500 ${
+							filterTag === "attachments"
+								? "bg-indigo-600 text-white shadow-2xs font-semibold"
+								: "bg-white text-neutral-600 border border-neutral-200 hover:bg-neutral-100 hover:text-neutral-900"
+						}`}
+					>
+						<Paperclip className={`h-3.5 w-3.5 ${filterTag === "attachments" ? "text-white" : "text-neutral-500"}`} />
+						Has Attachment
+					</button>
+
+					<div className="ml-auto flex items-center gap-1.5 pl-2">
+						<button
+							type="button"
+							onClick={toggleDensity}
+							title={density === "compact" ? "Switch to Comfortable layout" : "Switch to Compact 1-line layout"}
+							className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-2.5 py-1 text-[11px] font-medium text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 transition-colors cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500 whitespace-nowrap"
+						>
+							<Columns2 className="h-3.5 w-3.5 text-neutral-400" />
+							<span>{density === "compact" ? "Density: Compact" : "Density: Comfortable"}</span>
+						</button>
+					</div>
+				</div>
+			)}
+
 			<div className="min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-gutter-stable">
 				{config.folder === "inbox" && !config.folderId && offset === 0 && !mailboxesLoading && <DueFollowUps mailboxId={selectedMailbox?.id} />}
 				<div role="list" aria-label={title} className="divide-y divide-neutral-100">
-					{messages.map((message) => (
+					{displayMessages.map((message) => (
 						<MessageListRow
 							key={message.id}
 							message={message}
@@ -634,7 +723,7 @@ export function MessageFolderPage({
 							active={message.id === selectedMessageId}
 							opening={message.id === visibleOpeningMessageId}
 							onOpening={() => markMessageOpening(message.id)}
-							compact={compact || isMobile}
+							compact={compact || isMobile || density === "compact"}
 							currentAccountName={currentAccountName}
 							onSelectedChange={updateSelectedMessage}
 							onMessageAction={(messageId, action) => {

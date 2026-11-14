@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Copy, RefreshCw } from "@/components/icons";
+import { Check, Copy, RefreshCw, ShieldCheck, Sparkles, AlertTriangle } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { dnsAuthDescriptions, getDnsAuthItemClass } from "./utils";
 import { ROW_GRID, StatusBadge } from "./status-row";
@@ -69,7 +69,13 @@ export default function DomainDnsDetails({
 		(typeof window !== "undefined"
 			? `${window.location.protocol}//${window.location.host}`
 			: "");
-	const mailUrl = `${mailOrigin}/mail/inbox`;
+	const mailUrl = `${mailOrigin}/inbox`;
+
+	const checkList: DnsAuthRecord[] = ["mx", "spf", "dkim", "dmarc"];
+	const passedCount = audit
+		? checkList.filter((rec) => audit[rec]?.status === "ok").length
+		: 0;
+	const deliverabilityScore = Math.round((passedCount / checkList.length) * 100);
 
 	return (
 		<div className="space-y-5 px-4 pb-5 pt-4 sm:px-5">
@@ -77,7 +83,7 @@ export default function DomainDnsDetails({
 				<div className="flex items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-neutral-50/70 px-4 py-3">
 					<div>
 						<p className="text-sm font-medium text-neutral-900">Inbound email</p>
-						<p className="text-xs text-neutral-500">Handled by Replyot Mail Server</p>
+						<p className="text-xs text-neutral-500">Handled by Mailflare Engine</p>
 					</div>
 					<span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${mxReady ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>
 						{mxReady ? "Active" : "Waiting for MX"}
@@ -86,7 +92,7 @@ export default function DomainDnsDetails({
 				<div className="flex items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-neutral-50/70 px-4 py-3">
 					<div>
 						<p className="text-sm font-medium text-neutral-900">Outbound email</p>
-						<p className="text-xs text-neutral-500">Handled by Replyot Mail Server</p>
+						<p className="text-xs text-neutral-500">Handled by Mailflare Engine</p>
 					</div>
 					<span className="shrink-0 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800">
 						Active
@@ -95,15 +101,50 @@ export default function DomainDnsDetails({
 			</div>
 
 			{audit && (
-				<section>
-					<div className="flex flex-wrap items-center justify-between gap-2">
-						<div>
-							<h2 className="text-base font-semibold text-neutral-900">DNS connection</h2>
-							<p className="mt-0.5 text-sm text-neutral-500">
-								Add these records at your domain registrar (Namecheap, GoDaddy, Cloudflare, etc.) to connect {domain.hostname}.
-							</p>
+				<section className="space-y-4">
+					{/* Deliverability Health Score Card */}
+					<div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border p-4 ${
+						deliverabilityScore === 100
+							? "border-emerald-200 bg-emerald-50/70 text-emerald-950"
+							: deliverabilityScore >= 50
+							? "border-blue-200 bg-blue-50/70 text-blue-950"
+							: "border-amber-200 bg-amber-50/70 text-amber-950"
+					}`}>
+						<div className="flex items-center gap-3.5">
+							<div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl font-bold text-lg text-white shadow-xs ${
+								deliverabilityScore === 100
+									? "bg-emerald-600"
+									: deliverabilityScore >= 50
+									? "bg-blue-600"
+									: "bg-amber-600"
+							}`}>
+								{deliverabilityScore}%
+							</div>
+							<div>
+								<div className="flex flex-wrap items-center gap-2">
+									<h3 className="text-sm font-semibold">
+										{deliverabilityScore === 100
+											? "Optimal Deliverability • Inbox Ready"
+											: deliverabilityScore >= 75
+											? "Good Deliverability • Minor Steps Remaining"
+											: "Action Required • High Spam Risk"}
+									</h3>
+									{deliverabilityScore === 100 && (
+										<span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
+											<ShieldCheck className="h-3 w-3" />
+											Google & Yahoo Compliant
+										</span>
+									)}
+								</div>
+								<p className="text-xs opacity-80 mt-0.5">
+									{deliverabilityScore === 100
+										? "All authentication records (MX, SPF, DKIM, DMARC) are verified. Outbound mail will reliably reach recipients' primary inboxes."
+										: "Complete the missing DNS records below to ensure outgoing emails do not land in spam folders."}
+								</p>
+							</div>
 						</div>
-						<div className="flex items-center gap-2">
+
+						<div className="flex items-center gap-2 shrink-0">
 							{onDnsChanged && (
 								<Button
 									type="button"
@@ -115,21 +156,29 @@ export default function DomainDnsDetails({
 										onDnsChanged();
 										window.setTimeout(() => setChecking(false), 1200);
 									}}
-									className="gap-1.5 bg-white"
+									className="gap-1.5 bg-white shadow-2xs"
 								>
 									<RefreshCw className={`h-3.5 w-3.5 ${checking ? "animate-spin" : ""}`} />
-									Check DNS
+									{checking ? "Verifying..." : "Verify DNS"}
 								</Button>
 							)}
 							<Button size="sm" asChild className="rounded-full">
-								<a href={mailUrl}>Go to Inbox</a>
+								<a href={mailUrl}>Open Inbox</a>
 							</Button>
 						</div>
 					</div>
 
+					<div>
+						<h2 className="text-base font-semibold text-neutral-900">DNS connection records</h2>
+						<p className="mt-0.5 text-xs text-neutral-500">
+							Add these records at your domain registrar (Namecheap, GoDaddy, Cloudflare, Route53) to connect {domain.hostname}.
+						</p>
+					</div>
+
 					<ul className="mt-3 space-y-2">
-						{(["mx", "spf", "dmarc"] as DnsAuthRecord[]).map((record) => {
+						{(["mx", "spf", "dkim", "dmarc"] as DnsAuthRecord[]).map((record) => {
 							const item = audit[record];
+							if (!item) return null;
 							const ok = item.status === "ok";
 							const expected = expectedValues[record];
 
@@ -167,7 +216,8 @@ export default function DomainDnsDetails({
 							</p>
 							<ul className="space-y-2">
 								{dns.sending.map((rec, i) => {
-									const verified = rec.status === "ok" || rec.status === "verified";
+									const recValue = rec.content || "";
+									const verified = domain.sendingEnabled;
 									return (
 										<li
 											key={`${rec.type}-${rec.name}-${i}`}
@@ -185,9 +235,9 @@ export default function DomainDnsDetails({
 											</span>
 											<div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
 												<span className="min-w-0 break-all rounded-md border border-neutral-200 bg-white px-2.5 py-1 font-mono text-xs text-neutral-700">
-													{rec.value}
+													{recValue}
 												</span>
-												<CopyValueButton value={rec.value} />
+												<CopyValueButton value={recValue} />
 											</div>
 										</li>
 									);

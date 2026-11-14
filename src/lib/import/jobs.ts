@@ -64,13 +64,15 @@ function toImportJobSummary(row: JobRow): ImportJobSummary {
 export async function listImportJobs(
 	env: CloudflareEnv,
 	userId: string,
-	mailboxId: string,
+	mailboxId?: string | null,
 ): Promise<ImportJobSummary[]> {
 	const db = getDb(env);
+	const conditions = [eq(importJobs.userId, userId)];
+	if (mailboxId) conditions.push(eq(importJobs.mailboxId, mailboxId));
 	const rows = await db
 		.select()
 		.from(importJobs)
-		.where(and(eq(importJobs.userId, userId), eq(importJobs.mailboxId, mailboxId)))
+		.where(and(...conditions))
 		.orderBy(desc(importJobs.createdAt))
 		.limit(20);
 	return rows.map(toImportJobSummary);
@@ -164,6 +166,7 @@ export async function resumeImportJob(
 	env: CloudflareEnv,
 	userId: string,
 	jobId: string,
+	_password?: string,
 ): Promise<ResumeImportResult> {
 	const db = getDb(env);
 	const [row] = await db

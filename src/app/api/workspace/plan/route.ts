@@ -11,8 +11,9 @@ import {
 	listActiveStripeSubscriptions,
 	listStripeInvoices,
 	type StripeInvoice,
+	type StripeSubscriptionInfo,
 } from "@/lib/billing/stripe";
-import { PLAN_LIST, resolvePlanId } from "@/lib/plans/catalog";
+import { PLAN_LIST, getPlanDefinition, resolvePlanId } from "@/lib/plans/catalog";
 import { getWorkspaceWithUsage } from "@/lib/plans/usage";
 
 export async function GET(request: Request) {
@@ -32,19 +33,19 @@ export async function GET(request: Request) {
 		try {
 			const session = await retrieveStripeCheckoutSession(env, sessionId);
 			if (session.payment_status === "paid" || session.status === "complete") {
-				const plan = resolvePlanId(session.metadata?.plan);
+				const rawPlan = resolvePlanId(session.metadata?.plan);
+				const plan = (rawPlan === "free" ? "starter" : rawPlan) as "starter" | "pro" | "business";
 				const customerId = session.customer;
 				const subscriptionId = session.subscription;
-				const rawMailboxes = session.metadata?.mailboxes ? Number(session.metadata.mailboxes) : null;
-				const maxMailboxes = rawMailboxes && rawMailboxes >= 5 ? rawMailboxes : undefined;
-				const billingCycle = session.metadata?.cycle;
+				const billingCycle = session.metadata?.cycle === "yearly" ? "yearly" : "monthly";
+				const planDef = getPlanDefinition(plan);
 				await db
 					.update(workspaces)
 					.set({
 						plan,
 						status: "active",
-						...(maxMailboxes ? { maxMailboxes } : {}),
-						...(billingCycle ? { billingCycle } : {}),
+						maxMailboxes: planDef.maxMailboxes,
+						billingCycle,
 						...(customerId ? { stripeCustomerId: customerId } : {}),
 						...(subscriptionId ? { stripeSubscriptionId: subscriptionId } : {}),
 						updatedAt: new Date(),
@@ -59,6 +60,7 @@ export async function GET(request: Request) {
 	// Always sync with Stripe active subscription to ensure mailboxes, cycle, and currentPeriodEnd match reality
 	const [wsRowCurrent] = await db
 		.select({
+			plan: workspaces.plan,
 			stripeCustomerId: workspaces.stripeCustomerId,
 			stripeSubscriptionId: workspaces.stripeSubscriptionId,
 			currentPeriodEnd: workspaces.currentPeriodEnd,
@@ -71,7 +73,7 @@ export async function GET(request: Request) {
 
 	if (isStripeConfigured(env) && (wsRowCurrent?.stripeSubscriptionId || wsRowCurrent?.stripeCustomerId)) {
 		try {
-			let activeSub = null;
+			let activeSub: StripeSubscriptionInfo | null = null;
 			if (wsRowCurrent.stripeSubscriptionId) {
 				activeSub = await retrieveStripeSubscription(env, wsRowCurrent.stripeSubscriptionId);
 			}
@@ -81,22 +83,24 @@ export async function GET(request: Request) {
 			}
 
 			if (activeSub) {
-				const rawMailboxes = activeSub.metadata?.mailboxes ? Number(activeSub.metadata.mailboxes) : null;
-				const subMailboxes = rawMailboxes && rawMailboxes >= 5 ? rawMailboxes : null;
-				const subCycle = activeSub.metadata?.cycle || null;
+				const rawSubPlan = resolvePlanId(activeSub.metadata?.plan);
+				const subPlan = (rawSubPlan === "free" ? "starter" : rawSubPlan) as "starter" | "pro" | "business";
+				const subCycle = activeSub.metadata?.cycle === "yearly" ? "yearly" : "monthly";
+				const planDef = getPlanDefinition(subPlan);
 				const periodEnd = activeSub.current_period_end ? new Date(activeSub.current_period_end * 1000) : null;
 
-				const patch: Record<string, unknown> = { status: "active", updatedAt: new Date() };
+				const patch: Record<string, unknown> = {
+					status: "active",
+					plan: subPlan,
+					maxMailboxes: planDef.maxMailboxes,
+					billingCycle: subCycle,
+					updatedAt: new Date(),
+				};
 				let shouldUpdate = false;
 
-				if (subMailboxes && subMailboxes !== wsRowCurrent.maxMailboxes) {
-					patch.maxMailboxes = subMailboxes;
-					shouldUpdate = true;
-				}
-				if (subCycle && subCycle !== wsRowCurrent.billingCycle) {
-					patch.billingCycle = subCycle;
-					shouldUpdate = true;
-				}
+				if (subPlan !== wsRowCurrent.plan) shouldUpdate = true;
+				if (planDef.maxMailboxes !== wsRowCurrent.maxMailboxes) shouldUpdate = true;
+				if (subCycle !== wsRowCurrent.billingCycle) shouldUpdate = true;
 				if (activeSub.id && activeSub.id !== wsRowCurrent.stripeSubscriptionId) {
 					patch.stripeSubscriptionId = activeSub.id;
 					shouldUpdate = true;

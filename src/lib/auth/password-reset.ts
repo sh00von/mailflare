@@ -1,4 +1,4 @@
-import { and, eq, gt, isNull } from "drizzle-orm";
+import { and, eq, gt, isNull, or } from "drizzle-orm";
 import { getDb } from "@/db";
 import { passwordResetTokens, users } from "@/db/schema";
 import { newId } from "@/lib/ids";
@@ -19,9 +19,18 @@ const TOKEN_MINUTES = 30;
  */
 export async function requestPasswordReset(env: CloudflareEnv, email: string, origin: string): Promise<void> {
 	const db = getDb(env);
-	const [user] = await db.select().from(users).where(eq(users.email, email.trim().toLowerCase())).limit(1);
+	const cleanEmail = email.trim().toLowerCase();
+	const [user] = await db
+		.select()
+		.from(users)
+		.where(or(eq(users.email, cleanEmail), eq(users.resetEmail, cleanEmail)))
+		.limit(1);
+
 	// A passkey-only account must not regain password sign-in through email.
-	if (!user || user.disabled || !user.resetEmail || !hasPasswordHash(user.passwordHash)) return;
+	if (!user || user.disabled || !hasPasswordHash(user.passwordHash)) return;
+
+	const targetEmail = user.resetEmail || user.email;
+	if (!targetEmail) return;
 
 	const token = newId("prt");
 	await db.insert(passwordResetTokens).values({
@@ -34,10 +43,13 @@ export async function requestPasswordReset(env: CloudflareEnv, email: string, or
 	const link = `${origin}/reset-password?token=${encodeURIComponent(token)}`;
 	const { appName } = await getBranding(env);
 	const sent = await sendSystemEmail(env, {
-		to: user.resetEmail,
+		to: targetEmail,
 		...buildPasswordResetEmail({ email: user.email, appName, link, minutes: TOKEN_MINUTES }),
 	});
-	if (!sent) console.warn("Password reset requested but no domain can send mail; link not delivered");
+
+	if (!sent) {
+		console.warn(`[DEV/FALLBACK] Password reset link for ${user.email} (${targetEmail}): ${link}`);
+	}
 }
 
 /** Redeem a link: sets the password, burns the token, and signs the user out everywhere. */

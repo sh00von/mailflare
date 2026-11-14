@@ -22,6 +22,22 @@ export const settingsNavSections: SettingsNavSection[] = [
 		labelKey: "Mailbox",
 		items: [
 			{
+				href: "/settings/aliases",
+				labelKey: "Aliases",
+			},
+			{
+				href: "/settings/forwarding",
+				labelKey: "Forwarding",
+			},
+			{
+				href: "/settings/storage",
+				labelKey: "Storage",
+			},
+			{
+				href: "/settings/blocklist",
+				labelKey: "Blocked Senders",
+			},
+			{
 				href: "/settings/import",
 				labelKey: "Import",
 			},

@@ -37,6 +37,11 @@ export async function pickSystemSender(
 	env: CloudflareEnv,
 	hostname?: string,
 ): Promise<{ address: string; name: string } | null> {
+	const systemEnvFrom = (process.env.SYSTEM_FROM_EMAIL || (env as Record<string, any>)?.SYSTEM_FROM_EMAIL)?.trim();
+	if (systemEnvFrom) {
+		return { address: systemEnvFrom, name: "Mailflare" };
+	}
+
 	const db = getDb(env);
 	const rows = await db
 		.select({

@@ -162,6 +162,45 @@ export async function blockContact(env: CloudflareEnv, input: BlockContactInput)
 	return { email, blocked: true };
 }
 
+export async function unblockContact(env: CloudflareEnv, input: { userId: string; mailboxId: string; address: string }) {
+	const email = normalizeEmailAddress(input.address);
+	if (!email) throw new Error("Contact email is required");
+
+	const db = getDb(env);
+	await db
+		.update(contacts)
+		.set({ blocked: false })
+		.where(and(eq(contacts.userId, input.userId), eq(contacts.email, email)));
+
+	await db
+		.delete(routingRules)
+		.where(
+			and(
+				eq(routingRules.mailboxId, input.mailboxId),
+				eq(routingRules.matchField, "email"),
+				eq(routingRules.matchValue, email),
+				eq(routingRules.action, "trash"),
+			),
+		);
+
+	return { email, blocked: false };
+}
+
+export async function listBlockedContacts(env: CloudflareEnv, userId: string) {
+	const db = getDb(env);
+	const rows = await db
+		.select({
+			id: contacts.id,
+			email: contacts.email,
+			displayName: contacts.displayName,
+			createdAt: contacts.createdAt,
+			lastSeenAt: contacts.lastSeenAt,
+		})
+		.from(contacts)
+		.where(and(eq(contacts.userId, userId), eq(contacts.blocked, true)));
+	return rows;
+}
+
 function getNextDisplayName(existingName: string | null, source: string, nextName: string | null, incomingSource: string): string | null {
 	if (source === "manual") return existingName;
 	// A sender chooses its own From name, so inbound mail may name a contact but never rename one.

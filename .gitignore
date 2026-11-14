@@ -18,8 +18,13 @@
 *.pem
 *.key
 *.cert
-scripts/empty-db.mjs
-scripts/dump-neon.mjs
+scripts/
+!scripts/build-server.mjs
+!scripts/generate-migration-bundle.mjs
+!scripts/generate-vapid-keys.mjs
+!scripts/run-ts.mjs
+!scripts/db-smoke.ts
+!scripts/passkey-recovery-link.ts
 
 # Production & Build outputs
 /.next/

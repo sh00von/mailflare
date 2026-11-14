@@ -58,8 +58,8 @@ export async function ensureImportDestination(
 ): Promise<string> {
 	if (source.destination) return source.destination;
 	const folderName = source.folderName || source.label;
-	const folders = await getMailboxFolders(mailboxId);
-	const existing = folders.find(
+	const folderRes = await getMailboxFolders(mailboxId);
+	const existing = (folderRes.folders as ImportFolderSummary[] | undefined)?.find(
 		(folder: ImportFolderSummary) => folder.name.toLowerCase() === folderName.toLowerCase(),
 	);
 	if (existing) return `folder:${existing.id}`;
@@ -70,7 +70,7 @@ export async function ensureImportDestination(
 		body: JSON.stringify({ mailboxId, name: folderName }),
 	});
 	if (!response.ok) throw new Error(`Unable to create folder for ${folderName}`);
-	invalidateFolderCache(mailboxId);
+	invalidateFolderCache();
 	const data = (await response.json()) as { folder?: { id: string } };
 	if (!data.folder?.id) throw new Error(`Folder was not created for ${folderName}`);
 	return `folder:${data.folder.id}`;
@@ -87,10 +87,11 @@ export async function removeImportJob(id: string): Promise<void> {
 	if (!response.ok) throw new Error("Unable to update the import");
 }
 
-export async function resumeImportJob(id: string): Promise<void> {
+export async function resumeImportJob(id: string, password?: string): Promise<void> {
 	const response = await authFetch(`/api/import/jobs/${encodeURIComponent(id)}/resume`, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(password ? { password } : {}),
 	});
 	if (!response.ok) {
 		const data = (await response.json().catch(() => null)) as { error?: string } | null;

@@ -1,4 +1,4 @@
-import { calculateWorkspacePricing, getPlanDefinition, resolvePlanId, type BillingCycle, type PlanId, type WorkspaceStatus } from "@/lib/plans/catalog";
+import { calculatePlanPricing, getPlanDefinition, resolvePlanId, type BillingCycle, type PlanId, type WorkspaceStatus } from "@/lib/plans/catalog";
 
 const STRIPE_API = "https://api.stripe.com/v1";
 
@@ -75,7 +75,6 @@ export async function createStripeCheckoutSession(
 		workspaceId: string;
 		plan: PlanId;
 		cycle?: BillingCycle;
-		mailboxes?: number;
 		successUrl: string;
 		cancelUrl: string;
 	},
@@ -83,10 +82,8 @@ export async function createStripeCheckoutSession(
 	const config = getStripeConfig(env);
 	if (!config) throw new Error("Stripe is not configured");
 	const planDef = getPlanDefinition(input.plan);
-	const configuredPriceId = config.prices[input.plan];
-	const cycle: BillingCycle = input.cycle ?? "12m";
-	const mailboxes = Math.max(5, input.mailboxes ?? 5);
-	const pricing = calculateWorkspacePricing(mailboxes, cycle);
+	const cycle: BillingCycle = input.cycle ?? "monthly";
+	const pricing = calculatePlanPricing(planDef.id, cycle);
 
 	const params: Record<string, string> = {
 		mode: "subscription",
@@ -95,44 +92,24 @@ export async function createStripeCheckoutSession(
 		cancel_url: input.cancelUrl,
 		allow_promotion_codes: "true",
 		"metadata[workspaceId]": input.workspaceId,
-		"metadata[plan]": input.plan,
+		"metadata[plan]": planDef.id,
 		"metadata[cycle]": cycle,
-		"metadata[mailboxes]": String(mailboxes),
 		"subscription_data[metadata][workspaceId]": input.workspaceId,
-		"subscription_data[metadata][plan]": input.plan,
+		"subscription_data[metadata][plan]": planDef.id,
 		"subscription_data[metadata][cycle]": cycle,
-		"subscription_data[metadata][mailboxes]": String(mailboxes),
 		"line_items[0][quantity]": "1",
 	};
 
-	if (configuredPriceId && cycle === "12m" && mailboxes === 5) {
-		params["line_items[0][price]"] = configuredPriceId;
-	} else {
-		const unitAmount = Math.round(pricing.totalCharged * 100);
-		let interval = "year";
-		let intervalCount = "1";
-		let cycleLabel = "Annual";
+	const unitAmount = Math.round(pricing.totalCharged * 100);
+	const interval = cycle === "yearly" ? "year" : "month";
+	const cycleLabel = cycle === "yearly" ? "Annual" : "Monthly";
 
-		if (cycle === "3m") {
-			interval = "month";
-			intervalCount = "3";
-			cycleLabel = "Quarterly";
-		} else if (cycle === "6m") {
-			interval = "month";
-			intervalCount = "6";
-			cycleLabel = "Semi-Annual";
-		}
-
-		params["line_items[0][price_data][currency]"] = "usd";
-		params["line_items[0][price_data][unit_amount]"] = String(unitAmount);
-		params["line_items[0][price_data][recurring][interval]"] = interval;
-		if (interval === "month") {
-			params["line_items[0][price_data][recurring][interval_count]"] = intervalCount;
-		}
-		params["line_items[0][price_data][product_data][name]"] = `Replyot Workspace (${mailboxes} Inboxes · ${cycleLabel})`;
-		params["line_items[0][price_data][product_data][description]"] =
-			`Up to ${planDef.maxDomains} domains, ${mailboxes} team mailboxes with ${pricing.storageGb} GB dedicated storage (${planDef.dailySendLimit} emails/day)`;
-	}
+	params["line_items[0][price_data][currency]"] = "usd";
+	params["line_items[0][price_data][unit_amount]"] = String(unitAmount);
+	params["line_items[0][price_data][recurring][interval]"] = interval;
+	params["line_items[0][price_data][product_data][name]"] = `Mailflare ${planDef.name} (${cycleLabel})`;
+	params["line_items[0][price_data][product_data][description]"] =
+		`${planDef.maxMailboxes} inboxes, ${planDef.maxDomains} custom domains, ${planDef.storageLabel} storage (${planDef.dailySendLimit} emails/day)`;
 
 	return stripeFormRequest<{ id: string; url: string }>(config.secretKey, "/checkout/sessions", params);
 }
@@ -205,7 +182,7 @@ export function resolvePlanFromStripePriceOrMetadata(
 	metadataPlan: unknown,
 	priceId: string | null | undefined,
 ): PlanId | null {
-	if (metadataPlan === "starter" || metadataPlan === "pro" || metadataPlan === "business") {
+	if (metadataPlan === "free" || metadataPlan === "starter" || metadataPlan === "pro" || metadataPlan === "business") {
 		return metadataPlan;
 	}
 	if (!priceId) return null;

@@ -10,7 +10,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { authFetch } from "@/lib/auth/client";
-import { LicenseRequiredOverlay } from "@/components/license-required-overlay";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { AccountAliases } from "./account-aliases";
 import { AccountsTable } from "./accounts-table";

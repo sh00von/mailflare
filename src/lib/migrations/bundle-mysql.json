@@ -363,6 +363,16 @@
         "ALTER TABLE `domains` ADD `dkim_public_key` longtext;",
         "ALTER TABLE `domains` ADD `dkim_selector` varchar(191) DEFAULT 'default';"
       ]
+    },
+    {
+      "name": "0014_remove_auto_reply_add_default_from.sql",
+      "statements": [
+        "DROP TABLE IF EXISTS `auto_reply_deliveries`;",
+        "ALTER TABLE `mailboxes` ADD `default_from` text;",
+        "ALTER TABLE `mailboxes` DROP COLUMN `auto_reply_enabled`;",
+        "ALTER TABLE `mailboxes` DROP COLUMN `auto_reply_subject`;",
+        "ALTER TABLE `mailboxes` DROP COLUMN `auto_reply_body`;"
+      ]
     }
   ]
 }

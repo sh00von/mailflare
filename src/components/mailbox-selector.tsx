@@ -106,7 +106,7 @@ function MailboxAccountRow({ mailbox, unread, avatarUrl, onSelect }: MailboxAcco
 		<button
 			type="button"
 			onClick={onSelect}
-			className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left transition-colors hover:bg-white"
+			className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left transition-colors hover:bg-neutral-100/80 cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500"
 		>
 			<AccountAvatar
 				name={name}
@@ -286,7 +286,7 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 				<button
 					type="button"
 					onClick={() => setOpen((value) => !value)}
-					className="rounded-full p-1 transition-colors hover:bg-neutral-200"
+					className="rounded-full p-1 transition-colors hover:bg-neutral-200 cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500"
 					aria-label={"Open account menu"}
 					aria-expanded={open}
 				>
@@ -295,7 +295,7 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 			) : (
 				<Link
 					href="/mail/inbox"
-					className="inline-flex rounded-full p-1 transition-colors hover:bg-neutral-200"
+					className="inline-flex rounded-full p-1 transition-colors hover:bg-neutral-200 cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500"
 					aria-label={"Inbox"}
 				>
 					{triggerAvatar}
@@ -304,7 +304,7 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 
 			{open && (
 				<div className="absolute right-0 top-14 w-[360px] overflow-hidden rounded-[28px] border border-neutral-200 bg-popover p-3 shadow-2xl shadow-neutral-900/20 max-h-[82vh] overflow-y-auto z-90">
-					<div className="rounded-[22px] bg-white px-5 py-5">
+					<div className="rounded-[22px] bg-white px-5 py-5 shadow-xs">
 						<div className="flex items-center gap-4">
 							<AccountAvatar
 								name={selectedName}
@@ -337,7 +337,7 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 						<Link
 							href="/mail/inbox"
 							onClick={() => setOpen(false)}
-							className="mt-4 flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-row-hover"
+							className="mt-4 flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-row-hover transition-colors cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500"
 						>
 							<Inbox size={18} className="text-neutral-600" />
 							Inbox
@@ -345,7 +345,7 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 						<Link
 							href="/settings/account"
 							onClick={() => setOpen(false)}
-							className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-row-hover"
+							className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-row-hover transition-colors cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500"
 						>
 							<Settings size={18} className="text-neutral-600" />
 							Settings
@@ -356,10 +356,10 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 									type="button"
 									onClick={() => setInboxesOpen((value) => !value)}
 									aria-expanded={inboxesOpen}
-									className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold uppercase tracking-wide text-neutral-500 hover:bg-row-hover"
+									className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold uppercase tracking-wide text-neutral-500 hover:bg-row-hover transition-colors cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500"
 								>
 									{`Inboxes (${otherMailboxes.length})`}
-									<ChevronDown size={16} className={`transition-transform ${inboxesOpen ? "rotate-180" : ""}`} />
+									<ChevronDown size={16} className={`transition-transform duration-150 ${inboxesOpen ? "rotate-180" : ""}`} />
 								</button>
 								{inboxesOpen && otherMailboxes.map((mailbox) => {
 									const mailboxCount = counts.mailboxes.find((count) => count.mailboxId === mailbox.id);
@@ -391,7 +391,7 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 									key={account.userId}
 									type="button"
 									onClick={() => void switchAccount(account.userId)}
-									className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left transition-colors hover:bg-white"
+									className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left transition-colors hover:bg-white cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500"
 								>
 									<AccountAvatar
 										name={account.name}
@@ -408,12 +408,12 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 						</div>
 					)}
 
-					<div className="mt-2 overflow-hidden rounded-[22px] bg-white">
-						{user?.role === "admin" && (
+					<div className="mt-2 overflow-hidden rounded-[22px] bg-white shadow-xs">
+						{(user?.role === "admin" || user?.isPrimaryAdmin || user?.canManageDomains || user?.canManageUsers) && (
 							<Link
 								href="/admin/domains"
 								onClick={() => setOpen(false)}
-								className={`flex items-center gap-3 border-t border-neutral-100 px-5 py-4 text-sm font-medium text-neutral-800 hover:bg-row-hover ${adminActive ? "bg-blue-50" : ""}`}
+								className={`flex items-center gap-3 border-t border-neutral-100 px-5 py-4 text-sm font-medium text-neutral-800 hover:bg-row-hover transition-colors cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500 ${adminActive ? "bg-blue-50" : ""}`}
 							>
 								<ShieldCheck size={18} className="text-neutral-600" />
 								Admin Console
@@ -423,7 +423,7 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 						<Link
 							href="/login?add=1"
 							onClick={() => setOpen(false)}
-							className="flex items-center gap-3 px-5 py-4 text-sm font-medium text-neutral-800 hover:bg-row-hover"
+							className="flex items-center gap-3 px-5 py-4 text-sm font-medium text-neutral-800 hover:bg-row-hover transition-colors cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500"
 						>
 							<UserPlus size={18} className="text-neutral-600" />
 							Add another account
@@ -431,7 +431,7 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 						<button
 							type="button"
 							onClick={logout}
-							className="flex w-full items-center gap-3 border-t border-neutral-100 px-5 py-4 text-left text-sm font-medium text-neutral-800 hover:bg-row-hover"
+							className="flex w-full items-center gap-3 border-t border-neutral-100 px-5 py-4 text-left text-sm font-medium text-neutral-800 hover:bg-row-hover transition-colors cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500"
 						>
 							<LogOut size={18} className="text-neutral-600" />
 							Sign out

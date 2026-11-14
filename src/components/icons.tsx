@@ -58,6 +58,7 @@ import {
 	FileTypeIcon as HugeFileTypeIcon,
 	FileVideoCameraIcon as HugeFileVideoCameraIcon,
 	FileVideoIcon as HugeFileVideoIcon,
+	FlashIcon as HugeFlashIcon,
 	FolderIcon as HugeFolderIcon,
 	FolderInputIcon as HugeFolderInputIcon,
 	FolderPlusIcon as HugeFolderPlusIcon,
@@ -305,6 +306,7 @@ export const Webhook = createIcon(HugeWebhookIcon, "Webhook");
 export const Wrench = createIcon(HugeWrenchIcon, "Wrench");
 export const X = createIcon(HugeXIcon, "X");
 export const XCircle = createIcon(HugeCancelCircleIcon, "XCircle");
+export const Zap = createIcon(HugeFlashIcon, "Zap");
 export const LoaderCircle = Loader2;
 export const ArchiveIcon = Archive;
 export const InboxIcon = Inbox;

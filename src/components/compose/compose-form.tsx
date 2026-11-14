@@ -157,7 +157,12 @@ export function ComposeForm({
 			setSelectedFrom("");
 			return;
 		}
-		if (!senderAddresses.includes(selectedFrom)) setSelectedFrom(senderAddresses[0]);
+		if (!senderAddresses.includes(selectedFrom)) {
+			const preferred = selectedMailbox?.defaultFrom && senderAddresses.includes(selectedMailbox.defaultFrom)
+				? selectedMailbox.defaultFrom
+				: senderAddresses[0];
+			setSelectedFrom(preferred);
+		}
 	}, [selectedFrom, senderAddresses]);
 
 	useEffect(() => {

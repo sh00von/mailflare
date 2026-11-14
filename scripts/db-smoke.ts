@@ -10,7 +10,6 @@ import { getDatabaseConfig } from "@/db/with-database";
 import { openExternalDatabase } from "@/db/external";
 import { applyPendingMigrations, getMigrationStatus } from "@/lib/migrations/service";
 import { buildSearchConditions } from "@/lib/search/conditions";
-import { createBookedCalendarEvents } from "@/lib/booking/create";
 import { exportDatabaseRecords, restoreDatabaseRecords } from "@/lib/backups/export";
 import { getSearchIndexStatus } from "@/lib/search/index-admin";
 import { recordReputationObservation } from "@/lib/spam/repository";
@@ -18,6 +17,7 @@ import { isUniqueConstraintError } from "@/lib/database-errors";
 
 const [url, driver] = process.argv.slice(2);
 if (!url) throw new Error("usage: db-smoke <DATABASE_URL> [driver]");
+process.env.DATABASE_URL = url;
 
 const checks: Array<[string, boolean]> = [];
 const check = (name: string, ok: boolean) => {
@@ -98,11 +98,6 @@ for (const [query, expected] of [["quarterly", 1], ["subject:report", 1], ["from
 }
 
 const env = { DB: d1 } as unknown as CloudflareEnv;
-const event = { hostIds: [userId], name: "Intro", location: "Zoom", color: "blue", timeZone: "UTC" } as never;
-const startsAt = new Date(Date.now() + 86_400_000).toISOString();
-const endsAt = new Date(Date.now() + 86_400_000 + 1_800_000).toISOString();
-check("booking inserts", (await createBookedCalendarEvents(env, event, "Guest", "g@example.com", startsAt, endsAt)) === true);
-check("booking refuses a busy slot", (await createBookedCalendarEvents(env, event, "Guest", "g@example.com", startsAt, endsAt)) === false);
 
 await recordReputationObservation(env, `mbx_${stamp}`, [{ type: "domain", key: "example.com" }, { type: "email", key: "x@y.z" }] as never);
 await recordReputationObservation(env, `mbx_${stamp}`, [{ type: "domain", key: "example.com" }] as never);

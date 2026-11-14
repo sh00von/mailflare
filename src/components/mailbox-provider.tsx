@@ -29,14 +29,13 @@ export type MailboxOption = {
 	hostname: string;
 	displayName: string | null;
 	signature?: string | null;
-	autoReplyEnabled?: boolean;
-	autoReplySubject?: string;
-	autoReplyBody?: string;
+	defaultFrom?: string | null;
 	hasAvatar?: boolean;
 	type?: "personal" | "shared";
 	permission?: "read_only" | "send_as" | "send_on_behalf" | "full_access";
 	isPrimary?: boolean;
 	senderAddresses?: string[];
+	useAllDomains?: boolean;
 };
 
 type MailboxContextValue = {

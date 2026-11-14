@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db";
 import { workspaces } from "@/db/schema";
+import { getPlanDefinition } from "@/lib/plans/catalog";
 import {
 	getStripeConfig,
 	mapStripeSubscriptionStatus,
@@ -51,16 +52,16 @@ export async function POST(request: Request) {
 		const customerId = typeof obj.customer === "string" ? obj.customer : null;
 		const subscriptionId = typeof obj.subscription === "string" ? obj.subscription : null;
 		const plan = resolvePlanFromStripePriceOrMetadata(env, metadata.plan, null);
-		const rawMailboxes = metadata.mailboxes ? Number(metadata.mailboxes) : null;
-		const maxMailboxes = rawMailboxes && rawMailboxes >= 5 ? rawMailboxes : undefined;
-		const billingCycle = typeof metadata.cycle === "string" ? metadata.cycle : undefined;
+		const dbPlan = (plan && plan !== "free" ? plan : "starter") as "starter" | "pro" | "business";
+		const planDef = plan ? getPlanDefinition(plan) : undefined;
+		const billingCycle = metadata.cycle === "yearly" ? "yearly" : "monthly";
 		if (workspaceId) {
 			await db
 				.update(workspaces)
 				.set({
-					...(plan ? { plan } : {}),
-					...(maxMailboxes ? { maxMailboxes } : {}),
-					...(billingCycle ? { billingCycle } : {}),
+					...(plan ? { plan: dbPlan } : {}),
+					...(planDef ? { maxMailboxes: planDef.maxMailboxes } : {}),
+					billingCycle,
 					...(customerId ? { stripeCustomerId: customerId } : {}),
 					...(subscriptionId ? { stripeSubscriptionId: subscriptionId } : {}),
 					status: "active",
@@ -82,16 +83,16 @@ export async function POST(request: Request) {
 		const items = (obj.items as { data?: Array<{ price?: { id?: string } }> } | undefined)?.data;
 		const priceId = items?.[0]?.price?.id ?? null;
 		const plan = resolvePlanFromStripePriceOrMetadata(env, metadata.plan, priceId);
-		const rawMailboxes = metadata.mailboxes ? Number(metadata.mailboxes) : null;
-		const maxMailboxes = rawMailboxes && rawMailboxes >= 5 ? rawMailboxes : undefined;
-		const billingCycle = typeof metadata.cycle === "string" ? metadata.cycle : undefined;
+		const dbPlan = (plan && plan !== "free" ? plan : "starter") as "starter" | "pro" | "business";
+		const planDef = plan ? getPlanDefinition(plan) : undefined;
+		const billingCycle = metadata.cycle === "yearly" ? "yearly" : "monthly";
 		const trialEndSec = typeof obj.trial_end === "number" ? obj.trial_end : null;
 		const periodEndSec = typeof obj.current_period_end === "number" ? obj.current_period_end : null;
 
 		const patch = {
-			...(plan ? { plan } : {}),
-			...(maxMailboxes ? { maxMailboxes } : {}),
-			...(billingCycle ? { billingCycle } : {}),
+			...(plan ? { plan: dbPlan } : {}),
+			...(planDef ? { maxMailboxes: planDef.maxMailboxes } : {}),
+			billingCycle,
 			...(customerId ? { stripeCustomerId: customerId } : {}),
 			...(subscriptionId ? { stripeSubscriptionId: subscriptionId } : {}),
 			...(priceId ? { stripePriceId: priceId } : {}),

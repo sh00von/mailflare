@@ -1,4 +1,4 @@
-export type ImportJobKind = "file";
+export type ImportJobKind = "file" | "imap";
 
 export type ImportJobStatus = "queued" | "running" | "completed" | "failed" | "cancelled";
 

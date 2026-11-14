@@ -180,7 +180,7 @@ export default function AdminWorkspacesPage() {
 							<div className="min-w-0 space-y-1">
 								<div className="flex flex-wrap items-center gap-2">
 									<span className="font-semibold text-neutral-900">{ws.name}</span>
-									<Badge variant={ws.status === "suspended" ? "destructive" : "secondary"} className="rounded-full capitalize">{ws.status}</Badge>
+									<Badge variant={ws.status === "suspended" ? "outline" : "secondary"} className={`rounded-full capitalize ${ws.status === "suspended" ? "border-red-300 text-red-600 bg-red-50" : ""}`}>{ws.status}</Badge>
 									<span className="text-xs text-neutral-500">{ws.ownerEmail ?? "No owner"}</span>
 								</div>
 								<p className="text-xs text-neutral-600">

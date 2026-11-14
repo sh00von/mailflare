@@ -16,8 +16,7 @@ import { getOrEnsureWorkspaceForUser } from "@/lib/plans/usage";
 
 const checkoutSchema = z.object({
 	plan: z.enum(["starter", "pro", "business"]),
-	cycle: z.enum(["3m", "6m", "12m"]).optional(),
-	mailboxes: z.number().int().min(5).max(500).optional(),
+	cycle: z.enum(["monthly", "yearly", "6m", "12m"]).optional(),
 });
 
 function resolveAdminBaseUrl(request: Request): string {
@@ -77,8 +76,7 @@ export async function POST(request: Request) {
 		customerId,
 		workspaceId: workspace.id,
 		plan: parsed.data.plan,
-		cycle: parsed.data.cycle,
-		mailboxes: parsed.data.mailboxes,
+		cycle: parsed.data.cycle === "yearly" || parsed.data.cycle === "12m" ? "yearly" : "monthly",
 		successUrl: `${baseUrl}/admin/plan?billing=success&session_id={CHECKOUT_SESSION_ID}`,
 		cancelUrl: `${baseUrl}/admin/plan?billing=canceled`,
 	});

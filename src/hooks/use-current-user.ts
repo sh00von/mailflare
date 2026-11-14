@@ -22,6 +22,12 @@ export type SessionInfo = {
 	hasMailboxes?: boolean;
 	isSetup?: boolean;
 	user?: (CurrentUser & { timeZone?: string | null }) | null;
+	workspace?: {
+		status: "trialing" | "active" | "suspended";
+		daysLeftInTrial: number | null;
+		trialExpired: boolean;
+		plan: string;
+	} | null;
 };
 
 const SESSION_INFO_MAX_AGE_MS = 5 * 60 * 1000;

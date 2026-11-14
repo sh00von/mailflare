@@ -24,7 +24,8 @@
 		},
 		"types": [
 			"./env.d.ts",
-			"node"
+			"node",
+			"@cloudflare/workers-types"
 		]
 	},
 	"include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", ".next/dev/types/**/*.ts", ".next-node/types/**/*.ts", ".next-node/dev/types/**/*.ts"],

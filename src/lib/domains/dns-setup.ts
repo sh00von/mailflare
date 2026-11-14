@@ -40,12 +40,12 @@ export async function setupDomainDnsRecord(
 			if (shouldBindEmailCatchAllToWorker(env)) {
 				await ensureEmailRoutingCatchAllToWorker(env, domain.zoneId);
 			}
-			const routingEnabled = result.enabled ?? true;
+			const routingEnabled = result?.enabled ?? true;
 			await getDb(env)
 				.update(domains)
 				.set({
 					routingEnabled,
-					routingStatus: result.status ?? domain.routingStatus,
+					routingStatus: result?.status ?? domain.routingStatus,
 					// A domain added with "Skip DNS setup" starts out pending, and inbound
 					// routing only resolves active domains, so turning on receiving here
 					// has to activate it the same way domain creation does.

@@ -4,7 +4,7 @@ import type { BackupTableGroupId, DatabaseBackupDocument, DatabaseBackupTable, D
 import { mergeLegacyMessageBodies } from "./utils";
 import { BACKUP_TABLE_GROUPS, getSelectedBackupTables } from "./table-groups";
 
-export const BACKUP_TABLES: DatabaseBackupTable[] = ["workspaces", "users", "user_compose_preferences", "domains", "domain_tracking_hosts", "mailboxes", "mailbox_access", "contacts", "folders", "api_keys", "messages", "message_attachments", "shared_attachment_links", "outbound_jobs", "message_tracking", "message_opens", "follow_ups", "routing_rules", "webhooks", "webhook_deliveries", "sessions", "audit_logs", "backup_settings", "backups", "app_settings", "email_templates", "auto_reply_deliveries", "spam_token_stats", "spam_reputation", "spam_feedback", "mailbox_aliases", "password_reset_tokens", "mfa_recovery_codes", "login_challenges", "passkey_credentials"];
+export const BACKUP_TABLES: DatabaseBackupTable[] = ["workspaces", "users", "user_compose_preferences", "domains", "domain_tracking_hosts", "mailboxes", "mailbox_access", "contacts", "folders", "api_keys", "messages", "message_attachments", "shared_attachment_links", "outbound_jobs", "message_tracking", "message_opens", "follow_ups", "routing_rules", "webhooks", "webhook_deliveries", "sessions", "audit_logs", "backup_settings", "backups", "app_settings", "email_templates", "spam_token_stats", "spam_reputation", "spam_feedback", "mailbox_aliases", "password_reset_tokens", "mfa_recovery_codes", "login_challenges", "passkey_credentials"];
 /**
  * Tables every backup document must contain. Tables added to BACKUP_TABLES
  * after the format shipped are absent from older documents, so they stay
@@ -61,8 +61,8 @@ export const INTERNAL_TABLES = [
  * writers could not have known the drive group, so restoring one only
  * requires the groups that existed when it was written.
  */
-function groupsForDocumentVersion(version: DatabaseBackupDocument["version"]): typeof BACKUP_TABLE_GROUPS {
-	return version === 2 ? BACKUP_TABLE_GROUPS : BACKUP_TABLE_GROUPS.filter((group) => group.id !== "drive");
+function groupsForDocumentVersion(_version: DatabaseBackupDocument["version"]): typeof BACKUP_TABLE_GROUPS {
+	return BACKUP_TABLE_GROUPS;
 }
 
 /**
@@ -90,7 +90,7 @@ export async function exportDatabaseRecords(db: D1Database, excludedGroups: Back
 	if (!includedTables.length) throw new Error("Select at least one backup table group");
 	const tables: DatabaseBackupDocument["tables"] = {};
 	for (const table of includedTables) {
-		if ((table === "shared_attachment_links" || table === "booking_events" || table === "passkey_credentials" || table.startsWith("drive_") || LATER_MIGRATION_TABLES.includes(table)) && !databaseTables.has(table)) {
+		if ((table === "shared_attachment_links" || table === "passkey_credentials" || LATER_MIGRATION_TABLES.includes(table)) && !databaseTables.has(table)) {
 			tables[table] = [];
 			continue;
 		}
@@ -114,19 +114,13 @@ export async function restoreDatabaseRecords(db: D1Database, content: ArrayBuffe
 	const existing = await listTableNames(db);
 	const sharedLinksTable = existing.has("shared_attachment_links");
 	if (!sharedLinksTable && document.tables.shared_attachment_links?.length) throw new Error("Apply pending database migrations before restoring shared attachment links.");
-	const bookingTable = existing.has("booking_events");
-	if (!bookingTable && document.tables.booking_events?.length) throw new Error("Apply pending database migrations before restoring booking events.");
 	const passkeyTable = existing.has("passkey_credentials");
 	if (!passkeyTable && document.tables.passkey_credentials?.length) throw new Error("Apply pending database migrations before restoring passkeys.");
-	// Drive migrations ship later than the backup format, so an installation can have a database without them yet.
-	const driveTableNames = ["drive_items", "drive_upload_parts", "drive_shares"].filter((table) => existing.has(table));
-	if (["drive_items", "drive_upload_parts", "drive_shares"].some((table) => document.tables[table]?.length) && driveTableNames.length !== 3) throw new Error("Apply pending database migrations before restoring the Drive tables.");
 	const laterTableNames = LATER_MIGRATION_TABLES.filter((table) => existing.has(table));
 	const unmigrated = LATER_MIGRATION_TABLES.filter((table) => document.tables[table]?.length && !laterTableNames.includes(table));
 	if (unmigrated.length) throw new Error(`Apply pending database migrations before restoring ${unmigrated.join(", ")}.`);
-	const restoreTables = BACKUP_TABLES.filter((table) => (table !== "shared_attachment_links" || sharedLinksTable) && (table !== "booking_events" || bookingTable) && (table !== "passkey_credentials" || passkeyTable) && (!table.startsWith("drive_") || driveTableNames.includes(table)) && (!LATER_MIGRATION_TABLES.includes(table) || laterTableNames.includes(table)));
+	const restoreTables = BACKUP_TABLES.filter((table) => (table !== "shared_attachment_links" || sharedLinksTable) && (table !== "passkey_credentials" || passkeyTable) && (!LATER_MIGRATION_TABLES.includes(table) || laterTableNames.includes(table)));
 	const userColumns = await listColumnNames(db, "users");
-	const bookingColumns = bookingTable ? await listColumnNames(db, "booking_events") : null;
 	// The passkey table can predate later credential columns (aaguid); filter
 	// those out instead of failing after the restore has already torn down data.
 	const passkeyColumns = passkeyTable ? await listColumnNames(db, "passkey_credentials") : null;

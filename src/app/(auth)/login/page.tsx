@@ -16,7 +16,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
 	const cookieStore = await cookies();
 	const user = await getUserFromSession(env, cookieStore.get(SESSION_COOKIE)?.value).catch(() => null);
 	if (user && !user.disabled && !adding) {
-		redirect(user.role === "admin" ? "/admin/domains" : "/mail/inbox");
+		redirect("/inbox");
 	}
 
 	return (

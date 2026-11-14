@@ -2,7 +2,7 @@ import type { BackupTableGroupId, DatabaseBackupTable } from "./types";
 
 export const BACKUP_TABLE_GROUPS: { id: BackupTableGroupId; label: string; tables: DatabaseBackupTable[] }[] = [
 	{ id: "accounts", label: "Accounts and mailboxes", tables: ["workspaces", "users", "user_compose_preferences", "domains", "domain_tracking_hosts", "mailboxes", "mailbox_access", "mailbox_aliases", "contacts", "api_keys", "sessions", "password_reset_tokens", "mfa_recovery_codes", "login_challenges", "passkey_credentials"] },
-	{ id: "mail", label: "Mail and related data", tables: ["folders", "messages", "message_attachments", "shared_attachment_links", "outbound_jobs", "message_tracking", "message_opens", "follow_ups", "email_templates", "auto_reply_deliveries", "spam_token_stats", "spam_reputation", "spam_feedback"] },
+	{ id: "mail", label: "Mail and related data", tables: ["folders", "messages", "message_attachments", "shared_attachment_links", "outbound_jobs", "message_tracking", "message_opens", "follow_ups", "email_templates", "spam_token_stats", "spam_reputation", "spam_feedback"] },
 	{ id: "automation", label: "Routing and webhooks", tables: ["routing_rules", "webhooks", "webhook_deliveries"] },
 	{ id: "system", label: "App settings and history", tables: ["audit_logs", "backup_settings", "backups", "app_settings"] },
 ];

@@ -21,15 +21,12 @@ export async function completeLogin(
 	const token = await createSession(env, userId);
 	await recordAuthActivity(env, { action: options.activity ?? "auth.login", userId, request });
 
-	let redirectUrl = "/mail/inbox";
+	let redirectUrl = "/inbox";
 	try {
-		const [userRow] = await getDb(env)
-			.select({ role: users.role, isPrimaryAdmin: users.isPrimaryAdmin })
-			.from(users)
-			.where(eq(users.id, userId))
-			.limit(1);
-		if (userRow?.role === "admin" || userRow?.isPrimaryAdmin) {
-			redirectUrl = "/admin/domains";
+		const url = new URL(request.url);
+		const targetRedirect = url.searchParams.get("redirect") || url.searchParams.get("returnTo");
+		if (targetRedirect && targetRedirect.startsWith("/") && !targetRedirect.startsWith("//")) {
+			redirectUrl = targetRedirect;
 		}
 	} catch {}
 

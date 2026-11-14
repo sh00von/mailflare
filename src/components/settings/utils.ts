@@ -68,6 +68,27 @@ export async function updateMailboxSignature(mailboxId: string, signature: strin
 	return data.mailbox.signature ?? "";
 }
 
+export async function updateMailboxIdentity(
+	mailboxId: string,
+	patch: { displayName?: string | null; defaultFrom?: string | null; signature?: string | null },
+): Promise<{ displayName: string | null; defaultFrom: string | null; signature: string | null }> {
+	const res = await authFetch(`/api/mailboxes/${mailboxId}`, {
+		method: "PATCH",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(patch),
+	});
+	const data = (await res.json()) as { ok?: boolean; mailbox?: { displayName: string | null; defaultFrom: string | null; signature: string | null }; error?: string };
+	if (!res.ok || !data.mailbox) {
+		throw new Error(typeof data.error === "string" ? data.error : "Failed to update identity");
+	}
+	clearMailboxesCache();
+	return {
+		displayName: data.mailbox.displayName,
+		defaultFrom: data.mailbox.defaultFrom,
+		signature: data.mailbox.signature,
+	};
+}
+
 export async function updateMailboxAutoReply(
 	mailboxId: string,
 	settings: MailboxAutoReplySettings,

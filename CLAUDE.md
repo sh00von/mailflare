@@ -7,29 +7,24 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-npm run dev                    # Vite + vinext in local workerd
-npm run lint                   # eslint (next/core-web-vitals + next/typescript)
-npm run build                  # vinext build, including the complete Worker
+pnpm run dev                    # Start local standalone node server
+pnpm run lint                   # eslint .
+pnpm run build                 # pnpm run build:node (db:bundle + next build + scripts/build-server.mjs)
+pnpm run build:next            # Build Next.js production app
 
-npm run db:generate            # drizzle-kit generate (SQLite) from src/db/schema/index.ts
-npm run db:generate:pg         # same schema, PostgreSQL -> drizzle/migrations-pg
-npm run db:generate:mysql      # same schema, MySQL -> drizzle/migrations-mysql
-npm run db:smoke -- <DATABASE_URL> [driver]   # exercises migrations + query shapes on any database (MAILFLARE_DB_DIALECT must match)
-npm run db:migrate:local       # wrangler d1 migrations apply DB --local
-npm run db:migrate:remote      # --remote (needs a concrete database_id in wrangler.jsonc)
-npm run db:seed                # POST /api/seed against localhost:4008
+pnpm run db:generate           # drizzle-kit generate (SQLite) from src/db/schema/index.ts
+pnpm run db:generate:pg        # same schema, PostgreSQL -> drizzle/migrations-pg
+pnpm run db:generate:mysql     # same schema, MySQL -> drizzle/migrations-mysql
+pnpm run db:bundle             # generate migration bundles
+pnpm run db:smoke -- <DATABASE_URL> [driver]   # exercises migrations + query shapes on any database
+pnpm run db:seed               # POST /api/seed against localhost:4008
 
-npm run deploy                 # vinext build + wrangler deploy
-npm run deploy                 # build and deploy; migrate later from Admin settings
-npm run preview                # build and preview the vinext Worker locally
-npm run cf-typegen             # regenerate cloudflare-env.d.ts from wrangler.jsonc
+pnpm run deploy                # Build & push Docker image, trigger Dokploy webhook
 ```
 
-There is no test script in `package.json`; the checks under `tests/` are `node:test` files run with `node --test tests/*.test.mjs` (pass the glob — on Node 24 a bare `tests/` is read as a module path). They must not need Workers bindings, so anything that reaches D1 or R2 belongs in a script under `scripts/` run against `npm run dev` instead.
+The checks under `tests/` are `node:test` files run with `node --test tests/*.test.mjs`.
 
-`next.config.ts` sets `typescript.ignoreBuildErrors: true` and `tsconfig.json` sets `noImplicitAny: false`, so the build will not catch type errors. Run `npx tsc --noEmit` if you want real type checking.
-
-`npm run deploy` builds with vinext and uploads with Wrangler. The Cloudflare Vite plugin generates `dist/server/wrangler.json` and redirects Wrangler to it, preserving the custom `worker.ts` entrypoint.
+`pnpm run deploy` builds the container with Docker, pushes to GHCR, and calls the Dokploy deploy webhook.
 
 ## Architecture
 

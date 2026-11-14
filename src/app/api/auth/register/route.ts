@@ -5,9 +5,11 @@ import { getDb } from "@/db";
 import { domains, mailboxes, users, workspaces } from "@/db/schema";
 import { hashPassword } from "@/lib/auth/password";
 import { hasAdminAccount } from "@/lib/auth/setup";
-import { createSession, SESSION_COOKIE } from "@/lib/auth/session";
+import { completeLogin } from "@/lib/auth/login-response";
 import { newId } from "@/lib/ids";
 import { firstRunRegisterSchema } from "@/lib/validators";
+import { isDisposableEmail } from "@/lib/auth/disposable-emails";
+import { verifyRegistrationCode } from "@/lib/auth/email-verification";
 import { addDomainForUser } from "@/lib/domains/service";
 import { rollbackDomainProvisioning } from "@/lib/domains/rollback";
 import type { DomainProvisioningChanges } from "@/lib/domains/types";
@@ -48,6 +50,26 @@ export async function POST(request: Request) {
 		return NextResponse.json({ error: "Invalid security code. Please try again." }, { status: 400 });
 	}
 
+	if (firstRunParsed.data.resetEmail && isDisposableEmail(firstRunParsed.data.resetEmail)) {
+		return NextResponse.json({ error: "Please provide a permanent, non-disposable email address for account recovery." }, { status: 400 });
+	}
+
+	if (!firstRunParsed.data.verificationCode) {
+		return NextResponse.json(
+			{ error: "Please enter the 6-digit verification code sent to your email." },
+			{ status: 400 },
+		);
+	}
+
+	const codeCheck = await verifyRegistrationCode(
+		env,
+		firstRunParsed.data.resetEmail,
+		firstRunParsed.data.verificationCode,
+	);
+	if (!codeCheck.ok) {
+		return NextResponse.json({ error: codeCheck.error }, { status: 400 });
+	}
+
 	const domainName = firstRunParsed.data.domain.toLowerCase().trim();
 	const username = firstRunParsed.data.username.toLowerCase().trim();
 	const email = `${username}@${domainName}`;
@@ -70,9 +92,9 @@ export async function POST(request: Request) {
 	const userId = newId("usr");
 	const workspaceId = await createWorkspaceForOwner(env, {
 		ownerUserId: userId,
-		name: rawOrgName || `${name}'s Workspace`,
+		name: rawOrgName || `${name || username}'s Workspace`,
 		plan: selectedPlan,
-		status: isStripeConfigured(env) ? "suspended" : "active",
+		status: "trialing",
 	});
 	await db.insert(users).values({
 		id: userId,
@@ -135,21 +157,6 @@ export async function POST(request: Request) {
 		);
 	}
 
-	let cookieDomain: string | undefined;
-	const rawCookieDomain = process.env.COOKIE_DOMAIN?.trim();
-	if (rawCookieDomain) {
-		const cleanDomain = rawCookieDomain.replace(/^\./, "").toLowerCase();
-		const reqHost = (
-			request.headers.get("x-forwarded-host") ??
-			request.headers.get("host") ??
-			new URL(request.url).host
-		).toLowerCase().split(":")[0];
-		if (reqHost === cleanDomain || reqHost.endsWith(`.${cleanDomain}`)) {
-			cookieDomain = rawCookieDomain.startsWith(".") ? rawCookieDomain : `.${rawCookieDomain}`;
-		}
-	}
-	const sessionToken = await createSession(env, userId);
-
 	if (isStripeConfigured(env)) {
 		try {
 			const customerId = await createStripeCustomer(env, {
@@ -163,21 +170,8 @@ export async function POST(request: Request) {
 		}
 	}
 
-	const response = NextResponse.json({
-		ok: true,
-		redirect: "/admin/domains",
+	return await completeLogin(env, request, userId, {
+		activity: "auth.login",
+		body: { redirect: "/inbox" },
 	});
-	response.headers.set("Cache-Control", "no-store");
-	const isHttps = request.headers.get("x-forwarded-proto") === "https" || request.url.startsWith("https://");
-	if (sessionToken) {
-		response.cookies.set(SESSION_COOKIE, sessionToken, {
-			httpOnly: true,
-			secure: isHttps,
-			sameSite: "lax",
-			path: "/",
-			...(cookieDomain ? { domain: cookieDomain } : {}),
-			maxAge: 30 * 24 * 60 * 60,
-		});
-	}
-	return response;
 }

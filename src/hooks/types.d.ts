@@ -49,6 +49,8 @@ export type Message = {
 	threadUnread?: number;
 	/** In conversation view: every message this row stands for within the current folder. */
 	threadMessageIds?: string[];
+	hasAttachments?: boolean;
+	attachmentCount?: number;
 	createdAt: string;
 };
 

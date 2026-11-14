@@ -38,8 +38,7 @@ type AdminNavLink = {
 // `id` names a section for its remembered open/closed state; it is not shown.
 const sections: { id?: string; labelKey?: string; links: AdminNavLink[] }[] = [
   {
-    // label: "Overview",
-    links: [{ href: "/admin/domains", labelKey: "Overview", icon: Settings }],
+    links: [{ href: "/admin", labelKey: "Overview", icon: Settings }],
   },
   {
     id: "Email",

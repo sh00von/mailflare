@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { notify } from "@/lib/notify";
-import Link from "next/link";
 import {
   ArrowRight,
   Check,
@@ -10,22 +9,19 @@ import {
   ExternalLink,
   FileText,
   HardDrive,
-  MailPlus,
-  Minus,
-  Plus,
+  Mail,
   ShieldCheck,
   Sparkles,
+  Zap,
 } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { authFetch } from "@/lib/auth/client";
 import {
-  ADDONS_CATALOG,
-  MIN_MAILBOXES,
   PLAN_LIST,
-  calculateWorkspacePricing,
+  calculatePlanPricing,
+  getPlanDefinition,
   type BillingCycle,
   type PlanDefinition,
   type PlanId,
@@ -65,55 +61,44 @@ function formatBytes(bytes: number): string {
   return `${(bytes / 1024 ** 3).toFixed(2)} GB`;
 }
 
-function UsageRow({
-  label,
-  usedLabel,
-  maxLabel,
-  availableLabel,
-  pct = 0,
+function QuotaCard({
+  title,
+  used,
+  limit,
+  unit = "",
+  percent = 0,
   loading = false,
 }: {
-  label: string;
-  usedLabel?: string;
-  maxLabel?: string;
-  availableLabel?: string;
-  pct?: number;
+  title: string;
+  used: string | number;
+  limit: string | number;
+  unit?: string;
+  percent?: number;
   loading?: boolean;
 }) {
-  const clamped = Math.min(100, Math.max(0, Math.round(pct)));
-  const tone =
-    clamped >= 95
-      ? "bg-red-500"
-      : clamped >= 80
-        ? "bg-amber-500"
-        : "bg-blue-600";
+  const clamped = Math.min(100, Math.max(0, Math.round(percent)));
+  const tone = clamped >= 95 ? "bg-red-500" : clamped >= 80 ? "bg-amber-500" : "bg-blue-600";
 
   return (
-    <div className="space-y-1.5">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-sm gap-0.5 sm:gap-0">
-        <span className="font-medium text-neutral-800">{label}</span>
-        {loading ? (
-          <Skeleton className="h-3 w-16" />
-        ) : (
-          <div className="flex items-center gap-1.5 text-xs">
-            <span className="font-semibold text-neutral-900">{usedLabel} of {maxLabel} used</span>
-            {availableLabel && (
-              <span className="text-emerald-700 font-medium">({availableLabel} available)</span>
-            )}
-            <span className="text-neutral-400 font-mono">· {clamped}% capacity</span>
-          </div>
-        )}
+    <div className="rounded-2xl border border-neutral-200/80 bg-white p-5 space-y-3">
+      <div className="flex items-center justify-between text-xs text-neutral-500 font-medium">
+        <span>{title}</span>
+        <span className="font-mono">{clamped}%</span>
       </div>
       {loading ? (
-        <Skeleton className="h-2 w-full rounded-full" />
+        <Skeleton className="h-6 w-24" />
       ) : (
-        <div className="h-2 w-full overflow-hidden rounded-full bg-neutral-100">
-          <div
-            className={`h-full rounded-full transition-all duration-300 ${tone}`}
-            style={{ width: `${Math.max(2, clamped)}%` }}
-          />
+        <div className="flex items-baseline gap-1 text-xl font-bold text-neutral-900">
+          <span>{used}</span>
+          <span className="text-xs font-normal text-neutral-400">/ {limit} {unit}</span>
         </div>
       )}
+      <div className="h-2 w-full overflow-hidden rounded-full bg-neutral-100">
+        <div
+          className={`h-full rounded-full transition-all duration-300 ${tone}`}
+          style={{ width: `${Math.max(3, clamped)}%` }}
+        />
+      </div>
     </div>
   );
 }
@@ -123,8 +108,7 @@ export default function PlanAndUsagePage() {
   const [error, setError] = useState<string | null>(null);
   const [busyPlan, setBusyPlan] = useState<PlanId | "portal" | null>(null);
   const [billingNotice, setBillingNotice] = useState<string | null>(null);
-  const [cycle, setCycle] = useState<BillingCycle>("12m");
-  const [mailboxesCount, setMailboxesCount] = useState<number>(MIN_MAILBOXES);
+  const [cycle, setCycle] = useState<BillingCycle>("yearly");
 
   useEffect(() => {
     let sessionId: string | null = null;
@@ -150,13 +134,8 @@ export default function PlanAndUsagePage() {
         if (!res.ok)
           throw new Error(json.error ?? "Failed to load plan details");
         setData(json);
-        if (json.workspace) {
-          if (typeof json.workspace.maxMailboxes === "number" && json.workspace.maxMailboxes >= MIN_MAILBOXES) {
-            setMailboxesCount(json.workspace.maxMailboxes);
-          }
-          if (json.workspace.billingCycle) {
-            setCycle(json.workspace.billingCycle);
-          }
+        if (json.workspace?.billingCycle) {
+          setCycle(json.workspace.billingCycle);
         }
       })
       .catch((err) => {
@@ -172,15 +151,21 @@ export default function PlanAndUsagePage() {
 
   const workspace = data?.workspace;
   const usage = data?.usage;
-  const limits = workspace?.planDetails;
+  const limits = workspace?.planDetails ?? getPlanDefinition(workspace?.plan ?? "pro");
   const plans = data?.plans ?? PLAN_LIST;
   const billing = data?.billing;
   const invoices = data?.invoices ?? [];
   const stripeReady = billing?.stripeConfigured ?? false;
   const loading = !data && !error;
-  const isActive = workspace?.status === "active";
+  const isPaidActive = workspace?.status === "active";
+  const isTrial = workspace?.status === "trialing" && !workspace.trialExpired;
+  const currentPlanId: PlanId = workspace?.plan ?? "free";
 
   async function startCheckout(planId: PlanId) {
+    if (planId === "free") {
+      notify.info("You are already on the Free tier.");
+      return;
+    }
     setBusyPlan(planId);
     try {
       const res = await authFetch("/api/billing/checkout", {
@@ -189,7 +174,6 @@ export default function PlanAndUsagePage() {
         body: JSON.stringify({
           plan: planId,
           cycle,
-          mailboxes: mailboxesCount,
         }),
       });
       const payload = (await res.json()) as { url?: string; error?: string };
@@ -211,34 +195,43 @@ export default function PlanAndUsagePage() {
       const res = await authFetch("/api/billing/portal", { method: "POST" });
       const payload = (await res.json()) as { url?: string; error?: string };
       if (!res.ok || !payload.url) {
-        notify.error(payload, "Could not open the billing portal");
+        notify.error(payload, "Could not open billing portal");
         return;
       }
       window.location.assign(payload.url);
     } catch (err) {
-      notify.error(err, "Could not open the billing portal");
+      notify.error(err, "Could not open billing portal");
     } finally {
       setBusyPlan(null);
     }
   }
 
-  const primaryPlan = plans[0] ?? PLAN_LIST[0];
-  const pricing = calculateWorkspacePricing(mailboxesCount, cycle);
-  const isCurrentSubscription =
-    isActive &&
-    mailboxesCount === (workspace?.maxMailboxes ?? MIN_MAILBOXES) &&
-    cycle === (workspace?.billingCycle ?? "12m");
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Page Header */}
-      <div>
-        <h1 className="text-2xl md:text-3xl font-medium text-neutral-900">
-          Plan &amp; Usage
-        </h1>
-        <p className="mt-2 text-sm text-neutral-500">
-          Choose your team mailbox capacity, track limits, and manage your workspace subscription.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-neutral-900">
+            Subscription &amp; Plans
+          </h1>
+          <p className="mt-1 text-sm text-neutral-500">
+            Predictable, cost-effective business email. Upgrade or adjust your plan anytime.
+          </p>
+        </div>
+
+        {stripeReady && billing?.hasCustomer && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="rounded-xl border-neutral-300 hover:bg-neutral-50 self-start sm:self-auto cursor-pointer"
+            disabled={busyPlan !== null}
+            onClick={() => void openBillingPortal()}
+          >
+            {busyPlan === "portal" ? "Opening portal..." : "Manage Billing & Cards"}
+            <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
+          </Button>
+        )}
       </div>
 
       {billingNotice && (
@@ -256,378 +249,204 @@ export default function PlanAndUsagePage() {
         </p>
       )}
 
-      {/* 1. Subscription & Custom Mailbox Plan Card */}
-      <div className="rounded-2xl border border-neutral-200 bg-white p-6 sm:p-8 space-y-6">
-        {/* Active Subscription Banner - Flat & Clean */}
-        {isActive && (
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-neutral-100">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
+      {/* Active Subscription Status Banner */}
+      <div className="rounded-3xl border border-neutral-200/90 bg-white p-6 md:p-7 shadow-xs">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-1.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                Current Plan:
+              </span>
+              <span className="text-lg font-bold text-neutral-900">
+                {limits.name}
+              </span>
+              {isPaidActive ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
                   <Check className="h-3 w-3" /> Active Subscription
                 </span>
-                <span className="text-xs text-neutral-500">
-                  Billed {workspace?.billingCycle === "3m" ? "Quarterly" : workspace?.billingCycle === "6m" ? "Semi-Annually" : "Yearly"}
+              ) : isTrial ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 border border-blue-200 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
+                  <Sparkles className="h-3 w-3" /> 14-Day Free Pro Trial ({workspace?.daysLeftInTrial ?? 14} days left)
                 </span>
-              </div>
-              <p className="text-lg font-bold text-neutral-900">
-                {workspace?.maxMailboxes ?? 5} Team Mailboxes · {workspace?.maxMailboxes ?? 5} GB NVMe Storage
-              </p>
-              {billing?.currentPeriodEnd && (
-                <p className="text-xs text-neutral-500">
-                  Renews on {new Date(billing.currentPeriodEnd).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
-                </p>
-              )}
-            </div>
-            {stripeReady && billing?.hasCustomer && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="self-start sm:self-auto rounded-lg text-xs font-medium border-neutral-300 hover:bg-neutral-50"
-                disabled={busyPlan !== null}
-                onClick={() => void openBillingPortal()}
-              >
-                {busyPlan === "portal" ? "Opening portal..." : "Manage Billing & Invoices"}
-              </Button>
-            )}
-          </div>
-        )}
-
-        {/* Plan Header + Billing Cycle Switcher */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex items-center gap-2.5">
-              <h2 className="text-xl font-bold tracking-tight text-neutral-900">
-                {isActive ? "Adjust Workspace Capacity" : primaryPlan.name}
-              </h2>
-              <Badge
-                variant={isActive ? "success" : "secondary"}
-                className="capitalize"
-              >
-                {isActive ? "Active Plan" : "Setup Mode"}
-              </Badge>
-            </div>
-            <p className="mt-1 text-sm text-neutral-500">
-              {isActive
-                ? "Scale your team inboxes up or down anytime. Volume pricing adjusts automatically."
-                : "Custom team mailbox capacity with transparent volume pricing. Minimum 5 inboxes."}
-            </p>
-          </div>
-
-          {/* Billing Cycle Switcher - Flat Segmented Control */}
-          <div className="inline-flex items-center rounded-lg border border-neutral-200 bg-neutral-50 p-1 self-start sm:self-auto">
-            <button
-              type="button"
-              onClick={() => setCycle("12m")}
-              className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-                cycle === "12m"
-                  ? "bg-white text-neutral-900 border border-neutral-200"
-                  : "text-neutral-600 hover:text-neutral-900"
-              }`}
-            >
-              12 Months <span className="text-[10px] text-emerald-600 font-bold ml-1">Save 40%</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setCycle("6m")}
-              className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-                cycle === "6m"
-                  ? "bg-white text-neutral-900 border border-neutral-200"
-                  : "text-neutral-600 hover:text-neutral-900"
-              }`}
-            >
-              6 Months
-            </button>
-            <button
-              type="button"
-              onClick={() => setCycle("3m")}
-              className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-                cycle === "3m"
-                  ? "bg-white text-neutral-900 border border-neutral-200"
-                  : "text-neutral-600 hover:text-neutral-900"
-              }`}
-            >
-              3 Months
-            </button>
-          </div>
-        </div>
-
-        {/* Mailbox Capacity Stepper - Clean Inline Layout, No Nested Card */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 py-2">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-neutral-900">
-                Team Mailbox Quantity
-              </span>
-              {isActive && !isCurrentSubscription && (
-                <span className="text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-0.5">
-                  Adjusting
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-neutral-500 mt-0.5">
-              Minimum 5 mailboxes · 1 GB dedicated NVMe storage included per mailbox
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2 self-start sm:self-auto">
-            <button
-              type="button"
-              disabled={mailboxesCount <= MIN_MAILBOXES}
-              onClick={() => setMailboxesCount((c) => Math.max(MIN_MAILBOXES, c - 1))}
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-700 transition hover:bg-neutral-50 disabled:opacity-30 disabled:cursor-not-allowed"
-              aria-label="Decrease mailboxes"
-            >
-              <Minus className="h-4 w-4" />
-            </button>
-            <div className="flex h-9 min-w-16 items-center justify-center rounded-lg bg-neutral-50 px-3 font-mono font-bold text-base text-neutral-900 border border-neutral-200">
-              {mailboxesCount}
-            </div>
-            <button
-              type="button"
-              onClick={() => setMailboxesCount((c) => c + 1)}
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-700 transition hover:bg-neutral-50"
-              aria-label="Increase mailboxes"
-            >
-              <Plus className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* Price Hero - Flat, Open, No Nested Card Box */}
-        <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-3 border-y border-neutral-100 py-5">
-          <div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-extrabold tracking-tight text-neutral-900">
-                ${pricing.totalMonthlyEquivalent.toFixed(2)}
-              </span>
-              <span className="text-sm font-medium text-neutral-500">/ month</span>
-            </div>
-            <p className="mt-1 text-xs font-semibold text-blue-600">
-              {pricing.billingText}
-            </p>
-          </div>
-          <div className="sm:text-right">
-            <span className="text-sm font-semibold text-neutral-900">
-              ${pricing.pricePerMailboxMonthly.toFixed(2)} / mailbox / mo
-            </span>
-            <p className="text-xs text-neutral-500 mt-0.5">
-              {pricing.mailboxes} mailboxes &amp; {pricing.storageGb} GB dedicated NVMe storage
-            </p>
-          </div>
-        </div>
-
-        {/* Features Checklist */}
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 text-sm text-neutral-700 pt-1">
-          <p className="flex items-center gap-2.5">
-            <Check className="h-4 w-4 shrink-0 text-blue-600" />
-            <span><strong className="font-semibold text-neutral-900">{pricing.mailboxes}</strong> active team mailboxes included</span>
-          </p>
-          <p className="flex items-center gap-2.5">
-            <Check className="h-4 w-4 shrink-0 text-blue-600" />
-            <span><strong className="font-semibold text-neutral-900">{pricing.storageGb} GB</strong> workspace storage (1 GB / inbox)</span>
-          </p>
-          <p className="flex items-center gap-2.5">
-            <Check className="h-4 w-4 shrink-0 text-blue-600" />
-            <span>Up to <strong className="font-semibold text-neutral-900">5 custom domains</strong> with 1-click DNS</span>
-          </p>
-          <p className="flex items-center gap-2.5">
-            <Check className="h-4 w-4 shrink-0 text-blue-600" />
-            <span><strong className="font-semibold text-neutral-900">500 emails/day</strong> outbound relay (Gmail matched)</span>
-          </p>
-          <p className="flex items-center gap-2.5">
-            <Check className="h-4 w-4 shrink-0 text-blue-600" />
-            <span><strong className="font-semibold text-neutral-900">100 emails/hour</strong> burst deliverability protection</span>
-          </p>
-          <p className="flex items-center gap-2.5">
-            <Check className="h-4 w-4 shrink-0 text-blue-600" />
-            <span><strong className="font-semibold text-neutral-900">25 MB</strong> attachments &amp; SPF/DKIM verification</span>
-          </p>
-        </div>
-
-        {/* Plan Action CTA */}
-        <div className="flex flex-col sm:flex-row items-center gap-3 pt-3">
-          {stripeReady ? (
-            <Button
-              type="button"
-              variant={isCurrentSubscription ? "outline" : "default"}
-              className={isCurrentSubscription ? "w-full sm:w-auto rounded-xl" : "w-full sm:w-auto rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold"}
-              disabled={busyPlan !== null || isCurrentSubscription}
-              onClick={() => void startCheckout(primaryPlan.id)}
-            >
-              {busyPlan === primaryPlan.id ? (
-                "Redirecting to Stripe..."
-              ) : isCurrentSubscription ? (
-                "Current Active Subscription"
-              ) : isActive ? (
-                `Update to ${pricing.mailboxes} Mailboxes ($${pricing.totalCharged.toFixed(2)})`
               ) : (
-                `Activate Workspace (${pricing.mailboxes} Mailboxes · $${pricing.totalCharged.toFixed(2)})`
+                <span className="inline-flex items-center gap-1 rounded-full bg-neutral-100 border border-neutral-200 px-2.5 py-0.5 text-xs font-semibold text-neutral-600">
+                  Free Forever
+                </span>
               )}
-              {!isCurrentSubscription && <ArrowRight className="ml-1.5 h-4 w-4" />}
-            </Button>
-          ) : (
-            <p className="text-xs text-neutral-500">
-              Stripe billing keys are not set. Workspace is operational in free setup mode.
+            </div>
+
+            <p className="text-xs text-neutral-600">
+              {isPaidActive
+                ? `Billed ${workspace?.billingCycle === "yearly" ? "Yearly" : "Monthly"}${
+                    billing?.currentPeriodEnd
+                      ? ` · Renews on ${new Date(billing.currentPeriodEnd).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}`
+                      : ""
+                  }`
+                : isTrial
+                  ? "Explore all 5 mailboxes and 3 domains risk-free. No credit card required."
+                  : "Basic single-mailbox capacity. Upgrade to Starter or Pro for extra mailboxes and priority throughput."}
             </p>
-          )}
+          </div>
 
-          {stripeReady && billing?.hasCustomer ? (
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-xl border-neutral-300 hover:bg-neutral-50"
-              disabled={busyPlan !== null}
-              onClick={() => void openBillingPortal()}
-            >
-              {busyPlan === "portal" ? "Opening portal..." : "Manage Billing & Invoices"}
-            </Button>
-          ) : null}
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-neutral-500 hidden sm:inline">Billing Cycle:</span>
+            <div className="inline-flex items-center rounded-xl border border-neutral-200 bg-neutral-50 p-1">
+              <button
+                type="button"
+                onClick={() => setCycle("monthly")}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${
+                  cycle === "monthly"
+                    ? "bg-white text-neutral-900 border border-neutral-200 shadow-2xs"
+                    : "text-neutral-600 hover:text-neutral-900"
+                }`}
+              >
+                Monthly
+              </button>
+              <button
+                type="button"
+                onClick={() => setCycle("yearly")}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${
+                  cycle === "yearly"
+                    ? "bg-white text-neutral-900 border border-neutral-200 shadow-2xs"
+                    : "text-neutral-600 hover:text-neutral-900"
+                }`}
+              >
+                Yearly
+                <span className="text-[10px] text-emerald-600 font-bold ml-1.5 bg-emerald-50 px-1.5 py-0.5 rounded-full">
+                  2 Months Free
+                </span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* 2. Workspace Quotas & Usage Card */}
-      <div className="rounded-2xl border border-neutral-200 bg-white p-6 space-y-5">
-        <div>
-          <h2 className="text-base font-semibold text-neutral-900">
-            Workspace Limits &amp; Usage
-          </h2>
-          <p className="mt-1 text-sm text-neutral-500">
-            Live resource consumption across your domains, mailboxes, and storage.
-          </p>
-        </div>
-
-        <div className="space-y-4">
-          <UsageRow
-            label="Custom domains"
+      {/* Quotas & Capacity Grid */}
+      <div>
+        <h2 className="text-base font-semibold text-neutral-900 mb-3">Live Resource Usage</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <QuotaCard
+            title="Team Mailboxes"
+            used={usage ? usage.mailboxesUsed : 0}
+            limit={limits.maxMailboxes}
+            percent={usage ? (usage.mailboxesUsed / Math.max(1, limits.maxMailboxes)) * 100 : 0}
             loading={loading}
-            usedLabel={usage ? String(usage.domainsUsed) : "0"}
-            maxLabel={isActive && limits ? String(limits.maxDomains) : "1"}
-            availableLabel={
-              usage && limits
-                ? String(Math.max(0, limits.maxDomains - usage.domainsUsed))
-                : undefined
-            }
-            pct={
-              usage
-                ? (usage.domainsUsed /
-                    (isActive && limits ? limits.maxDomains : 1)) *
-                  100
-                : 0
-            }
           />
-
-          <UsageRow
-            label="Team mailboxes & users"
+          <QuotaCard
+            title="Custom Domains"
+            used={usage ? usage.domainsUsed : 0}
+            limit={limits.maxDomains}
+            percent={usage ? (usage.domainsUsed / Math.max(1, limits.maxDomains)) * 100 : 0}
             loading={loading}
-            usedLabel={usage ? String(usage.mailboxesUsed) : "0"}
-            maxLabel={String(workspace?.maxMailboxes ?? limits?.maxMailboxes ?? mailboxesCount)}
-            availableLabel={
-              usage
-                ? String(Math.max(0, (workspace?.maxMailboxes ?? limits?.maxMailboxes ?? mailboxesCount) - usage.mailboxesUsed))
-                : undefined
-            }
-            pct={
-              usage
-                ? (usage.mailboxesUsed /
-                    (workspace?.maxMailboxes ?? limits?.maxMailboxes ?? mailboxesCount)) *
-                  100
-                : 0
-            }
           />
-
-          <UsageRow
-            label="Workspace storage"
+          <QuotaCard
+            title="Storage Used"
+            used={usage ? formatBytes(usage.storageUsedBytes) : "0 MB"}
+            limit={limits.storageLabel}
+            percent={usage ? (usage.storageUsedBytes / Math.max(1, limits.storageLimitBytes)) * 100 : 0}
             loading={loading}
-            usedLabel={usage ? formatBytes(usage.storageUsedBytes) : "0 B"}
-            maxLabel={`${workspace?.maxMailboxes ?? limits?.maxMailboxes ?? mailboxesCount} GB`}
-            availableLabel={
-              usage
-                ? `${Math.max(0, (workspace?.maxMailboxes ?? limits?.maxMailboxes ?? mailboxesCount) - Math.ceil(usage.storageUsedBytes / (1024 ** 3)))} GB`
-                : undefined
-            }
-            pct={
-              usage
-                ? (usage.storageUsedBytes /
-                    ((workspace?.maxMailboxes ?? limits?.maxMailboxes ?? mailboxesCount) * 1024 ** 3)) *
-                  100
-                : 0
-            }
           />
-
-          <UsageRow
-            label="Emails sent today (UTC)"
+          <QuotaCard
+            title="Outbound Today"
+            used={usage ? usage.dailySentCount : 0}
+            limit={limits.dailySendLimit}
+            percent={usage ? (usage.dailySentCount / Math.max(1, limits.dailySendLimit)) * 100 : 0}
             loading={loading}
-            usedLabel={usage ? String(usage.dailySentCount) : "0"}
-            maxLabel={isActive && limits ? String(limits.dailySendLimit) : "500"}
-            availableLabel={
-              usage && limits
-                ? String(Math.max(0, limits.dailySendLimit - usage.dailySentCount))
-                : undefined
-            }
-            pct={
-              isActive && usage && limits
-                ? (usage.dailySentCount / limits.dailySendLimit) * 100
-                : 0
-            }
           />
         </div>
-
-        <p className="pt-4 border-t border-neutral-100 text-xs text-neutral-500 leading-relaxed">
-          <strong className="font-semibold text-neutral-800">Deliverability guarantee:</strong> All outbound emails are routed through high-reputation Amazon SES relays with automatic 100 emails/hour burst throttling to protect your domain reputation.
-        </p>
       </div>
 
-      {/* 3. Mailbox Storage Boosters Card */}
-      <div className="rounded-2xl border border-neutral-200 bg-white p-6 sm:p-8 space-y-4">
-        <div>
-          <h2 className="text-base font-semibold text-neutral-900">
-            Mailbox Storage Boosters
-          </h2>
-          <p className="mt-1 text-sm text-neutral-500">
-            Need more storage for specific high-volume inboxes? Assign dedicated +1 GB boosters directly to individual addresses like <code className="rounded bg-neutral-100 px-1 py-0.5 text-neutral-800">support@</code>.
-          </p>
+      {/* 4-Tier Plan Grid */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-bold text-neutral-900">Available Plans</h2>
+            <p className="text-xs text-neutral-500">Pick the plan that fits your current volume. Change anytime.</p>
+          </div>
         </div>
 
-        <div className="divide-y divide-neutral-100">
-          {ADDONS_CATALOG.map((addon) => {
-            const isStorage = addon.id.includes("storage");
-            const IconComponent = isStorage ? HardDrive : MailPlus;
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {plans.map((p) => {
+            const pricing = calculatePlanPricing(p.id, cycle);
+            const isCurrent = currentPlanId === p.id && (isPaidActive || p.id === "free");
+            const isHighlighted = p.highlighted;
+
             return (
               <div
-                key={addon.id}
-                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 py-4 first:pt-2 last:pb-0"
+                key={p.id}
+                className={`relative flex flex-col justify-between rounded-3xl border bg-white p-6 transition-all duration-200 ${
+                  isHighlighted
+                    ? "border-blue-600 shadow-md ring-1 ring-blue-600/20"
+                    : "border-neutral-200/90 shadow-2xs hover:border-neutral-300"
+                }`}
               >
-                <div className="flex items-start gap-3">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-                    <IconComponent className="h-4 w-4" />
+                {isHighlighted && (
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-blue-600 px-3 py-0.5 text-[11px] font-bold text-white shadow-2xs">
+                    Most Popular
                   </span>
+                )}
+
+                <div className="space-y-4">
                   <div>
-                    <span className="font-semibold text-sm text-neutral-900">
-                      {addon.name}
-                    </span>
-                    <p className="text-xs text-neutral-500 mt-0.5">
-                      {addon.description}
+                    <h3 className="text-lg font-bold text-neutral-900">{p.name}</h3>
+                    <p className="mt-1 text-xs text-neutral-500 min-h-[32px]">{p.tagline}</p>
+                  </div>
+
+                  <div className="border-y border-neutral-100 py-3">
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-3xl font-black text-neutral-900">
+                        {p.id === "free" ? "$0" : `$${pricing.monthlyEquivalent.toFixed(2)}`}
+                      </span>
+                      <span className="text-xs font-medium text-neutral-500">/ month</span>
+                    </div>
+                    <p className="text-[11px] text-neutral-400 mt-0.5 font-medium">
+                      {pricing.billingText}
                     </p>
                   </div>
+
+                  <ul className="space-y-2.5 text-xs text-neutral-600">
+                    {p.features.map((feature, idx) => (
+                      <li key={idx} className="flex items-start gap-2">
+                        <Check className="h-3.5 w-3.5 shrink-0 text-blue-600 mt-0.5" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
 
-                <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0">
-                  <div className="text-left sm:text-right">
-                    <span className="font-semibold text-xs text-neutral-900">
-                      ${addon.priceMonthlyEquivalent.toFixed(2)}/mo
-                    </span>
-                    <span className="block text-[11px] text-neutral-400">
-                      Billed ${addon.priceQuarterlyUsd} / 3mo
-                    </span>
-                  </div>
-
-                  <Button asChild size="sm" variant="outline" className="rounded-lg border-neutral-300 hover:bg-neutral-50">
-                    <Link href="/admin/mailboxes">
-                      {isStorage ? "Assign to Inbox" : "Add Mailbox"}
-                    </Link>
-                  </Button>
+                <div className="pt-6">
+                  {p.id === "free" ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={isCurrent}
+                      className="w-full rounded-xl border-neutral-200 text-xs font-semibold"
+                    >
+                      {isCurrent ? "Current Plan" : "Free Forever"}
+                    </Button>
+                  ) : stripeReady ? (
+                    <Button
+                      type="button"
+                      disabled={busyPlan !== null || isCurrent}
+                      onClick={() => void startCheckout(p.id)}
+                      className={`w-full rounded-xl text-xs font-semibold cursor-pointer ${
+                        isHighlighted
+                          ? "bg-blue-600 hover:bg-blue-700 text-white shadow-2xs"
+                          : "bg-neutral-900 hover:bg-neutral-800 text-white"
+                      }`}
+                    >
+                      {busyPlan === p.id
+                        ? "Redirecting..."
+                        : isCurrent
+                          ? "Current Plan"
+                          : `Choose ${p.name}`}
+                      {!isCurrent && <ArrowRight className="ml-1.5 h-3.5 w-3.5" />}
+                    </Button>
+                  ) : (
+                    <p className="text-[11px] text-center text-neutral-400">
+                      Stripe setup required
+                    </p>
+                  )}
                 </div>
               </div>
             );
@@ -635,98 +454,68 @@ export default function PlanAndUsagePage() {
         </div>
       </div>
 
-      {/* 4. Payment History & Invoices Card */}
-      <div className="rounded-2xl border border-neutral-200 bg-white p-6 sm:p-8 space-y-4">
-        <div>
-          <h2 className="text-base font-semibold text-neutral-900">
-            Payment History &amp; Invoices
-          </h2>
-          <p className="mt-1 text-sm text-neutral-500">
-            View past subscription charges and download official PDF receipts.
-          </p>
-        </div>
-
-        {loading ? (
-          <div className="space-y-2 py-2">
-            <Skeleton className="h-10 w-full rounded-xl" />
-            <Skeleton className="h-10 w-full rounded-xl" />
+      {/* Invoices History Table */}
+      {invoices.length > 0 && (
+        <div className="rounded-3xl border border-neutral-200 bg-white p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-semibold text-neutral-900">Payment &amp; Invoice History</h2>
+              <p className="text-xs text-neutral-500">Download PDF receipts for your accounting records.</p>
+            </div>
+            <FileText className="h-5 w-5 text-neutral-400" />
           </div>
-        ) : invoices.length > 0 ? (
+
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-neutral-100 text-xs font-semibold text-neutral-400 uppercase tracking-wider">
-                  <th className="py-2.5 pr-4">Date</th>
-                  <th className="py-2.5 px-4">Invoice #</th>
-                  <th className="py-2.5 px-4">Amount</th>
-                  <th className="py-2.5 px-4">Status</th>
-                  <th className="py-2.5 pl-4 text-right">Receipt</th>
+            <table className="w-full text-left text-xs text-neutral-600">
+              <thead className="border-b border-neutral-100 bg-neutral-50/50 text-[11px] font-semibold uppercase tracking-wider text-neutral-500">
+                <tr>
+                  <th className="py-2.5 px-3">Date</th>
+                  <th className="py-2.5 px-3">Invoice</th>
+                  <th className="py-2.5 px-3">Amount</th>
+                  <th className="py-2.5 px-3">Status</th>
+                  <th className="py-2.5 px-3 text-right">Receipt</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100">
                 {invoices.map((inv) => (
-                  <tr key={inv.id} className="hover:bg-neutral-50/60 transition-colors">
-                    <td className="py-3 pr-4 font-medium text-neutral-800">
-                      {new Date(inv.created * 1000).toLocaleDateString("en-US", {
-                        year: "numeric",
+                  <tr key={inv.id} className="hover:bg-neutral-50/60 transition">
+                    <td className="py-3 px-3 font-medium text-neutral-900">
+                      {new Date(inv.created * 1000).toLocaleDateString(undefined, {
                         month: "short",
                         day: "numeric",
+                        year: "numeric",
                       })}
                     </td>
-                    <td className="py-3 px-4 font-mono text-xs text-neutral-500">
-                      {inv.number || inv.id}
+                    <td className="py-3 px-3 font-mono">{inv.number ?? inv.id.slice(-8)}</td>
+                    <td className="py-3 px-3 font-semibold text-neutral-900">
+                      ${(inv.amount_paid / 100).toFixed(2)} {inv.currency.toUpperCase()}
                     </td>
-                    <td className="py-3 px-4 font-medium text-neutral-900">
-                      ${(inv.amount_paid / 100).toFixed(2)}{" "}
-                      <span className="text-xs text-neutral-400 uppercase">
-                        {inv.currency}
+                    <td className="py-3 px-3">
+                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                        {inv.status}
                       </span>
                     </td>
-                    <td className="py-3 px-4">
-                      <Badge
-                        variant="outline"
-                        className="rounded-full border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700"
-                      >
-                        {inv.status === "paid" ? "Paid" : inv.status}
-                      </Badge>
-                    </td>
-                    <td className="py-3 pl-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        {inv.invoice_pdf && (
-                          <a
-                            href={inv.invoice_pdf}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 rounded-md border border-neutral-200 bg-white px-2.5 py-1 text-xs font-medium text-neutral-700 hover:bg-neutral-50"
-                          >
-                            <Download className="h-3 w-3" />
-                            PDF
-                          </a>
-                        )}
-                        {inv.hosted_invoice_url && (
-                          <a
-                            href={inv.hosted_invoice_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
-                          >
-                            <ExternalLink className="h-3 w-3" />
-                            View
-                          </a>
-                        )}
-                      </div>
+                    <td className="py-3 px-3 text-right">
+                      {inv.invoice_pdf ? (
+                        <a
+                          href={inv.invoice_pdf}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 font-medium text-blue-600 hover:text-blue-700 cursor-pointer"
+                        >
+                          <Download className="h-3 w-3" /> PDF
+                        </a>
+                      ) : (
+                        <span className="text-neutral-400">—</span>
+                      )}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        ) : (
-          <div className="py-8 text-center text-sm text-neutral-500">
-            No payment invoices yet. Downloadable PDF receipts and past charges will appear here automatically.
-          </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

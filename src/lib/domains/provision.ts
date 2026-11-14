@@ -98,8 +98,8 @@ export async function provisionDomainOnCloudflare(
 			}
 			const routing = await enableEmailRouting(env, zone.id, routingName);
 			changes.enabledEmailRouting = !routingWasEnabled;
-			routingEnabled = routing.enabled ?? true;
-			routingStatus = routing.status;
+			routingEnabled = routing?.enabled ?? true;
+			routingStatus = routing?.status;
 			if (shouldBindEmailCatchAllToWorker(env)) {
 				await ensureEmailRoutingCatchAllToWorker(env, zone.id);
 			}

@@ -1,4 +1,4 @@
-import { and, count, eq } from "drizzle-orm";
+import { count, eq } from "drizzle-orm";
 import { getDb } from "@/db";
 import { users } from "@/db/schema";
 import { getLicenseEntitlements } from "./service";
@@ -15,6 +15,6 @@ export async function getAccountSeatError(env: CloudflareEnv): Promise<string | 
 	if (accountSeatLimit === null) return null;
 	const used = await countUsedAccountSeats(env);
 	return used >= accountSeatLimit
-		? `All ${accountSeatLimit} account seats of this license are in use. Disable an account or add seats to your license`
+		? `All ${accountSeatLimit} account seats are in use.`
 		: null;
 }

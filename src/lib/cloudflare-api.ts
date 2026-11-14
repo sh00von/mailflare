@@ -14,6 +14,7 @@ import {
 } from "@/lib/cloudflare-api-utils";
 import { CloudflareApiError } from "@/lib/cloudflare-api-error";
 import { getZoneLookupCandidates } from "@/lib/domains/utils";
+import { hasCloudflareCredentials } from "@/lib/runtime";
 export type { CfDnsRecord } from "@/lib/cloudflare-api.types";
 
 export async function cfRequest<T>(
@@ -87,6 +88,7 @@ export async function enableEmailRouting(
 	zoneId: string,
 	hostname?: string,
 ) {
+	if (zoneId === "manual" || zoneId === "self-hosted" || !hasCloudflareCredentials(env)) return;
 	return cfRequest<{ status?: string; enabled?: boolean }>(
 		env,
 		`/zones/${zoneId}/email/routing/dns`,
@@ -98,6 +100,7 @@ export async function enableEmailRouting(
 }
 
 export async function disableEmailRouting(env: CloudflareEnv, zoneId: string) {
+	if (zoneId === "manual" || zoneId === "self-hosted" || !hasCloudflareCredentials(env)) return;
 	return cfRequest<unknown>(env, `/zones/${zoneId}/email/routing/dns`, {
 		method: "DELETE",
 	});
@@ -133,6 +136,7 @@ export async function deleteSendingSubdomain(
 	zoneId: string,
 	subdomainTag: string,
 ) {
+	if (zoneId === "manual" || zoneId === "self-hosted" || !hasCloudflareCredentials(env)) return;
 	return cfRequest<unknown>(
 		env,
 		`/zones/${zoneId}/email/sending/subdomains/${subdomainTag}`,
@@ -221,7 +225,7 @@ export async function ensureEmailRoutingRuleToWorker(
 	address: string,
 	changes?: CfEmailRoutingRuleChange[],
 ) {
-	if (zoneId === "manual") return;
+	if (zoneId === "manual" || zoneId === "self-hosted" || !hasCloudflareCredentials(env)) return;
 	const normalized = address.toLowerCase();
 	const workerName = getEmailWorkerName();
 	const rules = await listEmailRoutingRules(env, zoneId);
@@ -253,6 +257,7 @@ export async function ensureEmailRoutingRuleToWorker(
 
 /** Undo only the rules created or re-enabled by a failed provisioning attempt. */
 export async function rollbackEmailRoutingRuleChanges(env: CloudflareEnv, changes: CfEmailRoutingRuleChange[]) {
+	if (!hasCloudflareCredentials(env)) return;
 	const results = await Promise.allSettled(changes.map(({ zoneId, ruleId, previous }) =>
 		previous
 			? cfRequest(env, `/zones/${zoneId}/email/routing/rules/${ruleId}`, {
@@ -273,7 +278,7 @@ export async function deleteEmailRoutingRuleForAddress(
 	zoneId: string,
 	address: string,
 ): Promise<boolean> {
-	if (zoneId === "manual") return false;
+	if (zoneId === "manual" || zoneId === "self-hosted" || !hasCloudflareCredentials(env)) return false;
 	const normalized = address.toLowerCase();
 	const workerName = getEmailWorkerName();
 	const rules = await listEmailRoutingRules(env, zoneId);

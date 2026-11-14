@@ -85,9 +85,9 @@ export default function SettingsImportPage() {
       );
       await importMessageFiles(
         selectedMailbox.id,
-        destination,
         files,
-        (progress) => setFileProgress(progress),
+        destination,
+        (percent) => setFileProgress({ completed: percent, total: 100, label: `${percent}%` }),
       );
       setFileStarted(true);
       setFiles([]);
