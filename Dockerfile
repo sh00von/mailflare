@@ -20,7 +20,7 @@ RUN pnpm prune --prod --ignore-scripts \
 	&& rm -rf node_modules/wrangler node_modules/miniflare node_modules/workerd node_modules/@cloudflare node_modules/cloudflare node_modules/@aws-sdk node_modules/esbuild node_modules/@esbuild node_modules/typescript node_modules/better-sqlite3
 
 FROM base AS runtime
-ENV NODE_ENV=production DATA_DIR=/data PORT=4008 SMTP_INBOUND_PORT=25
+ENV NODE_ENV=production DATA_DIR=/data PORT=4008 SMTP_INBOUND_PORT=25 SMTP_URL=smtp://postfix:587 SMTP_TLS_REJECT_UNAUTHORIZED=false OUTBOUND_PROVIDER=postfix
 COPY --chown=node:node --from=prod-deps /app/node_modules ./node_modules
 COPY --chown=node:node --from=build /app/.next-node ./.next-node
 COPY --chown=node:node --from=build /app/dist ./dist

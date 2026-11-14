@@ -15,7 +15,13 @@ function optional(name: string): string | undefined {
 }
 
 function mailerConfig(): MailerConfig {
-	const smtp = optional("SMTP_URL") ?? (optional("POSTFIX_HOST") ? `smtp://${optional("POSTFIX_HOST")}:${optional("POSTFIX_PORT") ?? "587"}` : undefined);
+	const smtp =
+		optional("SMTP_URL") ??
+		(optional("POSTFIX_HOST")
+			? `smtp://${optional("POSTFIX_HOST")}:${optional("POSTFIX_PORT") ?? "587"}`
+			: process.env.NODE_ENV === "production" || optional("REPLYOT_RUNTIME") === "node"
+				? "smtp://postfix:587"
+				: undefined);
 	if (smtp) return { kind: "smtp", url: smtp };
 	const accountId = optional("CF_ACCOUNT_ID");
 	const token = optional("CF_TOKEN");

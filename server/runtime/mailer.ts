@@ -48,7 +48,13 @@ export class Mailer {
 		if (config.kind === "smtp") {
 			// Self-signed relays are common on private networks; opt in explicitly.
 			const rejectUnauthorized = process.env.SMTP_TLS_REJECT_UNAUTHORIZED !== "false";
-			this.transporter = nodemailer.createTransport({ url: config.url, tls: { rejectUnauthorized } });
+			this.transporter = nodemailer.createTransport({
+				url: config.url,
+				tls: { rejectUnauthorized },
+				connectionTimeout: 4000,
+				greetingTimeout: 4000,
+				socketTimeout: 10000,
+			});
 		}
 	}
 
@@ -61,27 +67,39 @@ export class Mailer {
 		const headers = { ...(message.headers ?? {}), "Message-ID": messageId };
 
 		if (this.config.kind === "smtp" && this.transporter) {
-			await this.transporter.sendMail({
-				from: addressString(message.from),
-				to: message.to,
-				cc: message.cc,
-				bcc: message.bcc,
-				replyTo: message.replyTo ? addressString(message.replyTo) : undefined,
-				subject: message.subject,
-				text: message.text,
-				html: message.html,
-				headers: Object.fromEntries(Object.entries(headers).filter(([key]) => key !== "Message-ID")),
-				messageId,
-				attachments: (message.attachments ?? []).map((attachment) => ({
-					filename: attachment.filename,
-					contentType: attachment.type,
-					content: toBuffer(attachment.content),
-					contentDisposition: attachment.disposition === "inline" ? "inline" : "attachment",
-					cid: attachment.contentId ?? undefined,
-				})),
-				...(message.dkim ? { dkim: message.dkim } : {}),
-			});
-			return { messageId };
+			try {
+				await this.transporter.sendMail({
+					from: addressString(message.from),
+					to: message.to,
+					cc: message.cc,
+					bcc: message.bcc,
+					replyTo: message.replyTo ? addressString(message.replyTo) : undefined,
+					subject: message.subject,
+					text: message.text,
+					html: message.html,
+					headers: Object.fromEntries(Object.entries(headers).filter(([key]) => key !== "Message-ID")),
+					messageId,
+					attachments: (message.attachments ?? []).map((attachment) => ({
+						filename: attachment.filename,
+						contentType: attachment.type,
+						content: toBuffer(attachment.content),
+						contentDisposition: attachment.disposition === "inline" ? "inline" : "attachment",
+						cid: attachment.contentId ?? undefined,
+					})),
+					...(message.dkim ? { dkim: message.dkim } : {}),
+				});
+				return { messageId };
+			} catch (err: unknown) {
+				const error = err as { code?: string; message?: string };
+				if (
+					process.env.NODE_ENV !== "production" &&
+					(error.code === "ENOTFOUND" || error.code === "ECONNREFUSED" || error.code === "ETIMEDOUT")
+				) {
+					console.warn(`[Local Dev] SMTP server at ${this.config.url} unreachable (${error.code || error.message}). Simulated successful email dispatch.`);
+					return { messageId };
+				}
+				throw err;
+			}
 		}
 
 		if (this.config.kind === "cloudflare") {
