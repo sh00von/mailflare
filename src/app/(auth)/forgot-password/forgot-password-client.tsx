@@ -42,8 +42,8 @@ export function ForgotPasswordClient() {
 			title={"Reset your password"}
 			description={
 				sent
-					? "If that account has a recovery email, a reset link is on its way. It works for 30 minutes."
-					: "Enter the address you sign in with. We will send a reset link to the recovery email on the account."
+					? "If we found your account, we've sent a reset link to its backup email. The link works for 30 minutes."
+					: "Enter the email you sign in with. We'll send a reset link to your backup email."
 			}
 			footer={
 				<Link href="/login" className="text-sm text-neutral-500 hover:text-neutral-800">

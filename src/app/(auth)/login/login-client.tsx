@@ -95,7 +95,7 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
     return (
       <AuthShell
         icon={ShieldCheck}
-        title={"2-Step Verification"}
+        title={"Enter your code"}
         description={description}
       >
         <form onSubmit={onSubmitCode} className="space-y-6">

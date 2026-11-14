@@ -51,7 +51,7 @@ export function CaptchaField({
 			<div className="flex items-center justify-between text-xs">
 				<label htmlFor={`captcha-input-${id}`} className="flex items-center gap-1.5 font-medium text-neutral-700">
 					<ShieldCheck className="h-3.5 w-3.5 text-neutral-500" />
-					<span>Security Verification</span>
+					<span>Type the characters you see</span>
 				</label>
 				<button
 					type="button"
@@ -61,7 +61,7 @@ export function CaptchaField({
 					title="Get a new verification code"
 				>
 					<RefreshCw className={cn("h-3 w-3", (refreshing || loading) && "animate-spin")} />
-					<span>Reload</span>
+					<span>New image</span>
 				</button>
 			</div>
 
@@ -69,7 +69,7 @@ export function CaptchaField({
 				{/* Captcha SVG Preview */}
 				<div
 					className="relative flex h-10 w-36 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-neutral-200 bg-neutral-50"
-					aria-label="Security verification code image"
+					aria-label="Characters to type"
 				>
 					{loading ? (
 						<div className="flex items-center gap-1.5 text-xs text-neutral-400">
@@ -91,7 +91,7 @@ export function CaptchaField({
 					name="captchaAnswer"
 					value={answer}
 					onChange={(e) => setAnswer(e.target.value.toUpperCase())}
-					placeholder="Enter code"
+					placeholder="Characters"
 					required={required}
 					disabled={disabled || loading}
 					maxLength={5}

@@ -56,8 +56,8 @@ export function ResetPasswordClient() {
 			title={done ? "Password updated" : "Choose a new password"}
 			description={
 				done
-					? "You have been signed out everywhere. Sign in with your new password to continue."
-					: "Use at least 8 characters. Every other session for this account will be signed out."
+					? "You're signed out on all devices. Sign in with your new password."
+					: "Use at least 8 characters. You'll be signed out on your other devices."
 			}
 			footer={
 				done ? (

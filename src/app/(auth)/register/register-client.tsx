@@ -52,12 +52,12 @@ export function RegisterClient() {
 		try {
 			const { ok, data } = await checkExistingMx(hostname);
 			if (!ok) {
-				setError(typeof data.error === "string" ? data.error : "Could not check DNS records");
+				setError(typeof data.error === "string" ? data.error : "Could not check your domain. Try again.");
 				return;
 			}
 			setDnsChecklist(data.requiredRecords ?? []);
 		} catch (err) {
-			setError(err instanceof Error ? err.message : "Could not check DNS records");
+			setError(err instanceof Error ? err.message : "Could not check your domain. Try again.");
 		} finally {
 			setDnsChecking(false);
 		}
@@ -118,17 +118,17 @@ export function RegisterClient() {
 
 	const stepTitle =
 		step === 1
-			? "Create your workspace"
+			? "Get started"
 			: step === 2
-				? `Connect ${domainName}`
-				: "Create your admin account";
+				? `Set up ${domainName}`
+				: "Create your account";
 
 	const stepSubtitle =
 		step === 1
-			? "Pick a plan and enter your business domain to begin."
+			? "Enter your company's domain. Your team's email addresses will use it."
 			: step === 2
-				? "Add these DNS records at your domain registrar so your team can send and receive mail."
-				: `Choose your first email address on ${domainName}.`;
+				? "Copy these settings into the website where you bought your domain. This is what makes your email work."
+				: `Pick your email address at ${domainName}.`;
 
 	const allDnsVerified = dnsChecklist.length > 0 && dnsChecklist.every((rec) => rec.added);
 	const errorBox = error && (
@@ -145,9 +145,9 @@ export function RegisterClient() {
 			description={stepSubtitle}
 			wide={step === 2}
 			steps={[
-				{ label: "Plan and domain", active: step === 1, done: step > 1 },
-				{ label: "Connect DNS", active: step === 2, done: step > 2 },
-				{ label: "Admin account", active: step === 3 },
+				{ label: "Your domain", active: step === 1, done: step > 1 },
+				{ label: "Connect it", active: step === 2, done: step > 2 },
+				{ label: "Your account", active: step === 3 },
 			]}
 		>
 			{!ready ? (
@@ -157,48 +157,9 @@ export function RegisterClient() {
 				</div>
 			) : step === 1 ? (
 				<form onSubmit={onDomainStepSubmit} className="space-y-6">
-					<fieldset className="space-y-3">
-						<legend className={`${AUTH_LABEL_CLASS} mb-3`}>Plan</legend>
-						<div role="radiogroup" aria-label="Plan" className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-							{PLAN_LIST.map((item) => {
-								const active = plan === item.id;
-								return (
-									<button
-										key={item.id}
-										type="button"
-										role="radio"
-										aria-checked={active}
-										onClick={() => setPlan(item.id)}
-										className={`relative rounded-xl border p-4 text-left transition ${
-											active
-												? "border-blue-600 bg-blue-50 ring-1 ring-blue-600"
-												: "border-neutral-300 bg-white hover:border-neutral-400 hover:bg-neutral-50"
-										}`}
-									>
-										<span className="flex items-center justify-between gap-2">
-											<span className="text-sm font-medium text-neutral-900">{item.name}</span>
-											<span
-												aria-hidden="true"
-												className={`flex h-4 w-4 items-center justify-center rounded-full border-2 ${active ? "border-blue-600" : "border-neutral-400"}`}
-											>
-												{active && <span className="h-2 w-2 rounded-full bg-blue-600" />}
-											</span>
-										</span>
-										<span className="mt-2 block">
-											<span className="text-xl font-normal text-neutral-900">${item.priceMonthlyUsd}</span>
-											<span className="text-xs text-neutral-500"> / month</span>
-										</span>
-										<span className="mt-1.5 block text-xs leading-5 text-neutral-500">
-											{item.maxDomains} {item.maxDomains === 1 ? "domain" : "domains"} · {item.maxMailboxes} mailboxes · {item.storageLabel}
-										</span>
-									</button>
-								);
-							})}
-						</div>
-					</fieldset>
 					<div className="space-y-2">
 						<Label htmlFor="orgName" className={AUTH_LABEL_CLASS}>
-							Business name <span className="font-normal text-neutral-500">(optional)</span>
+							Company name <span className="font-normal text-neutral-500">(optional)</span>
 						</Label>
 						<Input
 							id="orgName"
@@ -210,7 +171,7 @@ export function RegisterClient() {
 						/>
 					</div>
 					<div className="space-y-2">
-						<Label htmlFor="domain" className={AUTH_LABEL_CLASS}>Business domain</Label>
+						<Label htmlFor="domain" className={AUTH_LABEL_CLASS}>Company domain</Label>
 						<Input
 							id="domain"
 							name="domain"
@@ -236,7 +197,7 @@ export function RegisterClient() {
 							Sign in instead
 						</Link>
 						<Button type="submit" className={AUTH_PRIMARY_BUTTON_CLASS} disabled={loading}>
-							{loading ? "Checking domain..." : "Next"}
+							{loading ? "Checking..." : "Next"}
 						</Button>
 					</div>
 				</form>
@@ -256,14 +217,14 @@ export function RegisterClient() {
 						<span>
 							{allDnsVerified
 								? `All records found for ${domainName}. You can continue.`
-								: "Add the records below at your registrar (Namecheap, GoDaddy, Cloudflare…), then check again. Changes can take a few minutes to appear."}
+								: "Sign in where you bought your domain (GoDaddy, Namecheap, Cloudflare…), add each setting below, then press Check again. It can take a few minutes to show up."}
 						</span>
 					</div>
 
 					{dnsChecking && dnsChecklist.length === 0 ? (
 						<div className="flex items-center gap-2 py-6 text-sm text-neutral-500">
 							<LoaderCircle className="h-4 w-4 animate-spin" />
-							Checking live DNS for {domainName}...
+							Checking {domainName}...
 						</div>
 					) : (
 						<ul className="divide-y divide-neutral-200 overflow-hidden rounded-xl border border-neutral-300">
@@ -272,7 +233,7 @@ export function RegisterClient() {
 									<div className="flex flex-wrap items-center gap-2">
 										<span className="rounded-md bg-neutral-100 px-2 py-0.5 font-mono text-xs font-medium text-neutral-700">{rec.type}</span>
 										<span className="text-sm text-neutral-500">
-											Host <code className="font-mono text-neutral-900">{rec.name}</code>
+											Name <code className="font-mono text-neutral-900">{rec.name}</code>
 											{rec.priority !== undefined ? ` · Priority ${rec.priority}` : ""}
 										</span>
 										<span
@@ -319,22 +280,22 @@ export function RegisterClient() {
 								<RefreshCw className={`h-4 w-4 ${dnsChecking ? "animate-spin" : ""}`} />
 								{dnsChecking ? "Checking..." : "Check again"}
 							</Button>
-							<Button type="button" className={AUTH_PRIMARY_BUTTON_CLASS} onClick={() => setStep(3)}>
-								{allDnsVerified ? "Next" : "Continue to account"}
+							<Button type="button" className={AUTH_PRIMARY_BUTTON_CLASS} disabled={!allDnsVerified} onClick={() => setStep(3)}>
+								Next
 							</Button>
 						</div>
 					</div>
 					{!allDnsVerified && (
 						<p className="text-center text-xs text-neutral-500">
-							DNS records can take a few minutes to propagate. You can continue creating your account now and verify DNS anytime in your dashboard.
+							You can continue once every setting shows Found.
 						</p>
 					)}
 				</div>
 			) : (
 				<form method="post" onSubmit={onAccountSubmit} className="space-y-6">
-					<div className="space-y-2">
+					<div className="space-y-1.5">
 						<Label htmlFor="username" className={AUTH_LABEL_CLASS}>Your email address</Label>
-						<div className="flex items-stretch overflow-hidden rounded-lg border border-neutral-400 bg-white transition hover:border-neutral-700 focus-within:border-blue-600 focus-within:ring-1 focus-within:ring-blue-600">
+						<div className="flex items-stretch overflow-hidden rounded-xl border border-slate-300 bg-white shadow-2xs transition-all hover:border-slate-400 focus-within:border-blue-600 focus-within:ring-2 focus-within:ring-blue-600/20">
 							<input
 								id="username"
 								name="username"
@@ -344,9 +305,9 @@ export function RegisterClient() {
 								spellCheck={false}
 								required
 								autoFocus
-								className="h-12 min-w-0 flex-1 bg-transparent px-4 text-base outline-none placeholder:text-neutral-400"
+								className="h-11 min-w-0 flex-1 bg-transparent px-4 text-sm font-medium text-slate-900 outline-none placeholder:text-slate-400"
 							/>
-							<span className="flex max-w-[55%] items-center truncate border-l border-neutral-200 bg-neutral-50 px-4 text-base text-neutral-500">
+							<span className="flex max-w-[55%] items-center truncate border-l border-slate-200 bg-slate-50 px-3.5 font-mono text-xs font-semibold text-slate-600">
 								@{domainName}
 							</span>
 						</div>

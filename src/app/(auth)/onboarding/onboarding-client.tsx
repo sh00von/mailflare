@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { AUTH_INPUT_CLASS, AUTH_LABEL_CLASS, AUTH_PRIMARY_BUTTON_CLASS } from "@/components/auth/auth-ui-utils";
 import { checkDomain, createDomain, createMailbox, getDomains } from "./utils";
 import type { DomainPreflight } from "./types";
 
@@ -116,15 +117,15 @@ export function OnboardingClient() {
 	return (
 		<AuthShell
 			icon={MailPlus}
-			title={step === 1 ? "Connect mail routing" : "Create your first mailbox"}
+			title={step === 1 ? "Add your domain" : "Create your first email address"}
 			description={
 				step === 1
-					? "Add the Cloudflare domain that will receive mail and optionally send through this workspace."
-					: "Choose the mailbox address that should open directly into the inbox."
+					? "Add the domain your email will use."
+					: "Pick the address you'll use first. You can add more later."
 			}
 			steps={[
 				{ label: "Domain", active: step === 1 },
-				{ label: "Mailbox", active: step === 2 },
+				{ label: "Email address", active: step === 2 },
 			]}
 			footer={
 				<span className="inline-flex items-center gap-2 text-neutral-500">
@@ -136,11 +137,11 @@ export function OnboardingClient() {
 			<div className="space-y-5">
 				{step === 1 && (
 					<>
-						<p className="rounded-2xl bg-search px-4 py-3 text-sm leading-6 text-neutral-700">
-							{`Your domain must use Cloudflare DNS on the same account as ${"\u0001"}.`.split("\u0001").flatMap((part, index) => index === 0 ? [part] : [<code key={index} className="no-font-mono text-xs font-semibold text-blue-800">CF_TOKEN</code>, part])}
+						<p className="rounded-2xl border border-blue-100 bg-blue-50/70 px-4 py-3 text-xs leading-relaxed text-blue-900">
+							The domain must be in the Cloudflare account this server is connected to.
 						</p>
-						<div className="space-y-2">
-							<Label htmlFor="domain">Domain</Label>
+						<div className="space-y-1.5">
+							<Label htmlFor="domain" className={AUTH_LABEL_CLASS}>Domain name</Label>
 							<Input
 								id="domain"
 								value={hostname}
@@ -154,13 +155,14 @@ export function OnboardingClient() {
 								}}
 								onBlur={() => void inspectDomain()}
 								placeholder="example.com"
+								className={AUTH_INPUT_CLASS}
 							/>
 						</div>
-						<div className="flex items-center justify-between gap-4 rounded-2xl bg-neutral-50 px-4 py-3">
+						<div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200/80 bg-slate-50 p-4">
 							<div>
-								<Label htmlFor="onboarding-skip-dns">Skip DNS setup</Label>
+								<Label htmlFor="onboarding-skip-dns" className="text-xs font-semibold uppercase tracking-wider text-slate-700">Set up later</Label>
 								<p className="mt-1 text-xs leading-5 text-neutral-500">
-									{skipDns ? "DNS is not added or checked. Set the records yourself before mail can flow." : "Add the domain without adding or checking DNS records. You can set them later."}
+									{skipDns ? "We won't change your domain's settings. Email won't work until you set them up." : "Add the domain now and connect it later."}
 								</p>
 							</div>
 							<Switch
@@ -174,17 +176,17 @@ export function OnboardingClient() {
 							/>
 						</div>
 						{!skipDns && (
-						<div className="flex items-center justify-between gap-4 rounded-2xl bg-neutral-50 px-4 py-3">
+						<div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200/80 bg-slate-50 p-4">
 							<div>
-								<Label htmlFor="onboarding-enable-sending">Enable sending</Label>
+								<Label htmlFor="onboarding-enable-sending" className="text-xs font-semibold uppercase tracking-wider text-slate-700">Send email too</Label>
 								<p className="mt-1 text-xs leading-5 text-neutral-500">
 									{domainChecking
-										? "Checking Cloudflare access..."
+										? "Checking your domain..."
 										: domainCheck
 											? enableSending
-												? "Required to send email."
-												: "Receive-only mode."
-											: "Leave the domain field to verify it."}
+												? "You can send and receive."
+												: "You can receive only."
+											: "Enter your domain first."}
 								</p>
 							</div>
 							{domainChecking ? (
@@ -200,25 +202,25 @@ export function OnboardingClient() {
 						</div>
 						)}
 						{domainCheck && !skipDns && (
-							<div className="flex items-center gap-3 rounded-2xl bg-green-50 px-4 py-3 text-sm text-green-700">
-								<CheckCircle2 className="h-4 w-4" />
-								{`Domain found in Cloudflare as ${domainCheck.zone.name}`}
+							<div className="flex items-center gap-2.5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-semibold text-emerald-800">
+								<CheckCircle2 className="h-4 w-4 text-emerald-600" />
+								{`${domainCheck.zone.name} is ready to connect`}
 							</div>
 						)}
 						{mxConflict && (
 							<div className="space-y-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-amber-900">
 								<div className="flex items-start gap-3">
-									<AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-									<p className="text-sm leading-6">
-										Existing MX records deliver mail to another provider. Continuing deletes those records and replaces them with Cloudflare Email Routing, so the previous provider will stop receiving mail.
+									<AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+									<p className="text-xs leading-5">
+										This domain already gets email somewhere else. If you continue, new email will come here instead and your old provider will stop receiving it.
 									</p>
 								</div>
 								<Button
 									onClick={() => void addDomain(true)}
 									disabled={loading}
-									className="h-11 w-full rounded-full px-6 active:scale-[0.98]"
+									className={AUTH_PRIMARY_BUTTON_CLASS}
 								>
-									{loading ? "Replacing MX records..." : "Delete MX records and continue"}
+									{loading ? "Switching..." : "Switch my email here"}
 								</Button>
 							</div>
 						)}
@@ -226,7 +228,7 @@ export function OnboardingClient() {
 							<Button
 								onClick={() => void addDomain()}
 								disabled={!hostname || loading || domainChecking}
-								className="h-11 w-full rounded-full px-6 active:scale-[0.98]"
+								className={`w-full ${AUTH_PRIMARY_BUTTON_CLASS}`}
 							>
 								{loading ? "Adding..." : "Add domain"}
 							</Button>
@@ -235,24 +237,27 @@ export function OnboardingClient() {
 				)}
 				{step === 2 && (
 					<>
-						<div className="space-y-2">
-							<Label htmlFor="localPart">Mailbox address</Label>
-							<div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
-								<Input
+						<div className="space-y-1.5">
+							<Label htmlFor="localPart" className={AUTH_LABEL_CLASS}>Mailbox address</Label>
+							<div className="flex items-stretch overflow-hidden rounded-xl border border-slate-300 bg-white shadow-2xs transition-all hover:border-slate-400 focus-within:border-blue-600 focus-within:ring-2 focus-within:ring-blue-600/20">
+								<input
 									id="localPart"
 									value={localPart}
-									onChange={(e) => setLocalPart(e.target.value)}
-									className="min-w-0"
+									onChange={(e) => setLocalPart(e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, ""))}
+									placeholder="me, hello, support"
+									className="h-11 min-w-0 flex-1 bg-transparent px-4 text-sm font-medium text-slate-900 outline-none placeholder:text-slate-400"
 								/>
-								<span className="max-w-36 truncate text-sm font-medium text-neutral-500">@{hostname}</span>
+								<span className="flex max-w-[55%] items-center truncate border-l border-slate-200 bg-slate-50 px-3.5 font-mono text-xs font-semibold text-slate-600">
+									@{hostname}
+								</span>
 							</div>
 						</div>
 						<Button
 							onClick={addMailbox}
 							disabled={!localPart || loading}
-							className="h-11 w-full rounded-full px-6 active:scale-[0.98]"
+							className={`w-full ${AUTH_PRIMARY_BUTTON_CLASS}`}
 						>
-							{loading ? "Creating..." : "Go to inbox"}
+							{loading ? "Creating inbox..." : "Go to inbox (1 GB Dedicated)"}
 						</Button>
 					</>
 				)}

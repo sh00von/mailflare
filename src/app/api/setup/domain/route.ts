@@ -30,7 +30,7 @@ export async function POST(request: Request) {
 	const normalized = parsed.data.hostname.toLowerCase().trim();
 	const [existing] = await getDb(env).select({ id: domains.id }).from(domains).where(eq(domains.hostname, normalized)).limit(1);
 	if (existing) {
-		return NextResponse.json({ error: "This domain is already registered. Only the workspace owner can create team accounts for it." }, { status: 409 });
+		return NextResponse.json({ error: "This domain is already in use. Ask the person who set it up to add you." }, { status: 409 });
 	}
 
 	try {
