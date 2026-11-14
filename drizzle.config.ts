@@ -1,3 +1,4 @@
+process.env.REPLYOT_DB_DIALECT = "sqlite";
 import { defineConfig } from "drizzle-kit";
 
 // SQLite (D1, libSQL, better-sqlite3). PostgreSQL and MySQL have their own configs:

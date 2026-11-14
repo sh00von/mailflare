@@ -95,15 +95,24 @@ export async function auditDomainDns(
 		check("dmarc", "DMARC", `_dmarc.${hostname}`, "TXT", (value) => /v=DMARC1/i.test(value)),
 	]);
 
-	const dkim: DnsAuthCheck = dkimName
-		? await check("dkim", "DKIM", dkimName, "TXT", () => true)
-		: {
-				record: "dkim",
-				label: "DKIM",
-				name: `*._domainkey.${hostname}`,
-				status: "unknown",
-				found: [],
-			};
+	let dkim: DnsAuthCheck;
+	if (dkimName) {
+		const txtResult = await check("dkim", "DKIM", dkimName, "TXT", () => true);
+		if (txtResult.status === "ok") {
+			dkim = txtResult;
+		} else {
+			const cnameResult = await check("dkim", "DKIM", dkimName, "CNAME", () => true);
+			dkim = cnameResult.status === "ok" ? cnameResult : txtResult;
+		}
+	} else {
+		dkim = {
+			record: "dkim",
+			label: "DKIM",
+			name: `*._domainkey.${hostname}`,
+			status: "unknown",
+			found: [],
+		};
+	}
 
 	return { mx, spf, dkim, dmarc };
 }

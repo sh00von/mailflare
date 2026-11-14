@@ -85,6 +85,13 @@
       "when": 1794492905329,
       "tag": "0011_natural_blonde_phantom",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1794589000000,
+      "tag": "0012_workspace_capacity",
+      "breakpoints": true
     }
   ]
 }

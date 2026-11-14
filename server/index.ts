@@ -1,3 +1,12 @@
+// Automatically load .env file in Node runtime if present
+if (typeof process.loadEnvFile === "function") {
+	try {
+		process.loadEnvFile();
+	} catch {
+		// Ignore if .env file is missing
+	}
+}
+
 import { createServer } from "node:http";
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -41,6 +50,11 @@ async function main() {
 	const runtime = createNodeRuntime();
 	const { env } = runtime;
 	globalThis.__replyotNodeEnv = env;
+
+	if (!env.DB) {
+		console.error("Replyot failed to start: No database configured. Set DATABASE_URL in your .env or environment.");
+		process.exit(1);
+	}
 
 	const migrated = (await applyPendingMigrations(env.DB)).applied;
 	if (migrated.length) console.log(`Applied ${migrated.length} migration(s): ${migrated.join(", ")}`);

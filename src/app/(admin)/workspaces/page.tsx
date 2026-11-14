@@ -194,9 +194,9 @@ export default function AdminWorkspacesPage() {
 									disabled={busyId === ws.id}
 									onValueChange={(plan) => void updateWorkspace({ id: ws.id, plan })}
 									options={[
-										{ value: "starter", label: "Starter ($5/mo)" },
-										{ value: "pro", label: "Pro ($15/mo)" },
-										{ value: "business", label: "Business ($39/mo)" },
+										{ value: "pro", label: "Replyot Workspace ($2.50/mo)" },
+										{ value: "starter", label: "Starter (5 Inboxes)" },
+										{ value: "business", label: "Business (High Volume)" },
 									]}
 								/>
 								<ShadcnSelect<WorkspaceStatus>

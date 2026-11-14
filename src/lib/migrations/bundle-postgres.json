@@ -382,6 +382,13 @@
         "ALTER TABLE \"workspaces\" ADD COLUMN \"stripe_price_id\" text;",
         "ALTER TABLE \"workspaces\" ADD COLUMN \"current_period_end\" bigint;"
       ]
+    },
+    {
+      "name": "0012_workspace_capacity.sql",
+      "statements": [
+        "ALTER TABLE \"workspaces\" ADD COLUMN \"max_mailboxes\" bigint DEFAULT 5 NOT NULL;",
+        "ALTER TABLE \"workspaces\" ADD COLUMN \"billing_cycle\" text DEFAULT '12m' NOT NULL;"
+      ]
     }
   ]
 }

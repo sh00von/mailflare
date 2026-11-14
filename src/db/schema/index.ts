@@ -17,6 +17,8 @@ export const workspaces = sqliteTable("workspaces", {
 	stripeSubscriptionId: text("stripe_subscription_id"),
 	stripePriceId: text("stripe_price_id"),
 	currentPeriodEnd: timestamp("current_period_end"),
+	maxMailboxes: integer("max_mailboxes").notNull().default(5),
+	billingCycle: text("billing_cycle").notNull().default("12m"),
 	createdAt: timestamp("created_at")
 		.notNull()
 		.$defaultFn(() => new Date()),

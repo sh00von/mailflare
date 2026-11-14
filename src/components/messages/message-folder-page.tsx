@@ -155,6 +155,7 @@ function MessageListRow({
 					aria-label={`Select message from ${party}`}
 				/>
 				<Link
+					data-message-row="true"
 					href={href}
 					onClick={config.folder === "drafts" ? undefined : onMessageNavigate}
 					onPointerEnter={config.folder === "drafts" ? undefined : navigation.prefetch}
@@ -248,6 +249,7 @@ function MessageListRow({
 			</span>
 			<span className="truncate text-neutral-700">
 				<Link
+					data-message-row="true"
 					href={href}
 					onClick={config.folder === "drafts" ? undefined : onMessageNavigate}
 					onPointerEnter={config.folder === "drafts" ? undefined : navigation.prefetch}

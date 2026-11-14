@@ -2,7 +2,7 @@ import { and, count, eq, gte, inArray, isNull, ne, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import { domains, mailboxes, messageAttachments, messages, users, workspaces } from "@/db/schema";
 import { newId } from "@/lib/ids";
-import { getPlanDefinition, resolvePlanId, TRIAL_DAYS, type PlanDefinition, type PlanId, type WorkspaceStatus } from "./catalog";
+import { getPlanDefinition, resolvePlanId, TRIAL_DAYS, type BillingCycle, type PlanDefinition, type PlanId, type WorkspaceStatus } from "./catalog";
 
 export type WorkspaceSummary = {
 	id: string;
@@ -14,6 +14,8 @@ export type WorkspaceSummary = {
 	trialEndsAt: string | null;
 	trialExpired: boolean;
 	daysLeftInTrial: number | null;
+	maxMailboxes: number;
+	billingCycle: BillingCycle;
 };
 
 export type WorkspaceUsage = {
@@ -21,6 +23,7 @@ export type WorkspaceUsage = {
 	mailboxesUsed: number;
 	storageUsedBytes: number;
 	dailySentCount: number;
+	hourlySentCount: number;
 };
 
 export type WorkspaceWithUsage = {
@@ -38,16 +41,29 @@ function toSummary(row: typeof workspaces.$inferSelect): WorkspaceSummary {
 			? Math.max(0, Math.ceil((trialEndsMs - now) / (24 * 60 * 60 * 1000)))
 			: null;
 
+	const maxMailboxes = typeof row.maxMailboxes === "number" && row.maxMailboxes >= 5 ? row.maxMailboxes : 5;
+	const billingCycle = ((row.billingCycle as BillingCycle | undefined) || "12m");
+	const basePlan = getPlanDefinition(plan);
+
+	const planDetails: PlanDefinition = {
+		...basePlan,
+		maxMailboxes,
+		storageLimitBytes: maxMailboxes * (1024 ** 3),
+		storageLabel: `${maxMailboxes} GB NVMe`,
+	};
+
 	return {
 		id: row.id,
 		name: row.name,
 		ownerUserId: row.ownerUserId,
 		plan,
-		planDetails: getPlanDefinition(plan),
+		planDetails,
 		status: row.status as WorkspaceStatus,
 		trialEndsAt: row.trialEndsAt ? row.trialEndsAt.toISOString() : null,
 		trialExpired,
 		daysLeftInTrial,
+		maxMailboxes,
+		billingCycle,
 	};
 }
 
@@ -128,13 +144,14 @@ export async function getWorkspaceUsage(env: CloudflareEnv, workspaceId: string)
 
 	const mailboxIds = wsMailboxes.map((m) => m.id);
 	if (mailboxIds.length === 0) {
-		return { domainsUsed: domainIds.length, mailboxesUsed: 0, storageUsedBytes: 0, dailySentCount: 0 };
+		return { domainsUsed: domainIds.length, mailboxesUsed: 0, storageUsedBytes: 0, dailySentCount: 0, hourlySentCount: 0 };
 	}
 
 	const startOfUtcDay = new Date();
 	startOfUtcDay.setUTCHours(0, 0, 0, 0);
+	const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
 
-	const [[attStats], [sentStats]] = await Promise.all([
+	const [[attStats], [dailySentStats], [hourlySentStats]] = await Promise.all([
 		db
 			.select({ total: sql<number>`coalesce(sum(${messageAttachments.size}), 0)` })
 			.from(messageAttachments)
@@ -152,13 +169,26 @@ export async function getWorkspaceUsage(env: CloudflareEnv, workspaceId: string)
 					gte(messages.createdAt, startOfUtcDay),
 				),
 			),
+		db
+			.select({ total: count() })
+			.from(messages)
+			.where(
+				and(
+					inArray(messages.mailboxId, mailboxIds),
+					eq(messages.direction, "outbound"),
+					ne(messages.status, "draft"),
+					ne(messages.status, "failed"),
+					gte(messages.createdAt, oneHourAgo),
+				),
+			),
 	]);
 
 	return {
 		domainsUsed: domainIds.length,
 		mailboxesUsed: mailboxIds.length,
 		storageUsedBytes: Number(attStats?.total ?? 0),
-		dailySentCount: Number(sentStats?.total ?? 0),
+		dailySentCount: Number(dailySentStats?.total ?? 0),
+		hourlySentCount: Number(hourlySentStats?.total ?? 0),
 	};
 }
 
@@ -213,14 +243,31 @@ export async function checkCanAddMailbox(
 	return { ok: true, workspace };
 }
 
+export async function getMailboxStorageUsed(env: CloudflareEnv, mailboxId: string): Promise<number> {
+	const db = getDb(env);
+	const [attStats] = await db
+		.select({ total: sql<number>`coalesce(sum(${messageAttachments.size}), 0)` })
+		.from(messageAttachments)
+		.innerJoin(messages, eq(messages.id, messageAttachments.messageId))
+		.where(eq(messages.mailboxId, mailboxId));
+	return Number(attStats?.total ?? 0);
+}
+
 export async function checkCanSendEmail(
 	env: CloudflareEnv,
 	user: { id: string; name: string; workspaceId?: string | null; isPrimaryAdmin?: boolean; createdByUserId?: string | null },
 	attachmentBytes = 0,
+	mailboxId?: string,
 ): Promise<{ ok: true; workspace: WorkspaceSummary } | { ok: false; error: string }> {
 	const { workspace, usage } = await getWorkspaceWithUsage(env, user);
 	const inactive = checkWorkspaceActive(workspace);
 	if (inactive) return { ok: false, error: inactive };
+	if (usage.hourlySentCount >= workspace.planDetails.hourlySendLimit) {
+		return {
+			ok: false,
+			error: `Hourly sending limit reached (${workspace.planDetails.hourlySendLimit} emails/hour on ${workspace.planDetails.name}). Please try again later or upgrade for higher volume.`,
+		};
+	}
 	if (usage.dailySentCount >= workspace.planDetails.dailySendLimit) {
 		return {
 			ok: false,
@@ -232,6 +279,15 @@ export async function checkCanSendEmail(
 			ok: false,
 			error: `Workspace storage limit reached (${workspace.planDetails.storageLabel} on ${workspace.planDetails.name}). Delete old emails or upgrade your plan to send.`,
 		};
+	}
+	if (mailboxId && workspace.planDetails.storagePerMailboxBytes) {
+		const mailboxUsed = await getMailboxStorageUsed(env, mailboxId);
+		if (mailboxUsed + attachmentBytes > workspace.planDetails.storagePerMailboxBytes) {
+			return {
+				ok: false,
+				error: `Mailbox storage quota reached (1 GB on ${workspace.planDetails.name}). Delete old emails with attachments before sending.`,
+			};
+		}
 	}
 	const maxAttachmentBytes = workspace.planDetails.maxAttachmentMb * 1024 * 1024;
 	if (attachmentBytes > maxAttachmentBytes) {
@@ -272,6 +328,7 @@ export async function checkCanReceiveStorage(
 	env: CloudflareEnv,
 	userId: string,
 	incomingBytes: number,
+	mailboxId?: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
 	const db = getDb(env);
 	const [owner] = await db
@@ -290,6 +347,12 @@ export async function checkCanReceiveStorage(
 	}
 	if (usage.storageUsedBytes + incomingBytes > workspace.planDetails.storageLimitBytes) {
 		return { ok: false, error: "552 5.2.2 Recipient workspace storage quota exceeded" };
+	}
+	if (mailboxId && workspace.planDetails.storagePerMailboxBytes) {
+		const mailboxUsed = await getMailboxStorageUsed(env, mailboxId);
+		if (mailboxUsed + incomingBytes > workspace.planDetails.storagePerMailboxBytes) {
+			return { ok: false, error: "552 5.2.2 Recipient mailbox storage quota exceeded (1 GB limit)" };
+		}
 	}
 	return { ok: true };
 }

@@ -42,16 +42,25 @@ export async function POST(request: Request) {
 	const metadata = (obj.metadata ?? {}) as Record<string, unknown>;
 	const now = new Date();
 
-	if (event.type === "checkout.session.completed") {
+	// Delayed methods (bank debits) complete the session before money moves; their
+	// subscription events activate the workspace once Stripe reports it paid.
+	if (event.type === "checkout.session.completed" && obj.payment_status !== "paid" && obj.payment_status !== "no_payment_required") {
+		return NextResponse.json({ received: true, pending: true });
+	} else if (event.type === "checkout.session.completed") {
 		const workspaceId = typeof metadata.workspaceId === "string" ? metadata.workspaceId : null;
 		const customerId = typeof obj.customer === "string" ? obj.customer : null;
 		const subscriptionId = typeof obj.subscription === "string" ? obj.subscription : null;
 		const plan = resolvePlanFromStripePriceOrMetadata(env, metadata.plan, null);
+		const rawMailboxes = metadata.mailboxes ? Number(metadata.mailboxes) : null;
+		const maxMailboxes = rawMailboxes && rawMailboxes >= 5 ? rawMailboxes : undefined;
+		const billingCycle = typeof metadata.cycle === "string" ? metadata.cycle : undefined;
 		if (workspaceId) {
 			await db
 				.update(workspaces)
 				.set({
 					...(plan ? { plan } : {}),
+					...(maxMailboxes ? { maxMailboxes } : {}),
+					...(billingCycle ? { billingCycle } : {}),
 					...(customerId ? { stripeCustomerId: customerId } : {}),
 					...(subscriptionId ? { stripeSubscriptionId: subscriptionId } : {}),
 					status: "active",
@@ -73,11 +82,16 @@ export async function POST(request: Request) {
 		const items = (obj.items as { data?: Array<{ price?: { id?: string } }> } | undefined)?.data;
 		const priceId = items?.[0]?.price?.id ?? null;
 		const plan = resolvePlanFromStripePriceOrMetadata(env, metadata.plan, priceId);
+		const rawMailboxes = metadata.mailboxes ? Number(metadata.mailboxes) : null;
+		const maxMailboxes = rawMailboxes && rawMailboxes >= 5 ? rawMailboxes : undefined;
+		const billingCycle = typeof metadata.cycle === "string" ? metadata.cycle : undefined;
 		const trialEndSec = typeof obj.trial_end === "number" ? obj.trial_end : null;
 		const periodEndSec = typeof obj.current_period_end === "number" ? obj.current_period_end : null;
 
 		const patch = {
 			...(plan ? { plan } : {}),
+			...(maxMailboxes ? { maxMailboxes } : {}),
+			...(billingCycle ? { billingCycle } : {}),
 			...(customerId ? { stripeCustomerId: customerId } : {}),
 			...(subscriptionId ? { stripeSubscriptionId: subscriptionId } : {}),
 			...(priceId ? { stripePriceId: priceId } : {}),

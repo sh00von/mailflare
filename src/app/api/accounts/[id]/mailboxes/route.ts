@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/db";
 import { domains, mailboxes } from "@/db/schema";
 import { canManageUserAccount } from "@/lib/auth/admin";
-import { isSameWorkspace } from "@/lib/plans/usage";
+import { getMailboxStorageUsed, isSameWorkspace } from "@/lib/plans/usage";
 import { requireTeamAdmin } from "../../utils";
 import { selectAccountById } from "../utils";
 import type { AccountRouteParams } from "../types";
@@ -24,5 +24,17 @@ export async function GET(request: Request, { params }: AccountRouteParams) {
 		domainId: mailboxes.domainId,
 		hostname: domains.hostname,
 	}).from(mailboxes).innerJoin(domains, eq(mailboxes.domainId, domains.id)).where(eq(mailboxes.userId, id));
-	return NextResponse.json({ mailboxes: rows });
+
+	const mailboxesWithStorage = await Promise.all(
+		rows.map(async (row) => {
+			const storageUsedBytes = await getMailboxStorageUsed(access.env, row.id);
+			return {
+				...row,
+				storageUsedBytes,
+				storageQuotaBytes: 1024 * 1024 * 1024, // 1 GB standard dedicated quota
+			};
+		}),
+	);
+
+	return NextResponse.json({ mailboxes: mailboxesWithStorage });
 }

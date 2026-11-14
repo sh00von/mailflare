@@ -34,6 +34,26 @@ export function startSmtpListener(
 	const connectionsByIp = new Map<string, number>();
 	// Only sessions that were admitted are counted, so rejected ones cannot decrement on close.
 	const admittedSessions = new Set<string>();
+	const domainCache = new Map<string, { active: boolean; expires: number }>();
+	function isDomainActiveCached(hostname: string): Promise<boolean> {
+		const now = Date.now();
+		const cached = domainCache.get(hostname);
+		if (cached && cached.expires > now) {
+			return Promise.resolve(cached.active);
+		}
+		return getDb(env)
+			.select({ id: domains.id, status: domains.status })
+			.from(domains)
+			.where(eq(domains.hostname, hostname))
+			.limit(1)
+			.then(([domain]) => {
+				const active = !!domain && domain.status === "active";
+				if (domainCache.size > 500) domainCache.clear();
+				domainCache.set(hostname, { active, expires: now + (active ? 60_000 : 15_000) });
+				return active;
+			});
+	}
+
 	const server = new SMTPServer({
 		maxClients: MAX_CLIENTS,
 		socketTimeout: SOCKET_TIMEOUT_MS,
@@ -61,10 +81,10 @@ export function startSmtpListener(
 				callback(Object.assign(new Error("Too many recipients"), { responseCode: 452 }));
 				return;
 			}
-			// Refuse unknown domains before DATA so nothing is buffered for mail we would drop anyway.
+			// Refuse unknown or non-active domains before DATA so nothing is buffered for mail we would drop anyway.
 			const hostname = address.address.slice(address.address.lastIndexOf("@") + 1).toLowerCase();
-			getDb(env).select({ id: domains.id }).from(domains).where(eq(domains.hostname, hostname)).limit(1).then(
-				([domain]) => callback(domain ? undefined : Object.assign(new Error("Relay access denied"), { responseCode: 550 })),
+			isDomainActiveCached(hostname).then(
+				(active) => callback(active ? undefined : Object.assign(new Error("Relay access denied"), { responseCode: 550 })),
 				(error) => {
 					console.error("SMTP recipient lookup failed", error);
 					callback(Object.assign(new Error("Temporary failure, try again later"), { responseCode: 451 }));

@@ -1,3 +1,4 @@
+process.env.REPLYOT_DB_DIALECT = "postgres";
 import { defineConfig } from "drizzle-kit";
 
 // Run with REPLYOT_DB_DIALECT=postgres so the schema module builds pgTable definitions

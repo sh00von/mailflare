@@ -1,4 +1,4 @@
-import { getPlanDefinition, resolvePlanId, type PlanId, type WorkspaceStatus } from "@/lib/plans/catalog";
+import { calculateWorkspacePricing, getPlanDefinition, resolvePlanId, type BillingCycle, type PlanId, type WorkspaceStatus } from "@/lib/plans/catalog";
 
 const STRIPE_API = "https://api.stripe.com/v1";
 
@@ -74,6 +74,8 @@ export async function createStripeCheckoutSession(
 		customerId: string;
 		workspaceId: string;
 		plan: PlanId;
+		cycle?: BillingCycle;
+		mailboxes?: number;
 		successUrl: string;
 		cancelUrl: string;
 	},
@@ -82,6 +84,9 @@ export async function createStripeCheckoutSession(
 	if (!config) throw new Error("Stripe is not configured");
 	const planDef = getPlanDefinition(input.plan);
 	const configuredPriceId = config.prices[input.plan];
+	const cycle: BillingCycle = input.cycle ?? "12m";
+	const mailboxes = Math.max(5, input.mailboxes ?? 5);
+	const pricing = calculateWorkspacePricing(mailboxes, cycle);
 
 	const params: Record<string, string> = {
 		mode: "subscription",
@@ -91,20 +96,42 @@ export async function createStripeCheckoutSession(
 		allow_promotion_codes: "true",
 		"metadata[workspaceId]": input.workspaceId,
 		"metadata[plan]": input.plan,
+		"metadata[cycle]": cycle,
+		"metadata[mailboxes]": String(mailboxes),
 		"subscription_data[metadata][workspaceId]": input.workspaceId,
 		"subscription_data[metadata][plan]": input.plan,
+		"subscription_data[metadata][cycle]": cycle,
+		"subscription_data[metadata][mailboxes]": String(mailboxes),
 		"line_items[0][quantity]": "1",
 	};
 
-	if (configuredPriceId) {
+	if (configuredPriceId && cycle === "12m" && mailboxes === 5) {
 		params["line_items[0][price]"] = configuredPriceId;
 	} else {
+		const unitAmount = Math.round(pricing.totalCharged * 100);
+		let interval = "year";
+		let intervalCount = "1";
+		let cycleLabel = "Annual";
+
+		if (cycle === "3m") {
+			interval = "month";
+			intervalCount = "3";
+			cycleLabel = "Quarterly";
+		} else if (cycle === "6m") {
+			interval = "month";
+			intervalCount = "6";
+			cycleLabel = "Semi-Annual";
+		}
+
 		params["line_items[0][price_data][currency]"] = "usd";
-		params["line_items[0][price_data][unit_amount]"] = String(planDef.priceMonthlyUsd * 100);
-		params["line_items[0][price_data][recurring][interval]"] = "month";
-		params["line_items[0][price_data][product_data][name]"] = `Replyot ${planDef.name}`;
+		params["line_items[0][price_data][unit_amount]"] = String(unitAmount);
+		params["line_items[0][price_data][recurring][interval]"] = interval;
+		if (interval === "month") {
+			params["line_items[0][price_data][recurring][interval_count]"] = intervalCount;
+		}
+		params["line_items[0][price_data][product_data][name]"] = `Replyot Workspace (${mailboxes} Inboxes · ${cycleLabel})`;
 		params["line_items[0][price_data][product_data][description]"] =
-			`${planDef.maxDomains} domains, ${planDef.maxMailboxes} mailboxes, ${planDef.storageLabel} storage`;
+			`Up to ${planDef.maxDomains} domains, ${mailboxes} team mailboxes with ${pricing.storageGb} GB dedicated storage (${planDef.dailySendLimit} emails/day)`;
 	}
 
 	return stripeFormRequest<{ id: string; url: string }>(config.secretKey, "/checkout/sessions", params);
@@ -237,5 +264,41 @@ export async function listStripeInvoices(
 	const data = (await response.json()) as { data?: StripeInvoice[] };
 	return data.data ?? [];
 }
+
+export type StripeSubscriptionInfo = {
+	id: string;
+	status: string;
+	customer: string;
+	current_period_end: number;
+	metadata: Record<string, string>;
+};
+
+export async function retrieveStripeSubscription(
+	env: CloudflareEnv,
+	subscriptionId: string,
+): Promise<StripeSubscriptionInfo | null> {
+	const config = getStripeConfig(env);
+	if (!config) return null;
+	const response = await fetch(`${STRIPE_API}/subscriptions/${encodeURIComponent(subscriptionId)}`, {
+		headers: { Authorization: `Bearer ${config.secretKey}` },
+	});
+	if (!response.ok) return null;
+	return response.json();
+}
+
+export async function listActiveStripeSubscriptions(
+	env: CloudflareEnv,
+	customerId: string,
+): Promise<StripeSubscriptionInfo[]> {
+	const config = getStripeConfig(env);
+	if (!config) return [];
+	const response = await fetch(`${STRIPE_API}/subscriptions?customer=${encodeURIComponent(customerId)}&status=active&limit=1`, {
+		headers: { Authorization: `Bearer ${config.secretKey}` },
+	});
+	if (!response.ok) return [];
+	const data = (await response.json()) as { data?: StripeSubscriptionInfo[] };
+	return data.data ?? [];
+}
+
 
 

@@ -31,6 +31,8 @@ export type ManagedMailbox = {
 	displayName: string | null;
 	domainId: string;
 	hostname: string;
+	storageUsedBytes?: number;
+	storageQuotaBytes?: number;
 };
 
 export type ManagedDomain = { id: string; hostname: string };

@@ -1,6 +1,4 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
+# Dependencies
 /node_modules
 /deploy/cloudflare-email-relay/node_modules
 /.pnp
@@ -11,57 +9,69 @@
 !.yarn/releases
 !.yarn/versions
 
-# testing
-test-results/
-playwright-report/
-/coverage
+# Environment files & secrets (never commit secrets)
+.env*
+!.env*.example
+!.env.example
+.dev.vars*
+!.dev.vars.example
+*.pem
+*.key
+*.cert
 
-# next.js
+# Production & Build outputs
 /.next/
 /.next-node/
 /out/
+/build/
+/dist/
+/.vinext/
+/.open-next/
+.vercel
 
-# production
-/build
-/dist
-/data
-.env.docker
+# Runtime data & Local databases
+/data/
+*.db
+*.sqlite
+*.sqlite3
+*.sqlite-journal
 
-# misc
-.DS_Store
-*.pem
+# Testing & Browser automation
+test-results/
+playwright-report/
+/coverage/
+.playwright-mcp/
 
-# debug
+# Debug & Logs
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
-!.env.example
-
-# vercel
-.vercel
-
-# typescript
+# TypeScript
 *.tsbuildinfo
 next-env.d.ts
 
-# vinext
-/.vinext
-/src/lib/migrations/bundle.json
-
-# wrangler files
-.wrangler
-.dev.vars*
-
-
-!.dev.vars.example
-yarn.lock
+# Wrangler & Cloudflare
+.wrangler/
 wrangler.prod.jsonc
-mailflare-landing
 
-.agents
+# AI agent, subagent & local tool artifacts
+.agents/
+.claude/
+.gstack/
 skills-lock.json
-/dist/
+
+# IDE & OS metadata
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Alternative lockfiles (Mailflare uses pnpm / pnpm-lock.yaml)
+yarn.lock
+package-lock.json

@@ -126,6 +126,64 @@ export function ShortcutsProvider({
         action: () => openComposer(),
       },
       {
+        key: "j",
+        label: "Next Message",
+        category: "Navigation",
+        action: () => {
+          const rows = Array.from(
+            document.querySelectorAll<HTMLElement>(
+              'a[data-message-row="true"], [data-message-item], main a[href*="/inbox/"], main a[href*="/sent/"], main a[href*="/starred/"], main a[href*="/trash/"], main a[href*="/archived/"]'
+            )
+          );
+          if (rows.length > 0) {
+            const currentIndex = rows.findIndex((r) => r === document.activeElement || r.contains(document.activeElement));
+            const nextIndex = currentIndex < 0 ? 0 : Math.min(currentIndex + 1, rows.length - 1);
+            rows[nextIndex]?.focus();
+            rows[nextIndex]?.scrollIntoView({ block: "nearest" });
+          }
+        },
+      },
+      {
+        key: "k",
+        label: "Previous Message",
+        category: "Navigation",
+        action: () => {
+          const rows = Array.from(
+            document.querySelectorAll<HTMLElement>(
+              'a[data-message-row="true"], [data-message-item], main a[href*="/inbox/"], main a[href*="/sent/"], main a[href*="/starred/"], main a[href*="/trash/"], main a[href*="/archived/"]'
+            )
+          );
+          if (rows.length > 0) {
+            const currentIndex = rows.findIndex((r) => r === document.activeElement || r.contains(document.activeElement));
+            const prevIndex = currentIndex <= 0 ? 0 : currentIndex - 1;
+            rows[prevIndex]?.focus();
+            rows[prevIndex]?.scrollIntoView({ block: "nearest" });
+          }
+        },
+      },
+      {
+        key: "e",
+        label: "Archive Message",
+        category: "Actions",
+        action: () => {
+          const archiveBtn = document.querySelector<HTMLButtonElement>(
+            'button[data-action="archive"], button[aria-label*="Archive" i]'
+          );
+          if (archiveBtn) archiveBtn.click();
+        },
+      },
+      {
+        key: "r",
+        label: "Reply to Message",
+        category: "Actions",
+        action: () => {
+          const replyBtn = document.querySelector<HTMLButtonElement>(
+            'button[data-action="reply"], button[aria-label*="Reply" i]'
+          );
+          if (replyBtn) replyBtn.click();
+        },
+      },
+      {
         key: "/",
         label: "Search Mail",
         category: "Navigation",
