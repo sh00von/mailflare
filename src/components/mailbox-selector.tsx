@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { notify } from "@/lib/notify";
 import { usePathname, useRouter } from "next/navigation";
 import { CalendarDays, Check, HardDrive, ChevronDown, Inbox, LogOut, Settings, ShieldCheck, UserPlus, UserRound, UsersRound } from "@/components/icons";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
@@ -248,6 +249,8 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 	async function logout() {
 		const switched = await logoutClientSession();
 		setOpen(false);
+		// Another signed-in account takes over, so the inbox alone would not show that this one signed out.
+		if (switched) notify.success("Signed out");
 		router.replace(switched ? "/mail/inbox" : "/login");
 		router.refresh();
 	}
@@ -256,6 +259,7 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 		const error = await switchBrowserAccount(userId);
 		setOpen(false);
 		if (error) {
+			notify.info("Sign in again to use that account");
 			router.push("/login?add=1");
 			return;
 		}
