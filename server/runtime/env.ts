@@ -23,9 +23,6 @@ function mailerConfig(): MailerConfig {
 				? "smtp://postfix:587"
 				: undefined);
 	if (smtp) return { kind: "smtp", url: smtp };
-	const accountId = optional("CF_ACCOUNT_ID");
-	const token = optional("CF_TOKEN");
-	if (accountId && token) return { kind: "cloudflare", accountId, token };
 	return { kind: "none" };
 }
 

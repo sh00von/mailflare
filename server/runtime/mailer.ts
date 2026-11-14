@@ -22,7 +22,6 @@ type Builder = {
 
 export type MailerConfig =
 	| { kind: "smtp"; url: string }
-	| { kind: "cloudflare"; accountId: string; token: string }
 	| { kind: "none" };
 
 function addressString(value: string | { name?: string; email: string }): string {
@@ -102,37 +101,7 @@ export class Mailer {
 			}
 		}
 
-		if (this.config.kind === "cloudflare") {
-			const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${this.config.accountId}/email/sending/send`, {
-				method: "POST",
-				headers: { Authorization: `Bearer ${this.config.token}`, "Content-Type": "application/json" },
-				body: JSON.stringify({
-					from: addressString(message.from),
-					to: message.to,
-					cc: message.cc,
-					bcc: message.bcc,
-					reply_to: message.replyTo ? addressString(message.replyTo) : undefined,
-					subject: message.subject,
-					text: message.text,
-					html: message.html,
-					headers,
-					attachments: (message.attachments ?? []).map((attachment) => ({
-						filename: attachment.filename,
-						type: attachment.type,
-						content: base64(toBuffer(attachment.content)),
-						disposition: attachment.disposition === "inline" ? "inline" : "attachment",
-						...(attachment.contentId ? { content_id: attachment.contentId } : {}),
-					})),
-				}),
-			});
-			if (!response.ok) {
-				const detail = await response.text().catch(() => "");
-				throw new Error(`Cloudflare Email Sending failed (${response.status}): ${detail.slice(0, 300)}`);
-			}
-			return { messageId };
-		}
-
-		throw new Error("Outbound mail is not configured. Set SMTP_URL, or CF_ACCOUNT_ID and CF_TOKEN.");
+		throw new Error("Outbound mail is not configured. Ensure Postfix is running or set SMTP_URL.");
 	}
 
 	/** Relay a raw RFC 5322 message unchanged, for forwarding rules. SMTP only. */
