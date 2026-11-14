@@ -2,10 +2,10 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { clearMailboxClientState } from "@/components/mailbox-provider-utils";
 import { BrandingProvider } from "@/components/branding-provider";
 import type { Branding } from "@/lib/branding/types";
-import { NewMessagePopup } from "@/components/new-message-popup";
 import { PwaServiceWorker } from "@/components/pwa-service-worker";
 import { ThemeSync } from "@/components/theme-sync";
 import { Toaster } from "@/components/ui/sonner";
@@ -14,10 +14,26 @@ import { clearMessageClientState } from "@/hooks/utils";
 import { clearMessageDetailCache } from "@/lib/messages/detail-cache";
 import { clearCurrentUserCache } from "@/hooks/use-current-user";
 import { AUTH_SESSION_CHANGED_EVENT } from "@/lib/auth/client";
+import { getEmailDisplayName } from "@/lib/email/address";
+import { notify } from "@/lib/notify";
 import type { AuthSessionChangedDetail } from "@/lib/auth/client-types";
 
 export function Providers({ children, initialBranding }: { children: React.ReactNode; initialBranding?: Branding }) {
 	const realtime = useMessagePolling();
+	const router = useRouter();
+	const { notification, dismissNotification } = realtime;
+
+	// New mail is an info toast like every other notice; each message gets its own id so arrivals stack.
+	useEffect(() => {
+		if (!notification) return;
+		const { messageId } = notification;
+		notify.info(`New email from ${notification.fromName ?? getEmailDisplayName(notification.from)}`, {
+			id: `new-mail:${messageId}`,
+			description: notification.subject || "(no subject)",
+			action: { label: "Open", onClick: () => router.push(`/inbox/${messageId}`) },
+		});
+		dismissNotification();
+	}, [notification, dismissNotification, router]);
 
 	const [client] = useState(
 		() =>
@@ -57,14 +73,6 @@ export function Providers({ children, initialBranding }: { children: React.React
 				{children}
 				<ThemeSync />
 				<Toaster />
-				<div role="status" aria-live="polite">
-					{realtime.notification && (
-						<NewMessagePopup
-							notification={realtime.notification}
-							onDismiss={realtime.dismissNotification}
-						/>
-					)}
-				</div>
 			</BrandingProvider>
 		</QueryClientProvider>
 	);
