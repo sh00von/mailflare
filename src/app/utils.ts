@@ -96,11 +96,36 @@ export const everywherePoints: Pick<LandingItem, "icon" | "titleKey">[] = [
 ];
 
 export const faqs: LandingFaq[] = [
-	{ questionKey: "What plans are available?", answerKey: "Choose between Starter ($5/mo), Pro ($15/mo), and Business ($39/mo) with transparent pricing and full access to your plan's limits." },
-	{ questionKey: "Why do I verify DNS before creating an account?", answerKey: "Verifying MX, SPF, and DMARC upfront proves domain ownership and prevents anyone else from claiming your domain on Replyot." },
-	{ questionKey: "Can several people share one mailbox?", answerKey: "Yes. Share a mailbox like support@ with teammates and choose per person: read-only, send as, send on behalf, or full access." },
-	{ questionKey: "What happens if my team hits a plan limit?", answerKey: "Your workspace tracks domains, mailboxes, S3 storage, and daily sends in real time. You can upgrade your plan anytime from the admin panel." },
-	{ questionKey: "Does it work on my phone?", answerKey: "Yes! Install the web app on your home screen for instant push notifications and an app-like experience." },
+	{
+		questionKey: "How much does it cost?",
+		answerKey:
+			"$0.50 per mailbox per month on yearly billing ($0.55 for 6 months, $0.60 for 3 months), with a minimum of 5 mailboxes. Every mailbox gets 1 GB of storage, and up to 5 custom domains are included at no extra cost.",
+	},
+	{
+		questionKey: "Can teammates share support@ or sales@?",
+		answerKey:
+			"Yes. Share any mailbox with teammates and give each person Full access, Send as, Send on behalf or Read only.",
+	},
+	{
+		questionKey: "Do I need to know DNS?",
+		answerKey:
+			"No. We show the exact MX, SPF, DKIM and DMARC records to add, check them live and tell you when everything is correct.",
+	},
+	{
+		questionKey: "Can I bring my existing email?",
+		answerKey:
+			"Yes. Upload a Google Takeout or mbox export and it imports in the background, keeping folders and conversations together.",
+	},
+	{
+		questionKey: "Do you read or sell my email?",
+		answerKey:
+			"No. There are no ads, we never scan your mail for marketing and we never build profiles from it.",
+	},
+	{
+		questionKey: "Does it work on my phone?",
+		answerKey:
+			"Yes. Use it in any browser, or install it as an app on iPhone, Android, Mac or Windows to get push notifications.",
+	},
 ];
 
 export function getHomeActions(isLoggedIn: boolean): HomeAction[] {

@@ -1,25 +1,23 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
-	Bell,
 	Check,
 	ChevronDown,
 	Clock,
 	FolderInput,
 	Globe2,
-	HardDrive,
+	KeyRound,
 	ShieldCheck,
-	Smartphone,
 	Users,
 } from "@/components/icons";
 import { getCurrentUser } from "@/lib/auth/cookies";
 import { getEnv } from "@/lib/cloudflare";
-import { PLAN_LIST } from "@/lib/plans/catalog";
 import { getHomeBranding } from "./home-server-utils";
 import { HomeAuthProvider } from "./home-auth";
 import { HomeHeaderActions } from "./home-header-actions";
 import { HomeHeroActions } from "./home-hero-actions";
 import { HomeInboxPreview } from "./home-inbox-preview";
+import { HomePricing } from "./home-pricing";
 import { faqs, landingNavItems } from "./utils";
 
 export const dynamic = "force-dynamic";
@@ -27,34 +25,47 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata(): Promise<Metadata> {
 	const branding = await getHomeBranding();
 	return {
-		title: branding.appName,
+		title: `${branding.appName} — Business email on your own domain`,
 		description:
-			"Business email on your own domain. Verify DNS, create team mailboxes in seconds, and keep every message fast and private.",
+			"Professional email on your own domain from $0.50 per mailbox. Shared team inboxes, guided DNS setup, no ads and no inbox scanning.",
 		icons: { icon: branding.hasCustomIcon ? "/api/branding/icon" : "/icon-96.png" },
 	};
 }
 
-/*
- * The homepage is always light, in the style of Google Workspace. The app's dark theme remaps the
- * Tailwind palette (neutral, white, blue…) under `.dark`, so this page uses fixed hex colours only.
- */
-
-const PRODUCT_TILES = [
-	{ icon: Globe2, tone: "bg-blue-50 text-blue-600", title: "Your own domain", body: "Connect your company domain with guided MX, SPF and DMARC checks, then hand out addresses in seconds." },
-	{ icon: Users, tone: "bg-green-50 text-green-700", title: "Shared team inboxes", body: "Let teammates work support@ or sales@ together, with read-only, send-as or full access per person." },
-	{ icon: ShieldCheck, tone: "bg-red-50 text-red-600", title: "Spam and security", body: "Layered spam scoring, two-step sign-in and audit logs keep your mail and your team safe." },
-	{ icon: HardDrive, tone: "bg-amber-50 text-amber-700", title: "Cloud storage", body: "Every workspace gets generous attachment storage with clear, predictable limits." },
-	{ icon: Clock, tone: "bg-purple-50 text-purple-600", title: "Schedule and snooze", body: "Threaded conversations, scheduled sends, undo send and snooze keep the inbox under control." },
-	{ icon: FolderInput, tone: "bg-cyan-50 text-cyan-700", title: "Easy migration", body: "Import from a Gmail export in the background, folders and threads intact." },
+const FEATURES = [
+	{
+		icon: Globe2,
+		title: "Your domain, set up for you",
+		body: "Add up to 5 domains. We check MX, SPF, DKIM and DMARC live and tell you exactly what to fix.",
+	},
+	{
+		icon: Users,
+		title: "Shared team inboxes",
+		body: "Run support@ and sales@ together with Full access, Send as, Send on behalf or Read only roles.",
+	},
+	{
+		icon: Clock,
+		title: "An inbox that keeps up",
+		body: "Threads, snooze, scheduled send, undo send and follow-up reminders when nobody replies.",
+	},
+	{
+		icon: FolderInput,
+		title: "Bring your old mail",
+		body: "Import a Google Takeout or mbox archive in the background with folders and threads intact.",
+	},
+	{
+		icon: ShieldCheck,
+		title: "Private by default",
+		body: "No ads, no inbox scanning, no profiling. Remote images stay blocked until you allow them.",
+	},
+	{
+		icon: KeyRound,
+		title: "Secure sign-in",
+		body: "Passkeys, authenticator-app two-step verification and recovery codes for every account.",
+	},
 ];
 
-const HIGHLIGHTS = [
-	{ icon: Bell, title: "Instant push notifications", body: "Know the moment an important message arrives." },
-	{ icon: Smartphone, title: "Works on every device", body: "Install the web app on your phone or desktop for an ultra-fast, modern inbox." },
-	{ icon: ShieldCheck, title: "Private by default", body: "Remote images stay blocked until you choose to load them." },
-];
-
-const GOOGLE_DOTS = ["bg-blue-500", "bg-red-500", "bg-amber-500", "bg-green-500"];
+const HERO_POINTS = ["5 custom domains included", "1 GB storage per mailbox", "No ads or inbox scanning"];
 
 export default async function HomePage() {
 	const [branding, sessionUser] = await Promise.all([
@@ -79,7 +90,7 @@ export default async function HomePage() {
 
 	return (
 		<HomeAuthProvider initialUser={initialUser}>
-			<div className="min-h-dvh bg-white text-neutral-900">
+			<div className="min-h-dvh bg-white text-neutral-900 selection:bg-blue-500/20">
 				<a
 					href="#main"
 					className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-blue-600 focus:shadow"
@@ -87,13 +98,20 @@ export default async function HomePage() {
 					Skip to content
 				</a>
 
-				<header className="sticky top-0 z-40 border-b border-neutral-100 bg-white/95 backdrop-blur">
-					<div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-						<div className="flex items-center gap-8">
+				<header className="sticky top-0 z-40 border-b border-neutral-100 bg-white/90 backdrop-blur-md">
+					<div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+						<div className="flex items-center gap-10">
 							<Link href="/" className="flex items-center gap-2.5" aria-label={`${branding.appName} home`}>
-								<img src={iconSrc} height={28} width={28} alt="" />
-								<span className="text-[20px] font-medium tracking-tight text-neutral-500">{branding.appName}</span>
+								<img src={iconSrc} height={28} width={28} alt="" className="rounded-lg" />
+								<span className="text-lg font-semibold tracking-tight">{branding.appName}</span>
 							</Link>
+							<nav aria-label="Primary" className="hidden items-center gap-7 text-sm text-neutral-600 md:flex">
+								{landingNavItems.map((item) => (
+									<a key={item.href} href={item.href} className="transition hover:text-neutral-900">
+										{item.labelKey}
+									</a>
+								))}
+							</nav>
 						</div>
 						<div className="flex items-center gap-2">
 							<HomeHeaderActions />
@@ -106,162 +124,88 @@ export default async function HomePage() {
 					<section className="relative overflow-hidden">
 						<div
 							aria-hidden="true"
-							className="pointer-events-none absolute inset-x-0 top-0 h-[520px] bg-radial-[60%_60%_at_50%_0%] from-blue-50 to-transparent"
+							className="pointer-events-none absolute inset-x-0 top-0 h-[520px] bg-linear-to-b from-blue-50/70 to-transparent"
 						/>
-						<div className="relative mx-auto max-w-7xl px-4 pb-16 pt-16 text-center sm:px-6 sm:pt-24 lg:px-8">
-							<div className="mx-auto mb-6 flex w-fit items-center gap-1.5" aria-hidden="true">
-								{GOOGLE_DOTS.map((color) => (
-									<span key={color} className={`h-2 w-2 rounded-full ${color}`} />
-								))}
-							</div>
-							<h1 className="mx-auto max-w-4xl text-balance text-[40px] font-normal leading-[1.1] tracking-[-0.02em] text-neutral-900 sm:text-[56px] lg:text-[64px]">
-								Professional email for your business, <span className="text-blue-600">made simple</span>
-							</h1>
-							<p className="mx-auto mt-6 max-w-2xl text-pretty text-lg leading-8 text-neutral-500">
-								Custom email at <span className="font-medium text-neutral-900">you@yourcompany.com</span>, shared team inboxes and
-								built-in security. Set up your whole team in minutes.
+						<div className="relative mx-auto max-w-6xl px-4 pt-16 pb-20 text-center sm:px-6 sm:pt-24 sm:pb-28">
+							<p className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-white px-3 py-1 text-xs font-medium text-blue-700">
+								From $0.50 per mailbox / month
 							</p>
-							<div className="mt-10">
+							<h1 className="mx-auto mt-6 max-w-3xl text-balance text-4xl font-bold leading-[1.1] tracking-tight sm:text-6xl">
+								Business email on your own domain.
+							</h1>
+							<p className="mx-auto mt-5 max-w-xl text-pretty text-base leading-relaxed text-neutral-600 sm:text-lg">
+								Give your team <span className="font-medium text-neutral-900">you@yourcompany.com</span> with shared
+								inboxes and guided DNS setup, for a fraction of what the big suites charge.
+							</p>
+							<div className="mt-9">
 								<HomeHeroActions />
 							</div>
-							<p className="mt-5 text-sm text-neutral-500">Fast setup · Cloud storage · Built-in security</p>
-
-							<div className="relative mx-auto mt-14 max-w-5xl">
-								<div
-									aria-hidden="true"
-									className="absolute -inset-x-6 -bottom-6 top-10 -z-10 rounded-[32px] bg-linear-135 from-blue-50 via-green-50 to-amber-50 opacity-70 blur-2xl"
-								/>
+							<ul className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-neutral-500">
+								{HERO_POINTS.map((point) => (
+									<li key={point} className="flex items-center gap-1.5">
+										<Check className="h-4 w-4 text-emerald-600" />
+										{point}
+									</li>
+								))}
+							</ul>
+							<div className="mx-auto mt-16 max-w-5xl">
 								<HomeInboxPreview />
 							</div>
 						</div>
 					</section>
 
-					{/* Products / features */}
-					<section id="features" aria-labelledby="features-title" className="scroll-mt-20 py-20 sm:py-24">
-						<div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-							<div className="mx-auto max-w-2xl text-center">
-								<h2 id="features-title" className="text-[32px] font-normal leading-tight tracking-[-0.01em] text-neutral-900 sm:text-[44px]">
-									Everything your team needs to stay connected
+					{/* Features */}
+					<section
+						id="features"
+						aria-labelledby="features-title"
+						className="scroll-mt-20 border-t border-neutral-100 bg-neutral-50/60 py-20 sm:py-24"
+					>
+						<div className="mx-auto max-w-6xl px-4 sm:px-6">
+							<div className="max-w-2xl">
+								<h2 id="features-title" className="text-3xl font-bold tracking-tight sm:text-4xl">
+									Everything a team inbox needs. Nothing it doesn’t.
 								</h2>
-								<p className="mt-4 text-base leading-7 text-neutral-500 sm:text-lg">
-									One secure workspace for your company email, with nothing extra to install.
+								<p className="mt-3 text-base text-neutral-600">
+									The essentials of Google Workspace and Zoho Mail, without the bundle you never use.
 								</p>
 							</div>
-							<div className="mt-14 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-								{PRODUCT_TILES.map((tile) => (
-									<div
-										key={tile.title}
-										className="group rounded-3xl border border-neutral-200 bg-white p-8 transition hover:border-transparent hover:shadow-md"
-									>
-										<span
-											className={`flex h-12 w-12 items-center justify-center rounded-2xl ${tile.tone}`}
-										>
-											<tile.icon className="h-6 w-6" />
+							<div className="mt-14 grid grid-cols-1 gap-x-10 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
+								{FEATURES.map((feature) => (
+									<div key={feature.title}>
+										<span className="flex h-10 w-10 items-center justify-center rounded-xl border border-blue-100 bg-white text-blue-600">
+											<feature.icon className="h-5 w-5" />
 										</span>
-										<h3 className="mt-6 text-xl font-medium text-neutral-900">{tile.title}</h3>
-										<p className="mt-2 text-[15px] leading-7 text-neutral-500">{tile.body}</p>
+										<h3 className="mt-4 text-base font-semibold">{feature.title}</h3>
+										<p className="mt-1.5 text-sm leading-relaxed text-neutral-600">{feature.body}</p>
 									</div>
 								))}
 							</div>
 						</div>
 					</section>
 
-					{/* Highlights band */}
-					<section aria-label="Highlights" className="bg-neutral-50 py-20">
-						<div className="mx-auto grid max-w-7xl grid-cols-1 gap-10 px-4 sm:px-6 md:grid-cols-3 lg:px-8">
-							{HIGHLIGHTS.map((item) => (
-								<div key={item.title} className="text-center md:text-left">
-									<span className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-white text-blue-600 shadow-sm md:mx-0">
-										<item.icon className="h-5 w-5" />
-									</span>
-									<h3 className="mt-5 text-lg font-medium text-neutral-900">{item.title}</h3>
-									<p className="mt-2 text-[15px] leading-7 text-neutral-500">{item.body}</p>
-								</div>
-							))}
-						</div>
-					</section>
-
 					{/* Pricing */}
 					<section id="pricing" aria-labelledby="pricing-title" className="scroll-mt-20 py-20 sm:py-24">
-						<div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-							<div className="mx-auto max-w-2xl text-center">
-								<h2 id="pricing-title" className="text-[32px] font-normal leading-tight tracking-[-0.01em] text-neutral-900 sm:text-[44px]">
-									Choose the plan that’s right for you
-								</h2>
-								<p className="mt-4 text-base leading-7 text-neutral-500 sm:text-lg">
-									Every plan includes cloud storage and guided domain setup.
-								</p>
-							</div>
-
-							<div className="mx-auto mt-14 grid max-w-6xl grid-cols-1 gap-6 lg:grid-cols-3">
-								{PLAN_LIST.map((plan) => {
-									const featured = !!plan.highlighted;
-									const bullets = [
-										`${plan.maxDomains} ${plan.maxDomains === 1 ? "custom domain" : "custom domains"}`,
-										`Up to ${plan.maxMailboxes} team mailboxes`,
-										`${plan.storageLabel} cloud storage`,
-										`${plan.dailySendLimit.toLocaleString("en-US")} emails a day`,
-										`Attachments up to ${plan.maxAttachmentMb} MB`,
-									];
-									return (
-										<div
-											key={plan.id}
-											className={`relative flex flex-col rounded-3xl bg-white p-8 ${
-												featured
-													? "border-2 border-blue-600 shadow-lg"
-													: "border border-neutral-300"
-											}`}
-										>
-											{featured && (
-												<span className="absolute -top-3.5 left-1/2 -translate-x-1/2 rounded-full bg-blue-600 px-3.5 py-1 text-xs font-medium text-white">
-													Most popular
-												</span>
-											)}
-											<h3 className="text-2xl font-normal text-neutral-900">{plan.name}</h3>
-											<p className="mt-1.5 min-h-10 text-sm leading-5 text-neutral-500">{plan.tagline}</p>
-											<div className="mt-6 flex items-baseline gap-1.5">
-												<span className="text-[44px] font-normal leading-none tracking-tight text-neutral-900">${plan.priceMonthlyUsd}</span>
-												<span className="text-sm text-neutral-500">USD / month</span>
-											</div>
-											<Link
-												href={signedIn ? "/plan" : `/register?plan=${plan.id}`}
-												className={`mt-8 inline-flex h-11 items-center justify-center rounded-full text-sm font-medium transition ${
-													featured
-														? "bg-blue-600 text-white hover:bg-blue-700"
-														: "border border-neutral-300 text-blue-600 hover:border-blue-100 hover:bg-blue-50"
-												}`}
-											>
-												{signedIn ? "Manage plan" : "Get started"}
-											</Link>
-											<ul className="mt-8 space-y-3.5 border-t border-neutral-200 pt-8 text-[15px] text-neutral-700">
-												{bullets.map((item) => (
-													<li key={item} className="flex items-start gap-3">
-														<Check className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
-														<span>{item}</span>
-													</li>
-												))}
-											</ul>
-										</div>
-									);
-								})}
-							</div>
-						</div>
+						<HomePricing signedIn={signedIn} appName={branding.appName} />
 					</section>
 
 					{/* FAQ */}
-					<section id="faq" aria-labelledby="faq-title" className="scroll-mt-20 bg-neutral-50 py-20 sm:py-24">
-						<div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-							<h2 id="faq-title" className="text-center text-[32px] font-normal leading-tight tracking-[-0.01em] text-neutral-900 sm:text-[40px]">
-								Frequently asked questions
+					<section
+						id="faq"
+						aria-labelledby="faq-title"
+						className="scroll-mt-20 border-t border-neutral-100 bg-neutral-50/60 py-20 sm:py-24"
+					>
+						<div className="mx-auto max-w-3xl px-4 sm:px-6">
+							<h2 id="faq-title" className="text-center text-3xl font-bold tracking-tight sm:text-4xl">
+								Questions, answered
 							</h2>
-							<div className="mt-12 divide-y divide-neutral-300 border-y border-neutral-300">
+							<div className="mt-10 divide-y divide-neutral-200 border-y border-neutral-200">
 								{faqs.map((faq) => (
-									<details key={faq.questionKey} className="group [&_summary::-webkit-details-marker]:hidden">
-										<summary className="flex cursor-pointer list-none items-center justify-between gap-6 py-5 text-left text-base font-medium text-neutral-900 sm:text-lg">
+									<details key={faq.questionKey} className="group py-5 [&_summary::-webkit-details-marker]:hidden">
+										<summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-left text-base font-medium">
 											{faq.questionKey}
-											<ChevronDown className="h-5 w-5 shrink-0 text-neutral-500 transition-transform duration-200 group-open:rotate-180" />
+											<ChevronDown className="h-5 w-5 shrink-0 text-neutral-400 transition-transform group-open:rotate-180" />
 										</summary>
-										<p className="-mt-1 pb-5 pr-10 text-[15px] leading-7 text-neutral-500">{faq.answerKey}</p>
+										<p className="mt-3 pr-8 text-sm leading-relaxed text-neutral-600">{faq.answerKey}</p>
 									</details>
 								))}
 							</div>
@@ -269,42 +213,40 @@ export default async function HomePage() {
 					</section>
 
 					{/* Final CTA */}
-					<section aria-labelledby="cta-title" className="py-20 sm:py-24">
-						<div className="mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
-							<h2 id="cta-title" className="text-balance text-[32px] font-normal leading-tight tracking-[-0.01em] text-neutral-900 sm:text-[44px]">
-								Get started with {branding.appName} today
-							</h2>
-							<p className="mx-auto mt-4 max-w-xl text-base leading-7 text-neutral-500 sm:text-lg">
-								Launch team mailboxes on your own domain in minutes. Try it free for 14 days.
-							</p>
-							<div className="mt-10">
-								<HomeHeroActions />
+					<section aria-labelledby="cta-title" className="py-24 sm:py-28">
+						<div className="mx-auto max-w-6xl px-4 sm:px-6">
+							<div className="text-center">
+								<h2 id="cta-title" className="text-balance text-3xl font-bold tracking-tight sm:text-4xl">
+									Your team’s email, live today.
+								</h2>
+								<p className="mx-auto mt-3 max-w-lg text-base text-neutral-600">
+									Add your domain, verify DNS and create mailboxes in a few minutes.
+								</p>
+								<div className="mt-8">
+									<HomeHeroActions />
+								</div>
 							</div>
 						</div>
 					</section>
 				</main>
 
-				<footer className="border-t border-neutral-300 bg-white">
-					<div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-5 px-4 py-8 text-sm text-neutral-500 sm:flex-row sm:px-6 lg:px-8">
-						<div className="flex items-center gap-2.5">
-							<img src={iconSrc} height={20} width={20} alt="" />
-							<span>{`© ${year} ${branding.appName}`}</span>
+				<footer className="border-t border-neutral-200">
+					<div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 py-8 text-sm text-neutral-500 sm:flex-row sm:px-6">
+						<div className="flex items-center gap-2">
+							<img src={iconSrc} height={20} width={20} alt="" className="rounded" />
+							<span className="font-medium text-neutral-700">{branding.appName}</span>
+							<span>{`© ${year}`}</span>
 						</div>
-						<nav aria-label="Footer navigation" className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+						<nav aria-label="Footer" className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
 							{landingNavItems.map((item) => (
 								<a key={item.href} href={item.href} className="transition hover:text-neutral-900">
 									{item.labelKey}
 								</a>
 							))}
 							{!signedIn && (
-								<>
-									<Link href="/login" className="transition hover:text-neutral-900">
-										Sign in
-									</Link>
-									<Link href="/register" className="transition hover:text-neutral-900">
-										Create account
-									</Link>
-								</>
+								<Link href="/login" className="transition hover:text-neutral-900">
+									Sign in
+								</Link>
 							)}
 						</nav>
 					</div>
