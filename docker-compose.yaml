@@ -31,8 +31,6 @@ services:
     ports:
       - "4008:4008" # Web app
       - "25:25"     # Inbound SMTP
-    env_file:
-      - .env.docker
     environment:
       PORT: 4008
       DATABASE_URL: ${DATABASE_URL:-postgresql://replyot:b8f49a2ce081d643891db80e7cf15c2d@postgres:5432/replyot}
