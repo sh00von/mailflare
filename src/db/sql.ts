@@ -29,9 +29,9 @@ export function charIndex(haystack: AnyColumn | SQL, needle: string): SQL {
 	return dialect === "postgres" ? sql`strpos(${haystack}, ${needle})` : sql`instr(${haystack}, ${needle})`;
 }
 
-/** String concatenation; `||` is logical OR on MySQL. String arguments are SQL literals, so pass constants only. */
+/** String concatenation; `||` is logical OR on MySQL. Safe parameterized expressions. */
 export function concatText(...parts: Array<SQL | string>): SQL {
-	const list = parts.map((part) => (typeof part === "string" ? sql.raw(`'${part.replace(/'/g, "''")}'`) : part));
+	const list = parts.map((part) => (typeof part === "string" ? sql`${part}` : part));
 	return dialect === "mysql" ? sql`concat(${sql.join(list, sql`, `)})` : sql.join(list, sql` || `);
 }
 

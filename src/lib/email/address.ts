@@ -2,13 +2,18 @@ import type { Address, Mailbox } from "postal-mime";
 import type { EmailAddressParts } from "@/lib/email/address-types";
 import { parseAddress } from "@/lib/utils";
 
+function sanitizeHeaderValue(value: string): string {
+	return value.replace(/[\r\n\0]/g, "").trim();
+}
+
 function quoteDisplayName(name: string): string {
-	return `"${name.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+	const sanitized = sanitizeHeaderValue(name);
+	return `"${sanitized.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
 }
 
 export function formatEmailAddress(address: string, name?: string | null): string {
-	const normalizedAddress = address.trim();
-	const normalizedName = name?.trim();
+	const normalizedAddress = sanitizeHeaderValue(address);
+	const normalizedName = name ? sanitizeHeaderValue(name) : null;
 
 	if (!normalizedName) return normalizedAddress;
 	return `${quoteDisplayName(normalizedName)} <${normalizedAddress}>`;

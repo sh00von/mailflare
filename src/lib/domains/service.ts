@@ -18,7 +18,6 @@ import { getManualDomainDns } from "@/lib/domains/manual-dns";
 import { rollbackDomainProvisioning } from "@/lib/domains/rollback";
 import type { DomainProvisioningChanges } from "@/lib/domains/types";
 import { findSendingSubdomain } from "@/lib/domains/sending-status";
-import { ensureOutboundSendingDomain } from "@/lib/email/resend-domain-setup";
 import { preflightDomain } from "@/lib/domains/preflight";
 import { hasCloudflareCredentials } from "@/lib/runtime";
 import { checkDomainOwnershipDns, DomainOwnershipError } from "@/lib/domains/ownership";
@@ -44,7 +43,7 @@ export async function addDomainForUser(
 	env: CloudflareEnv,
 	userId: string,
 	hostname: string,
-	options?: { enableRouting?: boolean; enableSending?: boolean; replaceMxRecords?: boolean; skipDns?: boolean; receivingProvider?: "none" | "cloudflare" | "resend" | "ses" | "postfix"; sendingProvider?: "none" | "cloudflare" | "resend" | "ses" | "postfix" },
+	options?: { enableRouting?: boolean; enableSending?: boolean; replaceMxRecords?: boolean; skipDns?: boolean; receivingProvider?: "none" | "postfix"; sendingProvider?: "none" | "postfix" },
 ): Promise<{
 	domain: typeof domains.$inferSelect;
 	dns: DomainDnsView;

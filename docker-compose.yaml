@@ -6,9 +6,9 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_DB: replyot
-      POSTGRES_USER: replyot
-      POSTGRES_PASSWORD: b8f49a2ce081d643891db80e7cf15c2d
+      POSTGRES_DB: ${POSTGRES_DB:-replyot}
+      POSTGRES_USER: ${POSTGRES_USER:-replyot}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -29,14 +29,15 @@ services:
 
   replyot:
     image: ghcr.io/sh00von/replyot:latest
+    pull_policy: always
     restart: unless-stopped
     ports:
       - "4008:4008" # Web app
       - "25:25"     # Inbound SMTP
     environment:
       PORT: 4008
-      DATABASE_URL: ${DATABASE_URL:-postgresql://replyot:b8f49a2ce081d643891db80e7cf15c2d@postgres:5432/replyot}
-      SMTP_URL: ${SMTP_URL:-smtp://postfix:587}
+      DATABASE_URL: ${DATABASE_URL}
+      SMTP_URL: ${SMTP_URL:-smtp://postfix:25}
       SMTP_TLS_REJECT_UNAUTHORIZED: "false"
       APP_URL: ${APP_URL}
       ADMIN_APP_URL: ${ADMIN_APP_URL}

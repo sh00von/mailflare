@@ -6,9 +6,8 @@ export function getSetupRequirementChecks(env: CloudflareEnv): SetupRequirementC
 	const database = getDatabaseConfig(env);
 	if (isNodeRuntime(env)) {
 		const mailer = env.EMAIL as unknown as { configured?: boolean };
-		const hasResend = !!process.env.RESEND_API_KEY?.trim();
 		const hasSes = !!process.env.AWS_ACCESS_KEY_ID?.trim() && !!process.env.AWS_SECRET_ACCESS_KEY?.trim();
-		const outboundReady = mailer?.configured === true || hasResend || hasSes;
+		const outboundReady = mailer?.configured === true || hasSes;
 		return [
 			{
 				key: "Database",
@@ -20,7 +19,7 @@ export function getSetupRequirementChecks(env: CloudflareEnv): SetupRequirementC
 				configured: true,
 				message: outboundReady
 					? "Outbound mail relay is configured."
-					: "Not set: you can complete setup now and configure Resend, Amazon SES, or SMTP_URL later.",
+					: "Not set: you can complete setup now and configure Amazon SES, or Postfix / SMTP_URL later.",
 			},
 		];
 	}

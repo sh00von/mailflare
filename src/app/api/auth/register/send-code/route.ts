@@ -42,8 +42,8 @@ export async function POST(request: Request) {
 
 	const { email, captchaAnswer, captchaToken } = parsed.data;
 
-	if (captchaAnswer && captchaToken && !verifyCaptcha(captchaAnswer, captchaToken)) {
-		return NextResponse.json({ error: "Invalid security code. Please try again." }, { status: 400 });
+	if (!captchaAnswer || !captchaToken || !verifyCaptcha(captchaAnswer, captchaToken)) {
+		return NextResponse.json({ error: "Invalid security code. Please solve the captcha and try again." }, { status: 400 });
 	}
 
 	if (isDisposableEmail(email)) {

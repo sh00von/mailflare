@@ -92,9 +92,9 @@ export async function sendVerificationCodeEmail(
 </html>
 	`.trim();
 
-	// In development or if system mail delivery cannot reach an external relay,
-	// log to server console so registration is never blocked in dev mode.
-	console.log(`[Verification Code for ${cleanEmail}]: ${code}`);
+	if (process.env.NODE_ENV === "development") {
+		console.log(`[Verification Code for ${cleanEmail}]: ${code}`);
+	}
 
 	try {
 		await sendSystemEmail(env, {

@@ -1,5 +1,5 @@
-export type SendingProvider = "none" | "cloudflare" | "resend" | "ses" | "postfix";
-export type ReceivingProvider = "none" | "cloudflare" | "resend" | "ses" | "postfix";
+export type SendingProvider = "postfix" | "none";
+export type ReceivingProvider = "postfix" | "none";
 
 export type Domain = {
 	id: string;

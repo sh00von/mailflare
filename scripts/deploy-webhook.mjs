@@ -2,9 +2,7 @@
 import { execSync } from "node:child_process";
 
 const IMAGE_TAG = process.env.IMAGE_TAG || "ghcr.io/sh00von/replyot:latest";
-const WEBHOOK_URL =
-	process.env.DOKPLOY_DEPLOY_WEBHOOK ||
-	"http://103.42.4.218:3000/api/deploy/compose/4ZLECbgjlO9IUyZCbwvNb";
+const WEBHOOK_URL = process.env.DOKPLOY_DEPLOY_WEBHOOK;
 
 async function main() {
 	console.log("🚀 Starting build & deploy to Dokploy...");
@@ -22,6 +20,10 @@ async function main() {
 	execSync(`docker push ${IMAGE_TAG}`, { stdio: "inherit" });
 
 	// 4. Trigger Dokploy Webhook
+	if (!WEBHOOK_URL) {
+		console.log("ℹ️ DOKPLOY_DEPLOY_WEBHOOK is not set; container built & pushed to registry successfully.");
+		return;
+	}
 	console.log(`📡 Triggering Dokploy deploy webhook: ${WEBHOOK_URL}...`);
 	try {
 		const res = await fetch(WEBHOOK_URL, {

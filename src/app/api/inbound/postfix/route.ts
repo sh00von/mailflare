@@ -1,9 +1,18 @@
+import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { getEnv } from "@/lib/cloudflare";
 import { intakeIncomingMail } from "@/lib/email/intake";
 import { inboundAttachmentLimitReasonFromRaw } from "@/lib/email/inbound-attachments";
 
 export const dynamic = "force-dynamic";
+
+function safeSecretCompare(a?: string | null, b?: string | null): boolean {
+	if (!a || !b) return false;
+	const bufA = Buffer.from(a);
+	const bufB = Buffer.from(b);
+	if (bufA.length !== bufB.length) return false;
+	return timingSafeEqual(bufA, bufB);
+}
 
 /**
  * Inbound endpoint for Postfix container mail delivery.
@@ -13,13 +22,13 @@ export async function POST(request: Request) {
 	const env = getEnv();
 	const secret = (process.env.INBOUND_WEBHOOK_SECRET ?? env.INBOUND_WEBHOOK_SECRET)?.trim();
 
-	// If secret is set, verify authorization
+	// If secret is set, verify authorization with constant-time equality
 	if (secret) {
 		const authHeader = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "")?.trim();
 		const tokenHeader = request.headers.get("x-webhook-token")?.trim();
 		const urlToken = new URL(request.url).searchParams.get("token")?.trim();
 		const provided = authHeader || tokenHeader || urlToken;
-		if (provided !== secret) {
+		if (!safeSecretCompare(provided, secret)) {
 			return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 		}
 	}

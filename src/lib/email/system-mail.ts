@@ -67,6 +67,9 @@ export async function pickSystemSender(
 	// Resend is verified per domain in Resend itself.
 	const usable = rows.filter((row) => row.provider !== "cloudflare" || row.cloudflareSending);
 	const chosen = usable.find((row) => row.role === "admin") ?? usable[0];
-	if (!chosen) return null;
+	if (!chosen) {
+		const defaultHost = (process.env.MAIL_HOSTNAME || (env as Record<string, any>)?.MAIL_HOSTNAME || "ordify.site").trim();
+		return { address: `no-reply@${defaultHost}`, name: "Replyot" };
+	}
 	return { address: `${chosen.localPart}@${chosen.hostname}`, name: chosen.displayName ?? "Replyot" };
 }

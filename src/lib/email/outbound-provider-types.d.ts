@@ -1,12 +1,10 @@
-import type { AwsConfig } from "@/lib/aws/aws-types";
+export type SendingProvider = "postfix" | "none";
 
-export type SendingProvider = "none" | "cloudflare" | "resend" | "ses" | "postfix";
-
-export type OutboundProviderConfig =
-	| { provider: "cloudflare" }
-	| { provider: "resend"; apiKey: string }
-	| { provider: "ses"; config: AwsConfig }
-	| { provider: "postfix"; dkimPrivateKey?: string | null; dkimSelector?: string | null };
+export type OutboundProviderConfig = {
+	provider: "postfix";
+	dkimPrivateKey?: string | null;
+	dkimSelector?: string | null;
+};
 
 export type OutboundProviderAttachment = {
 	filename: string;
@@ -26,10 +24,4 @@ export type OutboundProviderMessage = {
 	text?: string;
 	headers?: Record<string, string>;
 	attachments?: OutboundProviderAttachment[];
-};
-
-export type ResendKeyStatus = {
-	configured: boolean;
-	/** Where the key in use comes from; the key itself never leaves the server. */
-	source: "settings" | "environment" | null;
 };

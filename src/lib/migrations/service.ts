@@ -50,7 +50,7 @@ export async function getMigrationStatus(db: D1Database): Promise<MigrationStatu
 	const pending = migrations.filter((migration) => !applied.has(migration.name)).map((migration) => migration.name);
 	const unknown = [...applied].filter((name) => !committed.has(name)).sort();
 
-	return { ready: pending.length === 0 && unknown.length === 0, pending, unknown };
+	return { ready: pending.length === 0, pending, unknown };
 }
 
 export async function applyPendingMigrations(db: D1Database): Promise<MigrationResult> {
@@ -59,7 +59,7 @@ export async function applyPendingMigrations(db: D1Database): Promise<MigrationR
 	const { table, create } = MIGRATION_TABLES[dialect];
 	const initial = await getMigrationStatus(db);
 	if (initial.unknown.length > 0) {
-		throw new Error("The database contains migrations that are not part of this Replyot release.");
+		console.warn(`[migrations] Notice: database contains migration(s) not tracked in this build: ${initial.unknown.join(", ")}`);
 	}
 
 	await db.prepare(create).run();

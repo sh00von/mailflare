@@ -18,9 +18,9 @@ function mailerConfig(): MailerConfig {
 	const smtp =
 		optional("SMTP_URL") ??
 		(optional("POSTFIX_HOST")
-			? `smtp://${optional("POSTFIX_HOST")}:${optional("POSTFIX_PORT") ?? "587"}`
+			? `smtp://${optional("POSTFIX_HOST")}:${optional("POSTFIX_PORT") ?? "25"}`
 			: process.env.NODE_ENV === "production" || optional("REPLYOT_RUNTIME") === "node"
-				? "smtp://postfix:587"
+				? "smtp://postfix:25"
 				: undefined);
 	if (smtp) return { kind: "smtp", url: smtp };
 	return { kind: "none" };
@@ -76,7 +76,6 @@ export function createNodeRuntime(): NodeRuntime {
 		CF_TOKEN: optional("CF_TOKEN"),
 		CF_API_KEY: optional("CF_API_KEY"),
 		CF_EMAIL: optional("CF_EMAIL"),
-		RESEND_API_KEY: optional("RESEND_API_KEY"),
 		AWS_ACCESS_KEY_ID: optional("AWS_ACCESS_KEY_ID"),
 		AWS_SECRET_ACCESS_KEY: optional("AWS_SECRET_ACCESS_KEY"),
 		AWS_REGION: optional("AWS_REGION"),

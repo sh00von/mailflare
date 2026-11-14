@@ -215,17 +215,7 @@ async function deliverEmail(env: CloudflareEnv, delivery: PreparedDelivery): Pro
 	const toAddr = joinEmailAddressList(to);
 	try {
 		const provider = await getOutboundProviderConfig(env, from);
-		// Cloudflare's 5 MiB cap forces big files into download links; Resend takes
-		// the attachments directly (the admin's outgoing limit still applies).
-		const prepared = provider.provider === "cloudflare"
-			? await prepareCloudflareAttachments(env, attachments, {
-				subject: input.subject,
-				html: input.html,
-				text: input.text,
-				headers,
-				publicOrigin: input.publicOrigin,
-			})
-			: { attachments, html: input.html, text: input.text };
+		const prepared = { attachments, html: input.html, text: input.text };
 		if (prepared.text !== input.text || prepared.html !== input.html) {
 			await db.update(messages).set({ textBody: prepared.text ?? null, htmlBody: prepared.html ?? null }).where(eq(messages.id, messageId));
 		}
