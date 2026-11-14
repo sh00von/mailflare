@@ -19,7 +19,7 @@
     "build:node": "pnpm run db:bundle && next build && node scripts/build-server.mjs",
     "start:node": "node --env-file-if-exists=.env dist/server.mjs",
     "dev:node": "pnpm run db:bundle && node scripts/build-server.mjs && node --env-file-if-exists=.env dist/server.mjs",
-    "deploy": "node scripts/deploy-webhook.mjs",
+    "deploy": "node --env-file-if-exists=.env scripts/deploy-webhook.mjs",
     "test:e2e": "playwright test"
   },
   "license": "SEE LICENSE IN LICENSE",
