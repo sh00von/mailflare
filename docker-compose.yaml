@@ -1,8 +1,6 @@
 services:
   replyot:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/sh00von/replyot:latest
     restart: unless-stopped
     ports:
       - "4008:4008" # Web app
@@ -11,6 +9,8 @@ services:
       - .env.docker
     environment:
       PORT: 4008
+      SMTP_URL: ${SMTP_URL:-smtp://postfix:587}
+      SMTP_TLS_REJECT_UNAUTHORIZED: "false"
       DATABASE_URL: ${DATABASE_URL}
       APP_URL: ${APP_URL}
       ADMIN_APP_URL: ${ADMIN_APP_URL}
@@ -19,11 +19,7 @@ services:
       COOKIE_DOMAIN: ${COOKIE_DOMAIN}
       MAIL_HOSTNAME: ${MAIL_HOSTNAME}
       SMTP_INBOUND_PORT: ${SMTP_INBOUND_PORT:-25}
-      RESEND_API_KEY: ${RESEND_API_KEY}
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
-      AWS_REGION: ${AWS_REGION:-}
-      OUTBOUND_PROVIDER: ${OUTBOUND_PROVIDER:-auto}
+      OUTBOUND_PROVIDER: ${OUTBOUND_PROVIDER:-postfix}
       SYSTEM_FROM_EMAIL: ${SYSTEM_FROM_EMAIL:-}
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
@@ -39,6 +35,19 @@ services:
       S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-true}
     volumes:
       - replyot-data:/data
+    depends_on:
+      - postfix
+
+  postfix:
+    image: boky/postfix:latest
+    container_name: replyot-postfix
+    restart: unless-stopped
+    environment:
+      - ALLOW_EMPTY_SENDER_DOMAINS=true
+      - MYNETWORKS=127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+    volumes:
+      - postfix-spool:/var/spool/postfix
 
 volumes:
   replyot-data:
+  postfix-spool:

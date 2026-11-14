@@ -68,7 +68,12 @@ export default function DomainItemCard({
               <StatusIcon ok={item.status === "active"} className="h-3 w-3" />
               {item.status === "active" ? "active" : item.status === "pending" ? "pending" : item.status}
             </Badge>
-            {item.receivingProvider === "cloudflare" ? (
+            {item.receivingProvider === "postfix" ? (
+              <Badge variant="outline" className="gap-1 border-blue-200 bg-blue-50 text-blue-700">
+                <StatusIcon ok className="h-3 w-3" />
+                Postfix Inbound (Port 25)
+              </Badge>
+            ) : item.receivingProvider === "cloudflare" ? (
               <Badge
                 variant={item.routingEnabled ? "outline" : "secondary"}
                 className={cn("gap-1", !item.routingEnabled && "opacity-50")}
@@ -85,7 +90,12 @@ export default function DomainItemCard({
                 {`receiving via ${item.receivingProvider === "ses" ? "Amazon SES" : "Resend"}`}
               </Badge>
             )}
-            {item.sendingProvider === "resend" || item.sendingProvider === "ses" ? (
+            {item.sendingProvider === "postfix" ? (
+              <Badge variant="outline" className="gap-1 border-emerald-200 bg-emerald-50 text-emerald-700">
+                <StatusIcon ok className="h-3 w-3" />
+                Postfix Outbound (DKIM)
+              </Badge>
+            ) : item.sendingProvider === "resend" || item.sendingProvider === "ses" ? (
               <Badge variant="outline" className="gap-1">
                 <StatusIcon ok className="h-3 w-3" />
                 {`sending via ${item.sendingProvider === "ses" ? "Amazon SES" : "Resend"}`}

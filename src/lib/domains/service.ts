@@ -33,6 +33,8 @@ export type DomainDnsView = {
 	sendingSubdomain?: { name: string; tag: string };
 };
 
+import { generateDkimKeyPair } from "@/lib/email/dkim";
+
 export async function listUserDomains(env: CloudflareEnv, userId: string) {
 	const db = getDb(env);
 	return db.select().from(domains).where(eq(domains.userId, userId));
@@ -42,7 +44,7 @@ export async function addDomainForUser(
 	env: CloudflareEnv,
 	userId: string,
 	hostname: string,
-	options?: { enableRouting?: boolean; enableSending?: boolean; replaceMxRecords?: boolean; skipDns?: boolean; receivingProvider?: "none" | "cloudflare" | "resend" | "ses"; sendingProvider?: "none" | "cloudflare" | "resend" | "ses" },
+	options?: { enableRouting?: boolean; enableSending?: boolean; replaceMxRecords?: boolean; skipDns?: boolean; receivingProvider?: "none" | "cloudflare" | "resend" | "ses" | "postfix"; sendingProvider?: "none" | "cloudflare" | "resend" | "ses" | "postfix" },
 ): Promise<{
 	domain: typeof domains.$inferSelect;
 	dns: DomainDnsView;
@@ -80,8 +82,8 @@ export async function addDomainForUser(
 			return null;
 		})
 		: null;
-	const defaultSendingProvider = outboundSetup?.provider ?? "cloudflare";
-	const receivingProvider = skipDns ? "none" : (options?.receivingProvider ?? "cloudflare");
+	const defaultSendingProvider = outboundSetup?.provider ?? "postfix";
+	const receivingProvider = skipDns ? "none" : (options?.receivingProvider ?? "postfix");
 	// Cloudflare's sending subdomain is only provisioned when Cloudflare is the sender.
 	const requestedSending = skipDns ? "none" : (options?.sendingProvider ?? (options?.enableSending === false ? "none" : defaultSendingProvider));
 	const provisioned = await provisionDomainOnCloudflare(env, hostname, {
@@ -104,6 +106,7 @@ export async function addDomainForUser(
 		// A manual zone goes live at once only when ownership was proven above (no Cloudflare credentials).
 		// "Set up later" on a Cloudflare-connected server stays pending until its zone is adopted and set up.
 		const liveManual = isManual && !(skipDns && hasCloudflareCredentials(env));
+		const dkim = (!existing || !existing.dkimPrivateKey) ? generateDkimKeyPair() : null;
 		const values = {
 			id: domainId,
 			userId,
@@ -114,10 +117,11 @@ export async function addDomainForUser(
 			routingStatus: provisioned.routingStatus ?? null,
 			sendingSubdomainTag: provisioned.sendingSubdomainTag,
 			sendingRequested: liveManual ? true : skipDns ? false : provisioned.sendingRequested,
-			...(skipDns ? { sendingProvider: "none" as const } : options?.sendingProvider ? { sendingProvider: options.sendingProvider } : existing && existing.sendingProvider !== "none" ? {} : { sendingProvider: requestedSending !== "none" ? requestedSending : provisioned.sendingRequested ? ("cloudflare" as const) : ("none" as const) }),
+			...(skipDns ? { sendingProvider: "none" as const } : options?.sendingProvider ? { sendingProvider: options.sendingProvider } : existing && existing.sendingProvider !== "none" ? {} : { sendingProvider: requestedSending !== "none" ? requestedSending : provisioned.sendingRequested ? ("postfix" as const) : ("none" as const) }),
 			sendingEnabled: liveManual ? true : skipDns ? false : provisioned.sendingEnabled,
 			routingEnabled: liveManual ? true : skipDns ? false : provisioned.routingEnabled,
 			dnsSkipped: isManual ? false : options?.skipDns === true,
+			...(dkim ? { dkimPrivateKey: dkim.privateKey, dkimPublicKey: dkim.publicKey, dkimSelector: dkim.selector } : {}),
 		};
 
 		if (existing) {

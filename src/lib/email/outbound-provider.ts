@@ -39,10 +39,25 @@ export async function getResendApiKey(env: CloudflareEnv): Promise<string> {
 export async function getOutboundProviderConfig(env: CloudflareEnv, fromAddress: string): Promise<OutboundProviderConfig> {
 	const hostname = getEmailAddress(fromAddress).split("@")[1]?.toLowerCase();
 	const [domain] = hostname
-		? await getDb(env).select({ provider: domains.sendingProvider }).from(domains).where(eq(domains.hostname, hostname)).limit(1)
+		? await getDb(env)
+				.select({
+					provider: domains.sendingProvider,
+					dkimPrivateKey: domains.dkimPrivateKey,
+					dkimSelector: domains.dkimSelector,
+				})
+				.from(domains)
+				.where(eq(domains.hostname, hostname))
+				.limit(1)
 		: [];
 	if (!domain || domain.provider === "none") {
 		throw new Error(`Sending is not set up for ${hostname ?? "this domain"}. Choose a sending provider on the Domains page.`);
+	}
+	if (domain.provider === "postfix") {
+		return {
+			provider: "postfix",
+			dkimPrivateKey: domain.dkimPrivateKey,
+			dkimSelector: domain.dkimSelector ?? "default",
+		};
 	}
 	if (domain.provider === "resend") return { provider: "resend", apiKey: await getResendApiKey(env) };
 	if (domain.provider === "ses") return { provider: "ses", config: await requireAwsConfig(env) };
@@ -109,6 +124,16 @@ export async function sendThroughProvider(
 ): Promise<{ messageId: string }> {
 	if (config.provider === "resend") return sendWithResend(config.apiKey, message, idempotencyKey);
 	if (config.provider === "ses") return sendSesEmail(config.config, message);
+	const fromDomain = getEmailAddress(message.from).split("@")[1] || "";
+	const dkimConfig =
+		config.provider === "postfix" && config.dkimPrivateKey
+			? {
+					domainName: fromDomain,
+					keySelector: config.dkimSelector ?? "default",
+					privateKey: config.dkimPrivateKey,
+			  }
+			: undefined;
+
 	const response = await env.EMAIL.send({
 		from: message.from,
 		to: message.to,
@@ -123,6 +148,7 @@ export async function sendThroughProvider(
 				? { filename: attachment.filename, type: attachment.type, content: attachment.content, disposition: "inline" as const, contentId: attachment.contentId }
 				: { filename: attachment.filename, type: attachment.type, content: attachment.content, disposition: "attachment" as const },
 		),
+		...(dkimConfig ? { dkim: dkimConfig } : {}),
 	});
 	return { messageId: response.messageId };
 }

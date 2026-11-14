@@ -13,6 +13,11 @@ type Builder = {
 	text?: string;
 	html?: string;
 	attachments?: Array<{ filename: string; type: string; content: ArrayBuffer | ArrayBufferView | string; disposition?: string; contentId?: string }>;
+	dkim?: {
+		domainName: string;
+		keySelector: string;
+		privateKey: string;
+	};
 };
 
 export type MailerConfig =
@@ -74,6 +79,7 @@ export class Mailer {
 					contentDisposition: attachment.disposition === "inline" ? "inline" : "attachment",
 					cid: attachment.contentId ?? undefined,
 				})),
+				...(message.dkim ? { dkim: message.dkim } : {}),
 			});
 			return { messageId };
 		}

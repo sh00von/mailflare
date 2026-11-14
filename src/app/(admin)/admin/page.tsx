@@ -47,7 +47,7 @@ const sections: AdminSection[] = [
 	{
 		href: "/admin/domains",
 		title: "Domains",
-		description: "Connect custom domains and verify MX, SPF, DMARC, and Resend DNS records.",
+		description: "Connect custom domains and verify MX, SPF, DKIM, and DMARC DNS records.",
 		icon: Globe2,
 		permission: "domains",
 	},

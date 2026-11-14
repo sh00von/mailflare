@@ -1,5 +1,5 @@
-export type SendingProvider = "none" | "cloudflare" | "resend" | "ses";
-export type ReceivingProvider = "none" | "cloudflare" | "resend" | "ses";
+export type SendingProvider = "none" | "cloudflare" | "resend" | "ses" | "postfix";
+export type ReceivingProvider = "none" | "cloudflare" | "resend" | "ses" | "postfix";
 
 export type Domain = {
 	id: string;
@@ -13,6 +13,8 @@ export type Domain = {
 	zoneId: string;
 	/** Added with DNS skipped: the Cloudflare zone is attached on first setup. */
 	dnsSkipped?: boolean;
+	dkimPublicKey?: string | null;
+	dkimSelector?: string | null;
 };
 
 export type DomainPreflight = {

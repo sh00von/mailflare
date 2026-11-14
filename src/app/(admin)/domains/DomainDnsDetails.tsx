@@ -36,19 +36,32 @@ export default function DomainDnsDetails({
 }: DomainDnsDetailsProps) {
 	const [checking, setChecking] = useState(false);
 	const audit = dns.audit;
-	const mailHost = `mail.${domain.hostname}`;
+	const serverMailHost = process.env.NEXT_PUBLIC_MAIL_HOSTNAME || `mail.${domain.hostname}`;
+	const mailHost = serverMailHost;
 
 	const expectedValues: Record<DnsAuthRecord, { host: string; type: string; value: string } | null> = {
 		mx: { host: "@", type: "MX", value: `10 ${mailHost}.` },
-		spf: { host: "@", type: "TXT", value: `v=spf1 a:${mailHost} ~all` },
-		dkim: process.env.NEXT_PUBLIC_PLATFORM_DKIM_RECORD
+		spf: {
+			host: "@",
+			type: "TXT",
+			value: process.env.NEXT_PUBLIC_SERVER_IP
+				? `v=spf1 ip4:${process.env.NEXT_PUBLIC_SERVER_IP} ~all`
+				: `v=spf1 a:${mailHost} ~all`,
+		},
+		dkim: domain.dkimPublicKey
 			? {
-					host: process.env.NEXT_PUBLIC_PLATFORM_DKIM_HOST || "replyot._domainkey",
+					host: `${domain.dkimSelector || "default"}._domainkey`,
+					type: "TXT",
+					value: `v=DKIM1; k=rsa; p=${domain.dkimPublicKey}`,
+			  }
+			: process.env.NEXT_PUBLIC_PLATFORM_DKIM_RECORD
+			? {
+					host: process.env.NEXT_PUBLIC_PLATFORM_DKIM_HOST || "default._domainkey",
 					type: "TXT",
 					value: process.env.NEXT_PUBLIC_PLATFORM_DKIM_RECORD,
-				}
+			  }
 			: null,
-		dmarc: { host: "_dmarc", type: "TXT", value: "v=DMARC1; p=none" },
+		dmarc: { host: "_dmarc", type: "TXT", value: "v=DMARC1; p=quarantine; pct=100; adkim=r; aspf=r" },
 	};
 
 	const mxReady = audit?.mx.status === "ok";

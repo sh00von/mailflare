@@ -809,6 +809,14 @@
         "ALTER TABLE `workspaces` ADD `max_mailboxes` integer DEFAULT 5 NOT NULL;",
         "ALTER TABLE `workspaces` ADD `billing_cycle` text DEFAULT '12m' NOT NULL;"
       ]
+    },
+    {
+      "name": "0087_add_domain_dkim.sql",
+      "statements": [
+        "ALTER TABLE `domains` ADD `dkim_private_key` text;",
+        "ALTER TABLE `domains` ADD `dkim_public_key` text;",
+        "ALTER TABLE `domains` ADD `dkim_selector` text DEFAULT 'default';"
+      ]
     }
   ]
 }

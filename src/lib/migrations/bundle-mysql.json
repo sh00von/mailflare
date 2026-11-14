@@ -355,6 +355,14 @@
         "ALTER TABLE `workspaces` ADD `max_mailboxes` bigint DEFAULT 5 NOT NULL;",
         "ALTER TABLE `workspaces` ADD `billing_cycle` text DEFAULT '12m' NOT NULL;"
       ]
+    },
+    {
+      "name": "0013_add_domain_dkim.sql",
+      "statements": [
+        "ALTER TABLE `domains` ADD `dkim_private_key` longtext;",
+        "ALTER TABLE `domains` ADD `dkim_public_key` longtext;",
+        "ALTER TABLE `domains` ADD `dkim_selector` varchar(191) DEFAULT 'default';"
+      ]
     }
   ]
 }

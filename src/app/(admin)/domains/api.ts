@@ -43,7 +43,7 @@ export function isMxConflictError(error: unknown): boolean {
  * so the server refuses (409) until the user agrees to replace them.
  * Returns false when the user declined.
  */
-export async function runReceivingSetup(domainId: string, provider: "cloudflare" | "resend" | "ses"): Promise<boolean> {
+export async function runReceivingSetup(domainId: string, provider: "cloudflare" | "resend" | "ses" | "postfix"): Promise<boolean> {
 	const call = async (replaceMx: boolean) => {
 		const response = await authFetch(`/api/domains/${domainId}/receiving/${provider}`, {
 			method: "POST",
@@ -67,8 +67,8 @@ export type CreateDomainInput = {
 	enableSending?: boolean;
 	replaceMxRecords?: boolean;
 	skipDns?: boolean;
-	sendingProvider?: "none" | "cloudflare" | "resend" | "ses";
-	receivingProvider?: "none" | "cloudflare" | "resend" | "ses";
+	sendingProvider?: "none" | "cloudflare" | "resend" | "ses" | "postfix";
+	receivingProvider?: "none" | "cloudflare" | "resend" | "ses" | "postfix";
 };
 
 export type DomainCreateResponse = SetupResponse & { domain?: unknown; [key: string]: unknown };

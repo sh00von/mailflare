@@ -389,6 +389,14 @@
         "ALTER TABLE \"workspaces\" ADD COLUMN \"max_mailboxes\" bigint DEFAULT 5 NOT NULL;",
         "ALTER TABLE \"workspaces\" ADD COLUMN \"billing_cycle\" text DEFAULT '12m' NOT NULL;"
       ]
+    },
+    {
+      "name": "0013_add_domain_dkim.sql",
+      "statements": [
+        "ALTER TABLE \"domains\" ADD COLUMN \"dkim_private_key\" text;",
+        "ALTER TABLE \"domains\" ADD COLUMN \"dkim_public_key\" text;",
+        "ALTER TABLE \"domains\" ADD COLUMN \"dkim_selector\" text DEFAULT 'default';"
+      ]
     }
   ]
 }
