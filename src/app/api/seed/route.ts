@@ -7,7 +7,8 @@ import { seedDemoData } from "@/lib/seed";
 import { demoCredentials } from "@/lib/seed-utils";
 
 export async function POST(request: Request) {
-	if (process.env.NODE_ENV === "production") {
+	// Creates an admin with a published password, so it needs an explicit opt-in as well as a non-production build.
+	if (process.env.NODE_ENV === "production" || process.env.ALLOW_DEMO_SEED !== "1") {
 		return NextResponse.json({ error: "Not available in production" }, { status: 403 });
 	}
 	const env = getEnv();

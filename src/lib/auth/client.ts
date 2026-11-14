@@ -20,16 +20,41 @@ function dispatchAuthSessionChanged(authenticated: boolean): void {
 	);
 }
 
+const MARKER_PREFIX = "m:";
+
+/**
+ * A non-secret fingerprint of a session token (FNV-1a over the token, two seeds). The token itself lives only in
+ * the httpOnly session cookie, so script injected into the page cannot read and replay it; the fingerprint only
+ * tells tabs and caches which session is active.
+ */
+function sessionMarker(token: string): string {
+	let a = 0x811c9dc5;
+	let b = 0x01000193 ^ token.length;
+	for (let i = 0; i < token.length; i++) {
+		const c = token.charCodeAt(i);
+		a = Math.imul(a ^ c, 0x01000193);
+		b = Math.imul(b ^ c, 0x5bd1e995);
+	}
+	return `${MARKER_PREFIX}${(a >>> 0).toString(36)}${(b >>> 0).toString(36)}`;
+}
+
+/** The active session's marker (not the token), or null when this browser has no session. */
 export function getClientSessionToken(): string | null {
 	if (typeof window === "undefined") return null;
-	return localStorage.getItem(SESSION_STORAGE_KEY);
+	const stored = localStorage.getItem(SESSION_STORAGE_KEY);
+	if (!stored || stored.startsWith(MARKER_PREFIX)) return stored;
+	// Older builds stored the raw bearer token here; replace it with its marker.
+	const marker = sessionMarker(stored);
+	localStorage.setItem(SESSION_STORAGE_KEY, marker);
+	return marker;
 }
 
 export function setClientSessionToken(token: string): void {
-	const previousToken = localStorage.getItem(SESSION_STORAGE_KEY);
-	localStorage.setItem(SESSION_STORAGE_KEY, token);
-	if (previousToken !== token) clearUserTimeZonePreference();
-	if (previousToken !== token) dispatchAuthSessionChanged(true);
+	const previous = getClientSessionToken();
+	const marker = sessionMarker(token);
+	localStorage.setItem(SESSION_STORAGE_KEY, marker);
+	if (previous !== marker) clearUserTimeZonePreference();
+	if (previous !== marker) dispatchAuthSessionChanged(true);
 }
 
 export function clearClientSessionToken(): void {
@@ -42,10 +67,6 @@ export function getAuthHeaders(headers?: HeadersInit): Headers {
 	const nextHeaders = new Headers(headers);
 	if (typeof window !== "undefined" && !nextHeaders.has("X-Time-Zone")) {
 		nextHeaders.set("X-Time-Zone", getUserTimeZone());
-	}
-	const token = getClientSessionToken();
-	if (token && !nextHeaders.has("Authorization")) {
-		nextHeaders.set("Authorization", `Bearer ${token}`);
 	}
 	return nextHeaders;
 }

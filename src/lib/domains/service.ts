@@ -21,6 +21,7 @@ import { findSendingSubdomain } from "@/lib/domains/sending-status";
 import { ensureOutboundSendingDomain } from "@/lib/email/resend-domain-setup";
 import { preflightDomain } from "@/lib/domains/preflight";
 import { hasCloudflareCredentials } from "@/lib/runtime";
+import { checkDomainOwnershipDns, DomainOwnershipError } from "@/lib/domains/ownership";
 
 export type DomainDnsView = {
 	routing: { records: CfDnsRecord[]; missing: CfDnsRecord[]; status?: string };
@@ -52,6 +53,12 @@ export async function addDomainForUser(
 	const [claimedHostname] = await db.select({ userId: domains.userId }).from(domains).where(eq(domains.hostname, normalizedHostname)).limit(1);
 	if (claimedHostname && claimedHostname.userId !== userId) {
 		throw new Error("Domain is already registered");
+	}
+	// Without Cloudflare zone access the domain is recorded as manual and goes live at once,
+	// so ownership has to be proven from public DNS first (re-saving an owned domain is exempt).
+	if (!hasCloudflareCredentials(env) && !claimedHostname) {
+		const ownership = await checkDomainOwnershipDns(normalizedHostname);
+		if (!ownership.ok) throw new DomainOwnershipError(ownership);
 	}
 	if (!options?.skipDns && hasCloudflareCredentials(env)) {
 		const { zone } = await preflightDomain(env, normalizedHostname);

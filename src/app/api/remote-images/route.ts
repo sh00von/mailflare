@@ -2,6 +2,7 @@ import { requireSessionUser } from "@/lib/api/auth";
 import { getEnv } from "@/lib/cloudflare";
 import { fetchRemoteImage, RemoteImageError } from "@/lib/remote-images/fetch";
 import { allowRemoteImageRequest } from "@/lib/remote-images/rate-limit";
+import { publicOnlyFetch } from "@/lib/security/public-fetch";
 
 const IMAGE_HEADERS = {
 	"Cache-Control": "private, no-store",
@@ -21,7 +22,7 @@ export async function GET(request: Request) {
 	const requestUrl = new URL(request.url);
 	const remoteUrl = requestUrl.searchParams.get("url") ?? "";
 	try {
-		const image = await fetchRemoteImage(remoteUrl, { blockedOrigins: [requestUrl.origin] });
+		const image = await fetchRemoteImage(remoteUrl, { blockedOrigins: [requestUrl.origin], fetch: publicOnlyFetch });
 		const body = new ArrayBuffer(image.body.byteLength);
 		new Uint8Array(body).set(image.body);
 		return new Response(body, {

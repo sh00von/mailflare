@@ -1,4 +1,3 @@
-import { resolveMx, resolveTxt } from "node:dns/promises";
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { getEnv } from "@/lib/cloudflare";
@@ -20,6 +19,7 @@ import { verifyCaptcha } from "@/lib/auth/captcha";
 import { allowLoginAttempt } from "@/lib/auth/rate-limit";
 import { getDomainProvisioningError } from "@/lib/domains/errors";
 import { auditDomainDns } from "@/lib/domains/dns-audit";
+import { checkDomainOwnershipDns } from "@/lib/domains/ownership";
 import { ensureOutboundSendingDomain } from "@/lib/email/resend-domain-setup";
 import { resolvePlanId } from "@/lib/plans/catalog";
 import { createWorkspaceForOwner } from "@/lib/plans/usage";
@@ -61,28 +61,20 @@ export async function POST(request: Request) {
 	}
 	const [existingDomain] = await db.select({ id: domains.id }).from(domains).where(eq(domains.hostname, domainName)).limit(1);
 	if (existingDomain) {
-		return NextResponse.json({ error: "This domain is already registered. Only the workspace owner can create team accounts for it." }, { status: 409 });
+		return NextResponse.json({ error: "This domain is already in use. Ask the person who set it up to add you." }, { status: 409 });
 	}
 
-	const expectedMx = (process.env.MAIL_HOSTNAME?.trim() || `mail.${domainName}`).toLowerCase().replace(/\.$/, "");
-	const [currentMx, rootTxt, dmarcTxt] = await Promise.all([
-		resolveMx(domainName).then((recs) => recs.map((r) => r.exchange.trim().toLowerCase().replace(/\.$/, ""))).catch(() => []),
-		resolveTxt(domainName).then((recs) => recs.map((chunks) => chunks.join("").trim())).catch(() => []),
-		resolveTxt(`_dmarc.${domainName}`).then((recs) => recs.map((chunks) => chunks.join("").trim())).catch(() => []),
-	]);
-	const mxOk = currentMx.some((mx) => mx === expectedMx);
-	const spfOk = rootTxt.some((txt) => txt.toLowerCase().startsWith("v=spf1") && txt.toLowerCase().includes(expectedMx));
-	const dmarcOk = dmarcTxt.some((txt) => txt.toLowerCase().startsWith("v=dmarc1"));
-	if (!mxOk || !spfOk || !dmarcOk) {
+	const ownership = await checkDomainOwnershipDns(domainName);
+	if (!ownership.ok) {
 		return NextResponse.json(
-			{ error: "Domain DNS is not verified yet. Add your MX, SPF, and DMARC records and check DNS again before creating your account." },
+			{ error: "Your domain isn't connected yet. Add the settings from the previous step, then try again." },
 			{ status: 400 },
 		);
 	}
 	const outboundSetup = await ensureOutboundSendingDomain(env, domainName, { createIfMissing: true }).catch(() => null);
 	if (outboundSetup && !outboundSetup.verified) {
 		return NextResponse.json(
-			{ error: "Outbound sending DNS records are not verified yet. Add all required records and click Check DNS again." },
+			{ error: "Your domain isn't ready to send email yet. Add all the settings from the previous step, then try again." },
 			{ status: 400 },
 		);
 	}

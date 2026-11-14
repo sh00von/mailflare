@@ -3,6 +3,7 @@ import { getSecurityHeaders } from "./src/lib/security/headers";
 
 const nextConfig: NextConfig = {
 	distDir: ".next-node",
+	poweredByHeader: false,
 	turbopack: {
 		root: import.meta.dirname,
 	},
@@ -14,7 +15,7 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
 	  },
 	// Native and server-only packages used by the self-hosted runtime; never bundle them.
-	serverExternalPackages: ["nodemailer", "smtp-server", "ws"],
+	serverExternalPackages: ["nodemailer", "smtp-server", "ws", "undici"],
 	async rewrites() {
 		return [
 			{ source: "/dash", destination: "/domains" },

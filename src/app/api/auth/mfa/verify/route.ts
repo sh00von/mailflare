@@ -8,6 +8,8 @@ import { readJsonBody } from "@/lib/http/request";
 import { RequestBodyTooLargeError } from "@/lib/http/errors";
 import { recordAuthActivity } from "@/lib/auth/activity";
 import { consumeLoginChallenge, getLoginChallengeUserId } from "@/lib/auth/login-challenge";
+import { canAttemptSecondFactor, clearSecondFactorFailures, recordSecondFactorFailure } from "@/lib/auth/mfa-attempts";
+import { hashSessionToken } from "@/lib/auth/session";
 import { verifySecondFactor } from "@/lib/auth/mfa";
 import { completeLogin } from "@/lib/auth/login-response";
 import { authError } from "@/lib/http/auth-error";
@@ -34,8 +36,20 @@ export async function POST(request: Request) {
 	const db = getDb(env);
 	const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
 	if (!user || user.disabled || user.deletedAt) return authError("account_disabled", 403);
+	// Keyed by the challenge's hash so the raw token is not kept in memory.
+	const challengeKey = await hashSessionToken(parsed.data.challengeToken);
+	if (!canAttemptSecondFactor(user.id, challengeKey)) {
+		await consumeLoginChallenge(env, parsed.data.challengeToken);
+		return authError("rate_limited", 429, { "Retry-After": "900" });
+	}
 	const method = await verifySecondFactor(env, user, parsed.data.code);
-	if (!method) return authError("code_mismatch", 401);
+	if (!method) {
+		if (recordSecondFactorFailure(user.id, challengeKey)) {
+			await consumeLoginChallenge(env, parsed.data.challengeToken);
+		}
+		return authError("code_mismatch", 401);
+	}
+	clearSecondFactorFailures(user.id, challengeKey);
 	if (!(await consumeLoginChallenge(env, parsed.data.challengeToken))) {
 		return authError("passkey_expired", 401);
 	}

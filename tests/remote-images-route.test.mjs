@@ -12,9 +12,10 @@ const mocks = {
 	"@/lib/cloudflare": "export function getEnv(){return globalThis.proxyEnv}",
 	"@/lib/api/auth": "export async function requireSessionUser(){return globalThis.proxyAuth}",
 	"@/lib/remote-images/fetch": "export class RemoteImageError extends Error { constructor(message,status){super(message);this.status=status} } export function fetchRemoteImage(...args){return globalThis.proxyFetch(...args)}",
+	"@/lib/security/public-fetch": "export function publicOnlyFetch(){throw new Error('network is mocked')}",
 };
 await build({ entryPoints: [join(project, "src/app/api/remote-images/route.ts")], outfile: join(temporary, "route.mjs"), bundle: true, platform: "node", format: "esm", packages: "external", alias: { "@": join(project, "src") }, logLevel: "silent", plugins: [{ name: "route-fixtures", setup(builder) {
-	builder.onResolve({ filter: /^@\/lib\/(cloudflare|api\/auth|remote-images\/fetch)$/ }, args => ({ path: args.path, namespace: "mock" }));
+	builder.onResolve({ filter: /^@\/lib\/(cloudflare|api\/auth|remote-images\/fetch|security\/public-fetch)$/ }, args => ({ path: args.path, namespace: "mock" }));
 	builder.onLoad({ filter: /.*/, namespace: "mock" }, args => ({ contents: mocks[args.path], loader: "js" }));
 } }] });
 const { GET } = await import(pathToFileURL(join(temporary, "route.mjs")).href);
@@ -45,6 +46,8 @@ test("authenticated Worker responses use private image headers and block the app
 	globalThis.proxyFetch = async (url, options) => {
 		assert.equal(url, "https://cdn.example/logo.png");
 		assert.deepEqual(options.blockedOrigins, ["https://mail.example"]);
+		// The route must hand the fetcher the connect-time public-address guard.
+		assert.equal(options.fetch?.name, "publicOnlyFetch");
 		return { body: new Uint8Array([1, 2, 3]), contentType: "image/png" };
 	};
 	const response = await GET(request());

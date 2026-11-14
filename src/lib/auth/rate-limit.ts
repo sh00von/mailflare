@@ -10,7 +10,7 @@ function clientRateLimitKey(request: Request): string {
 	return getClientIp(request) ?? "unknown";
 }
 
-/** Mobile sign-ins have their own, stricter budget (they skip Turnstile). */
+/** Mobile sign-ins have their own, stricter budget (they skip the captcha). */
 export async function allowDeviceLoginAttempt(env: CloudflareEnv, request: Request): Promise<boolean> {
 	const limiter = env.DEVICE_LOGIN_RATE_LIMIT ?? env.LOGIN_RATE_LIMIT;
 	if (!limiter) return true;

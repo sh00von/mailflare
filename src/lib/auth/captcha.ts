@@ -1,6 +1,7 @@
-import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { createHmac, randomBytes, randomInt, timingSafeEqual } from "node:crypto";
 
-const CAPTCHA_CHARS = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+// No look-alike pairs (0/O, 1/I, 2/Z, 5/S, 6/G, 8/B), which a stroke font makes ambiguous.
+const CAPTCHA_CHARS = "3479ACDEFHJKLMNPQRTUVWXY";
 const CAPTCHA_LENGTH = 5;
 const CAPTCHA_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -10,29 +11,70 @@ if (!runtimeSecret) {
 	runtimeSecret = randomBytes(32).toString("hex");
 }
 
-function getRandomInt(min: number, max: number): number {
-	return Math.floor(Math.random() * (max - min + 1)) + min;
+type Point = [number, number];
+type Glyph = Point[][];
+
+/**
+ * A stroke font on a 4x6 grid. Characters are drawn as path geometry, never as text, so the answer
+ * cannot be read out of the SVG markup; every glyph is jittered, rotated and merged with decoy strokes.
+ */
+const GLYPHS: Record<string, Glyph> = {
+	"3": [[[0, 0], [4, 0], [2, 2.5], [3.5, 3], [4, 4.5], [3, 6], [1, 6], [0, 5]]],
+	"4": [[[3, 6], [3, 0], [0, 4], [4, 4]]],
+	"7": [[[0, 0], [4, 0], [1.5, 6]]],
+	"9": [[[4, 2], [3, 3], [1, 3], [0, 2], [0, 1], [1, 0], [3, 0], [4, 1], [4, 5], [3, 6], [0.5, 6]]],
+	A: [[[0, 6], [2, 0], [4, 6]], [[1, 3.5], [3, 3.5]]],
+	C: [[[4, 1], [3, 0], [1, 0], [0, 1.5], [0, 4.5], [1, 6], [3, 6], [4, 5]]],
+	D: [[[0, 0], [0, 6], [2.5, 6], [4, 4.5], [4, 1.5], [2.5, 0], [0, 0]]],
+	E: [[[4, 0], [0, 0], [0, 6], [4, 6]], [[0, 3], [3, 3]]],
+	F: [[[4, 0], [0, 0], [0, 6]], [[0, 3], [3, 3]]],
+	H: [[[0, 0], [0, 6]], [[4, 0], [4, 6]], [[0, 3], [4, 3]]],
+	J: [[[4, 0], [4, 5], [3, 6], [1, 6], [0, 5]]],
+	K: [[[0, 0], [0, 6]], [[4, 0], [0, 3.5]], [[1.3, 2.7], [4, 6]]],
+	L: [[[0, 0], [0, 6], [4, 6]]],
+	M: [[[0, 6], [0, 0], [2, 3.5], [4, 0], [4, 6]]],
+	N: [[[0, 6], [0, 0], [4, 6], [4, 0]]],
+	P: [[[0, 6], [0, 0], [3, 0], [4, 1], [4, 2], [3, 3], [0, 3]]],
+	Q: [[[1, 0], [3, 0], [4, 1.5], [4, 4.5], [3, 6], [1, 6], [0, 4.5], [0, 1.5], [1, 0]], [[2.5, 4.5], [4, 6.5]]],
+	R: [[[0, 6], [0, 0], [3, 0], [4, 1], [4, 2], [3, 3], [0, 3]], [[2, 3], [4, 6]]],
+	T: [[[0, 0], [4, 0]], [[2, 0], [2, 6]]],
+	U: [[[0, 0], [0, 5], [1, 6], [3, 6], [4, 5], [4, 0]]],
+	V: [[[0, 0], [2, 6], [4, 0]]],
+	W: [[[0, 0], [1, 6], [2, 2.5], [3, 6], [4, 0]]],
+	X: [[[0, 0], [4, 6]], [[4, 0], [0, 6]]],
+	Y: [[[0, 0], [2, 3], [4, 0]], [[2, 3], [2, 6]]],
+};
+
+/** Uniform float in [min, max) from the CSPRNG. */
+function randomFloat(min: number, max: number): number {
+	return min + (randomInt(0, 1_000_000) / 1_000_000) * (max - min);
 }
 
 function getRandomColor(): string {
-	const colors = [
-		"#1e293b", // slate-800
-		"#334155", // slate-700
-		"#0f172a", // slate-900
-		"#312e81", // indigo-900
-		"#1e1b4b", // indigo-950
-		"#3730a3", // indigo-800
-		"#1e3a5f", // deep navy
-	];
-	return colors[getRandomInt(0, colors.length - 1)];
+	const colors = ["#1e293b", "#334155", "#0f172a", "#312e81", "#1e1b4b", "#3730a3", "#1e3a5f"];
+	return colors[randomInt(0, colors.length)];
 }
 
 function generateRandomText(length: number): string {
 	let text = "";
 	for (let i = 0; i < length; i++) {
-		text += CAPTCHA_CHARS[getRandomInt(0, CAPTCHA_CHARS.length - 1)];
+		text += CAPTCHA_CHARS[randomInt(0, CAPTCHA_CHARS.length)];
 	}
 	return text;
+}
+
+function shuffle<T>(items: T[]): T[] {
+	for (let i = items.length - 1; i > 0; i--) {
+		const j = randomInt(0, i + 1);
+		[items[i], items[j]] = [items[j], items[i]];
+	}
+	return items;
+}
+
+const n = (value: number) => value.toFixed(1);
+
+function polylineToPath(points: Point[]): string {
+	return points.map(([x, y], index) => `${index === 0 ? "M" : "L"}${n(x)} ${n(y)}`).join("");
 }
 
 export type CaptchaChallenge = {
@@ -41,7 +83,7 @@ export type CaptchaChallenge = {
 };
 
 /**
- * Generates an alphanumeric distorted SVG captcha and a signed verification token.
+ * Generates a distorted captcha drawn from stroke paths and a signed verification token.
  */
 export function generateCaptcha(): CaptchaChallenge {
 	const text = generateRandomText(CAPTCHA_LENGTH);
@@ -57,55 +99,40 @@ export function generateCaptcha(): CaptchaChallenge {
 	const width = 150;
 	const height = 44;
 
-	// Build SVG with noise lines, dots, and distorted character glyphs
 	const dots: string[] = [];
 	for (let i = 0; i < 28; i++) {
-		const cx = getRandomInt(4, width - 4);
-		const cy = getRandomInt(4, height - 4);
-		const r = getRandomInt(1, 2);
-		const opacity = (getRandomInt(15, 40) / 100).toFixed(2);
-		dots.push(`<circle cx="${cx}" cy="${cy}" r="${r}" fill="#64748b" opacity="${opacity}" />`);
+		dots.push(`<circle cx="${randomInt(4, width - 4)}" cy="${randomInt(4, height - 4)}" r="${randomInt(1, 3)}" fill="#64748b" opacity="${n(randomFloat(0.15, 0.4))}"/>`);
 	}
 
-	const lines: string[] = [];
-	for (let i = 0; i < 3; i++) {
-		const startX = getRandomInt(0, 20);
-		const startY = getRandomInt(8, height - 8);
-		const cp1X = getRandomInt(30, 60);
-		const cp1Y = getRandomInt(4, height - 4);
-		const cp2X = getRandomInt(80, 110);
-		const cp2Y = getRandomInt(4, height - 4);
-		const endX = getRandomInt(width - 25, width);
-		const endY = getRandomInt(8, height - 8);
-		const strokeWidth = (getRandomInt(10, 18) / 10).toFixed(1);
-		const strokeColor = getRandomColor();
-		lines.push(
-			`<path d="M ${startX} ${startY} C ${cp1X} ${cp1Y}, ${cp2X} ${cp2Y}, ${endX} ${endY}" stroke="${strokeColor}" stroke-width="${strokeWidth}" fill="none" opacity="0.4" />`
-		);
-	}
-
-	const charElements: string[] = [];
-	const charSpacing = width / (CAPTCHA_LENGTH + 0.8);
-
+	// Glyph strokes and decoy strokes share one path in shuffled order, so the markup does not
+	// segment characters or say which strokes belong to the answer.
+	const strokes: string[] = [];
+	const slot = (width - 16) / CAPTCHA_LENGTH;
 	for (let i = 0; i < text.length; i++) {
-		const char = text[i];
-		const x = Math.round(18 + i * charSpacing + getRandomInt(-2, 2));
-		const y = Math.round(30 + getRandomInt(-3, 3));
-		const rotate = getRandomInt(-18, 18);
-		const fontSize = getRandomInt(22, 26);
-		const color = getRandomColor();
-
-		charElements.push(
-			`<text x="${x}" y="${y}" font-family="system-ui, -apple-system, sans-serif" font-size="${fontSize}" font-weight="700" fill="${color}" transform="rotate(${rotate}, ${x}, ${y})">${char}</text>`
-		);
+		const glyph = GLYPHS[text[i]];
+		const scaleX = randomFloat(4.3, 4.8);
+		const scaleY = randomFloat(4.5, 4.9);
+		const angle = (randomFloat(-10, 10) * Math.PI) / 180;
+		const originX = 8 + i * slot + slot / 2 + randomFloat(-2, 2);
+		const originY = height / 2 + randomFloat(-2, 2);
+		const skew = randomFloat(-0.15, 0.15);
+		for (const polyline of glyph) {
+			strokes.push(polylineToPath(polyline.map(([gx, gy]) => {
+				const x = (gx - 2 + skew * (gy - 3)) * scaleX;
+				const y = (gy - 3) * scaleY;
+				return [
+					originX + x * Math.cos(angle) - y * Math.sin(angle) + randomFloat(-0.35, 0.35),
+					originY + x * Math.sin(angle) + y * Math.cos(angle) + randomFloat(-0.35, 0.35),
+				];
+			})));
+		}
+	}
+	{
+		const y0 = randomFloat(10, height - 10);
+		strokes.push(`M${n(randomFloat(0, 12))} ${n(y0)}C${n(randomFloat(35, 60))} ${n(randomFloat(2, height - 2))} ${n(randomFloat(85, 115))} ${n(randomFloat(2, height - 2))} ${n(randomFloat(width - 12, width))} ${n(randomFloat(10, height - 10))}`);
 	}
 
-	const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" class="select-none rounded-lg border border-neutral-200/80 bg-neutral-50/90 shadow-2xs">
-		<rect width="100%" height="100%" fill="#f8fafc" />
-		${dots.join("\n\t\t")}
-		${lines.join("\n\t\t")}
-		${charElements.join("\n\t\t")}
-	</svg>`;
+	const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" class="select-none rounded-lg border border-neutral-200/80 bg-neutral-50/90 shadow-2xs"><rect width="100%" height="100%" fill="#f8fafc"/>${dots.join("")}<path d="${shuffle(strokes).join("")}" stroke="${getRandomColor()}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>`;
 
 	return { svg, token };
 }

@@ -13,14 +13,11 @@ export async function GET() {
 		return NextResponse.json({
 			hasAdminAccount: adminAccountExists,
 			hasPrimaryDomain: !!domain,
-			primaryDomain: domain
-				? { hostname: domain.hostname, sendingRequested: domain.sendingRequested }
-				: null,
 		}, {
 			headers: { "Cache-Control": "no-store" },
 		});
 	} catch (error) {
-		const message = error instanceof Error ? error.message : "Could not load setup status";
-		return NextResponse.json({ error: message }, { status: 500 });
+		console.error("setup status failed", error);
+		return NextResponse.json({ error: "Could not load setup status" }, { status: 500 });
 	}
 }

@@ -1,4 +1,5 @@
 import { assertResolvesPublic, isPublicHttpsUrl } from "@/lib/security/public-url";
+import { publicOnlyFetch } from "@/lib/security/public-fetch";
 
 const ONE_CLICK_TIMEOUT_MS = 10_000;
 const WINDOW_MS = 60_000;
@@ -30,7 +31,7 @@ export async function postOneClickUnsubscribe(url: string): Promise<boolean> {
 		return false;
 	}
 	try {
-		const response = await fetch(url, {
+		const response = await publicOnlyFetch(url, {
 			method: "POST",
 			headers: { "Content-Type": "application/x-www-form-urlencoded" },
 			body: "List-Unsubscribe=One-Click",
