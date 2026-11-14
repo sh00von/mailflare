@@ -36,6 +36,8 @@ const lintConfig = {
     }
   ],
   "rules": {
+    // One toast system: everything goes through @/lib/notify (see CLAUDE.md "Feedback").
+    "no-restricted-imports": ["error", { "paths": [{ "name": "sonner", "message": "Use notify from @/lib/notify instead of importing sonner." }] }],
     "react/display-name": "error",
     "react/jsx-key": "error",
     "react/jsx-no-comment-textnodes": "error",
@@ -161,6 +163,15 @@ const lintConfig = {
     "next-env.d.ts"
   ],
   "overrides": [
+    {
+      "files": [
+        "src/lib/notify.ts",
+        "src/components/ui/sonner.tsx"
+      ],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    },
     {
       "files": [
         "**/*.d.ts"

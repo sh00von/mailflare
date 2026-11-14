@@ -191,6 +191,7 @@ The admin overview dispatches `deploy-update.yml` (constant in `src/app/api/admi
 - Server code reaches bindings through `getEnv()` / `getEnvAsync()` in `src/lib/cloudflare.ts`, then `getDb(env)` from `src/db`. Keep binding access centralized here.
 - API routes return `NextResponse.json({ error: "..." }, { status })` for failures; there is no shared error envelope helper.
 - UI is Tailwind v4 + shadcn/Radix primitives in `src/components/ui/`. `DialogContent` sets no max height, so a tall dialog overflows the viewport with an unreachable submit button — add `max-h-[calc(100vh-4rem)] overflow-y-auto` on any dialog with more than a few fields.
+- **Feedback goes through `notify` (`src/lib/notify.ts`, shadcn Sonner).** Results of actions (saved, moved, deleted, sent, copied, failed) are toasts; errors tied to a form field stay inline next to the field, and a page that failed to load shows an inline message with Retry. Success toasts only when the result is not already visible (no toast for star or read/unread). Pass API failures through `notify.fromResponse` or `notify.error(err, "fallback")`, which shows the server's plain-language `error` and replaces technical text (`toUserMessage` in `notify-utils.ts`). Only `notify.ts` and `components/ui/sonner.tsx` may import `sonner` (lint rule plus `tests/notify-utils.test.mjs`). The `<Toaster />` is mounted once in `Providers`.
 - `cloudflare-env.d.ts` is generated (500KB) — regenerate with `cf-typegen`, never hand-edit.
 
 <!-- BEGIN:nextjs-agent-rules -->

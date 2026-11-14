@@ -8,6 +8,7 @@ import type { Branding } from "@/lib/branding/types";
 import { NewMessagePopup } from "@/components/new-message-popup";
 import { PwaServiceWorker } from "@/components/pwa-service-worker";
 import { ThemeSync } from "@/components/theme-sync";
+import { Toaster } from "@/components/ui/sonner";
 import { useMessagePolling } from "@/hooks/use-message-polling";
 import { clearMessageClientState } from "@/hooks/utils";
 import { clearMessageDetailCache } from "@/lib/messages/detail-cache";
@@ -55,6 +56,7 @@ export function Providers({ children, initialBranding }: { children: React.React
 				<PwaServiceWorker />
 				{children}
 				<ThemeSync />
+				<Toaster />
 				<div role="status" aria-live="polite">
 					{realtime.notification && (
 						<NewMessagePopup
