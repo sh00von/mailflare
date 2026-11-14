@@ -2,6 +2,7 @@
 
 import { mobilePrimaryActionClass } from "@/components/page-header-utils";
 import { useEffect, useState } from "react";
+import { notify } from "@/lib/notify";
 import { Plus } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -97,6 +98,7 @@ export default function AccountsPage() {
 			setUseAllDomains(false);
 			setAliases([]);
 			setCreateOpen(false);
+			notify.success("Account created");
 			await loadAccounts();
 		} catch (error) {
 			setMessage(error instanceof Error ? error.message : "Unable to create account");
@@ -107,14 +109,14 @@ export default function AccountsPage() {
 
 	async function restoreAccount(account: Account) {
 		setRestoringId(account.id);
-		setMessage(null);
 		try {
 			const response = await authFetch(`/api/accounts/${account.id}/restore`, { method: "POST" });
 			const data = (await response.json()) as { error?: string };
 			if (!response.ok) throw new Error(data.error ?? "Unable to restore account");
+			notify.success(`${account.name || account.email} restored`);
 			await loadAccounts();
 		} catch (error) {
-			setMessage(error instanceof Error ? error.message : "Unable to restore account");
+			notify.error(error, "Could not restore the account");
 		} finally {
 			setRestoringId(null);
 		}

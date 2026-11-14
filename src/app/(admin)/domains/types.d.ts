@@ -73,15 +73,12 @@ export type DomainDnsDetailsProps = {
 	dns: DomainDnsView;
 	onSendingProviderChange?: (provider: SendingProvider) => void;
 	sendingProviderBusy?: boolean;
-	sendingProviderMessage?: string | null;
 	onReceivingProviderChange?: (provider: ReceivingProvider) => void;
 	receivingProviderBusy?: boolean;
-	receivingProviderMessage?: string | null;
 	/** Reload the DNS view after a setup that changed the zone. */
 	onDnsChanged?: () => void;
 	onSetup?: (record: DnsAuthRecord) => void;
 	setupRecord?: DnsAuthRecord | null;
-	setupMessage?: string | null;
 };
 
 export type DomainItemCardProps = {
@@ -90,10 +87,8 @@ export type DomainItemCardProps = {
 	dnsDetails?: DomainDnsView;
 	onSendingProviderChange?: (provider: SendingProvider) => void;
 	sendingProviderBusy?: boolean;
-	sendingProviderMessage?: string | null;
 	onReceivingProviderChange?: (provider: ReceivingProvider) => void;
 	receivingProviderBusy?: boolean;
-	receivingProviderMessage?: string | null;
 	onDnsChanged?: () => void;
 	dnsLoading?: boolean;
 	dnsError?: string | null;
@@ -102,5 +97,4 @@ export type DomainItemCardProps = {
 	onToggleDns: (id: string) => void;
 	onSetup?: (record: DnsAuthRecord) => void;
 	setupRecord?: DnsAuthRecord | null;
-	setupMessage?: string | null;
 };

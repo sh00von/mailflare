@@ -32,7 +32,6 @@ function CopyValueButton({ value }: { value: string }) {
 export default function DomainDnsDetails({
 	domain,
 	dns,
-	setupMessage,
 	onDnsChanged,
 }: DomainDnsDetailsProps) {
 	const [checking, setChecking] = useState(false);
@@ -184,7 +183,6 @@ export default function DomainDnsDetails({
 							</ul>
 						</div>
 					)}
-					{setupMessage && <p role="alert" className="mt-2 text-xs text-red-600">{setupMessage}</p>}
 				</section>
 			)}
 		</div>

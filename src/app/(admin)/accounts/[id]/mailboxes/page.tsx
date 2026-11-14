@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { notify } from "@/lib/notify";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Plus, Trash2 } from "@/components/icons";
@@ -66,14 +67,12 @@ export default function AccountMailboxesPage() {
   }
 
   async function removeMailbox(mailboxId: string) {
-    setMessage(null);
     try {
       await removeManagedMailbox(mailboxId);
+      notify.success("Mailbox removed");
       await load();
     } catch (error) {
-      setMessage(
-        error instanceof Error ? error.message : "Unable to remove mailbox",
-      );
+      notify.error(error, "Could not remove the mailbox");
     }
   }
 

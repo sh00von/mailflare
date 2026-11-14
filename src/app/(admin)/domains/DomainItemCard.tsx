@@ -29,10 +29,8 @@ export default function DomainItemCard({
   dnsDetails,
   onSendingProviderChange,
   sendingProviderBusy,
-  sendingProviderMessage,
   onReceivingProviderChange,
   receivingProviderBusy,
-  receivingProviderMessage,
   onDnsChanged,
   dnsLoading = false,
   dnsError,
@@ -41,7 +39,6 @@ export default function DomainItemCard({
   onToggleDns,
   onSetup,
   setupRecord,
-  setupMessage,
 }: DomainItemCardProps) {
   const auth = dns?.auth;
 
@@ -151,14 +148,11 @@ export default function DomainItemCard({
             dns={dnsDetails}
             onSendingProviderChange={onSendingProviderChange}
             sendingProviderBusy={sendingProviderBusy}
-            sendingProviderMessage={sendingProviderMessage}
             onReceivingProviderChange={onReceivingProviderChange}
             receivingProviderBusy={receivingProviderBusy}
-            receivingProviderMessage={receivingProviderMessage}
             onDnsChanged={onDnsChanged}
             onSetup={onSetup}
             setupRecord={setupRecord}
-            setupMessage={setupMessage}
           />
         ) : dnsError ? (
           <div className="px-4 pb-4 pt-4 text-sm text-red-600 sm:px-5 sm:pb-5">

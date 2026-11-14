@@ -4,6 +4,7 @@ import Link from "next/link";
 import { mobilePrimaryActionClass } from "@/components/page-header-utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
+import { notify } from "@/lib/notify";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -42,7 +43,6 @@ export default function DomainsPage() {
   const [domainCheckError, setDomainCheckError] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [setupRecord, setSetupRecord] = useState<DnsAuthRecord | null>(null);
-  const [setupMessage, setSetupMessage] = useState<string | null>(null);
   const [expandedDomainId, setExpandedDomainId] = useState<string | null>(null);
   const expandedIdRef = useRef<string | null>(null);
   const [dnsLoading, setDnsLoading] = useState(false);
@@ -124,14 +124,12 @@ export default function DomainsPage() {
     }
     const loadedView = { domain: json.domain, dns: json.dns };
     setDnsViews((current) => ({ ...current, [id]: loadedView }));
-    if (expandedIdRef.current === id) setSetupMessage(null);
   };
 
   const toggleDns = async (id: string) => {
     if (expandedDomainId === id) {
       expandedIdRef.current = null;
       setExpandedDomainId(null);
-      setSetupMessage(null);
       setDnsLoading(false);
       setDnsError(null);
       return;
@@ -140,7 +138,6 @@ export default function DomainsPage() {
     // than leaving the card unchanged until the request resolves.
     expandedIdRef.current = id;
     setExpandedDomainId(id);
-    setSetupMessage(null);
     setDnsError(null);
     if (dnsViews[id]) {
       setDnsLoading(false);
@@ -159,13 +156,11 @@ export default function DomainsPage() {
   };
 
   const [sendingBusy, setSendingBusy] = useState(false);
-  const [sendingMessage, setSendingMessage] = useState<string | null>(null);
 
   const changeSendingProvider = async (provider: SendingProvider) => {
     if (!expandedDomainId) return;
     const id = expandedDomainId;
     setSendingBusy(true);
-    setSendingMessage(null);
     try {
       const put = async (replaceMx: boolean) => {
         const res = await authFetch(`/api/domains/${id}/sending`, {
@@ -179,24 +174,23 @@ export default function DomainsPage() {
       // Cloudflare sending refuses while another service's MX records exist.
       if (confirmMxReplacement(res, json)) ({ res, json } = await put(true));
       if (!res.ok) throw new Error(json.error ?? "Failed to change sending provider");
-      if (json.warning) setSendingMessage(json.warning);
+      if (json.warning) notify.warning(json.warning);
+      else notify.success("Sending provider updated");
       await loadDns(id);
       qc.invalidateQueries({ queryKey: ["domains"] });
     } catch (error) {
-      setSendingMessage(error instanceof Error ? error.message : "Failed to change sending provider");
+      notify.error(error, "Could not change the sending provider");
     } finally {
       setSendingBusy(false);
     }
   };
 
   const [receivingBusy, setReceivingBusy] = useState(false);
-  const [receivingMessage, setReceivingMessage] = useState<string | null>(null);
 
   const changeReceivingProvider = async (provider: ReceivingProvider) => {
     if (!expandedDomainId) return;
     const id = expandedDomainId;
     setReceivingBusy(true);
-    setReceivingMessage(null);
     try {
       const res = await authFetch(`/api/domains/${id}/receiving`, {
         method: "PUT",
@@ -205,10 +199,11 @@ export default function DomainsPage() {
       });
       const json = (await res.json()) as { error?: string };
       if (!res.ok) throw new Error(json.error ?? "Failed to change receiving provider");
+      notify.success("Receiving provider updated");
       await loadDns(id);
       qc.invalidateQueries({ queryKey: ["domains"] });
     } catch (error) {
-      setReceivingMessage(error instanceof Error ? error.message : "Failed to change receiving provider");
+      notify.error(error, "Could not change the receiving provider");
     } finally {
       setReceivingBusy(false);
     }
@@ -225,7 +220,6 @@ export default function DomainsPage() {
     const dnsView = dnsViews[expandedDomainId];
     if (!dnsView) return;
     setSetupRecord(record);
-    setSetupMessage(null);
     try {
       const post = async (replaceMx: boolean) => {
         const res = await authFetch(`/api/domains/${dnsView.domain.id}/dns/setup`, {
@@ -256,7 +250,7 @@ export default function DomainsPage() {
       } else await loadDns(dnsView.domain.id);
       qc.invalidateQueries({ queryKey: ["domains"] });
     } catch (error) {
-      setSetupMessage(error instanceof Error ? error.message : "Failed to set up DNS record");
+      notify.error(error, "Could not set up the DNS record");
     } finally {
       setSetupRecord(null);
     }
@@ -392,10 +386,8 @@ export default function DomainsPage() {
                 dnsDetails={dnsViews[d.id]?.dns}
                 onSendingProviderChange={changeSendingProvider}
                 sendingProviderBusy={sendingBusy}
-                sendingProviderMessage={expandedDomainId === d.id ? sendingMessage : null}
                 onReceivingProviderChange={changeReceivingProvider}
                 receivingProviderBusy={receivingBusy}
-                receivingProviderMessage={expandedDomainId === d.id ? receivingMessage : null}
                 onDnsChanged={refreshExpandedDns}
                 dnsLoading={expandedDomainId === d.id && dnsLoading}
                 dnsError={expandedDomainId === d.id ? dnsError : null}
@@ -403,7 +395,6 @@ export default function DomainsPage() {
                 onToggleDns={toggleDns}
                 onSetup={setupDns}
                 setupRecord={setupRecord}
-                setupMessage={setupMessage}
                 item={d}
                 remove={remove}
               />

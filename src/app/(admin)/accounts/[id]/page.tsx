@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { notify } from "@/lib/notify";
 import { useParams } from "next/navigation";
 import { Upload } from "@/components/icons";
 import { Button } from "@/components/ui/button";
@@ -37,9 +38,9 @@ export default function AccountDetailsPage() {
 		setMessage(null);
 		try {
 			await saveManagedAccount(account);
-			setMessage("Account details updated");
+			notify.success("Account details updated");
 		} catch (error) {
-			setMessage(error instanceof Error ? error.message : "Unable to update account");
+			notify.error(error, "Could not update the account");
 		} finally {
 			setSaving(false);
 		}
@@ -52,7 +53,7 @@ export default function AccountDetailsPage() {
 			setAccount({ ...account, hasAvatar: true });
 			setAvatarVersion(Date.now());
 		} catch (error) {
-			setMessage(error instanceof Error ? error.message : "Unable to update avatar");
+			notify.error(error, "Could not update the picture");
 		}
 	}
 

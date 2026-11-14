@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { notify } from "@/lib/notify";
 import { Check, ChevronDown } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -140,7 +141,6 @@ export default function AdminWorkspacesPage() {
 
 	async function updateWorkspace(payload: { id: string; plan?: PlanId; status?: WorkspaceStatus; extendTrialDays?: number }) {
 		setBusyId(payload.id);
-		setError(null);
 		try {
 			const res = await authFetch("/api/admin/workspaces", {
 				method: "PATCH",
@@ -149,9 +149,10 @@ export default function AdminWorkspacesPage() {
 			});
 			const json = (await res.json()) as { error?: string };
 			if (!res.ok) throw new Error(json.error ?? "Could not update workspace");
+			notify.success("Workspace updated");
 			await load();
 		} catch (err) {
-			setError(err instanceof Error ? err.message : "Could not update workspace");
+			notify.error(err, "Could not update workspace");
 		} finally {
 			setBusyId(null);
 		}

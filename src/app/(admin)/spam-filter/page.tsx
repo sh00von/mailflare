@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { notify } from "@/lib/notify";
 import { ExternalLink } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,10 +18,8 @@ export default function SpamFilterSettingsPage() {
 	const [settings, setSettings] = useState<SpamFilterSettingsResponse | null>(null);
 	const [loadError, setLoadError] = useState("");
 	const [brandText, setBrandText] = useState("");
-	const [brandStatus, setBrandStatus] = useState("");
 	const [brandSaving, setBrandSaving] = useState(false);
 	const [ageSaving, setAgeSaving] = useState(false);
-	const [ageStatus, setAgeStatus] = useState("");
 
 	useEffect(() => {
 		let active = true;
@@ -39,23 +38,21 @@ export default function SpamFilterSettingsPage() {
 		event.preventDefault();
 		if (parsedBrands.invalidLines.length) return;
 		setBrandSaving(true);
-		setBrandStatus("");
 		try {
 			const data = await saveSpamFilterSettings({ brands: parsedBrands.brands });
 			setSettings(data);
 			setBrandText(formatBrandLines(data.brands));
-			setBrandStatus("Saved.");
+			notify.success("Brands saved");
 		} catch (error) {
-			setBrandStatus(error instanceof Error ? error.message : "Could not save spam filter settings.");
+			notify.error(error, "Could not save spam filter settings");
 		} finally { setBrandSaving(false); }
 	}
 
 	function toggleDomainAge(checked: boolean) {
 		setAgeSaving(true);
-		setAgeStatus("");
 		void saveSpamFilterSettings({ domainAge: checked })
 			.then(setSettings)
-			.catch((error) => setAgeStatus(error instanceof Error ? error.message : "Could not save spam filter settings."))
+			.catch((error) => notify.error(error, "Could not save spam filter settings"))
 			.finally(() => setAgeSaving(false));
 	}
 
@@ -77,7 +74,6 @@ export default function SpamFilterSettingsPage() {
 				<div><p className="font-medium text-neutral-900">Domain age check</p><p className="mt-1 text-sm text-neutral-500">Looks up when sender and link domains were registered (RDAP). Domains younger than a month raise the spam score. No key needed.</p>{settings?.domainAgeForcedOff && <p className="mt-1 text-sm text-amber-700">Turned off by SPAM_DOMAIN_AGE_CHECK=off.</p>}</div>
 				<Switch checked={Boolean(settings?.domainAge && !settings.domainAgeForcedOff)} disabled={!editable || ageSaving || settings?.domainAgeForcedOff} onCheckedChange={toggleDomainAge} aria-label={"Domain age check"} />
 			</CardContent>
-			{ageStatus && <p role="status" className="mt-3 text-sm text-red-700">{ageStatus}</p>}
 		</Card>
 
 		<Card className="rounded-3xl border-0 bg-white p-6">
@@ -89,7 +85,6 @@ export default function SpamFilterSettingsPage() {
 					<p id="spam-brands-help" className="text-xs text-neutral-500">One brand per line: Name = domain.com, other-domain.com. Global brands such as PayPal, Apple, Microsoft, Google, Amazon, DHL and Netflix are already included.</p>
 					{parsedBrands.invalidLines.length > 0 && <p role="alert" className="text-sm text-red-700">{`Line ${parsedBrands.invalidLines.join(", ")}: use the form Name = domain.com.`}</p>}
 				</div>
-				{brandStatus && <p role="status" className="text-sm text-neutral-700">{brandStatus}</p>}
 				<Button type="submit" disabled={!editable || brandSaving || parsedBrands.invalidLines.length > 0}>{brandSaving ? "Saving..." : "Save brands"}</Button>
 			</form></CardContent>
 		</Card>
@@ -117,7 +112,7 @@ function KeyRow({ field, envName, title, hint, signupUrl, source, disabled, onSa
 		try {
 			onSaved(await saveSpamFilterSettings({ [field]: key }));
 			setValue("");
-			setStatus({ text: key ? "The key works and was saved." : "Key removed.", error: false });
+			notify.success(key ? "The key works and was saved" : "Key removed");
 		} catch (error) {
 			setStatus({ text: error instanceof Error ? error.message : "Could not save spam filter settings.", error: true });
 		} finally { setSaving(false); }

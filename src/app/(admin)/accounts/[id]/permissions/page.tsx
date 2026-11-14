@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { notify } from "@/lib/notify";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -56,9 +57,9 @@ export default function AccountPermissionsPage() {
 			await saveManagedAccount(account);
 			// Editing your own flags changes what your navigation shows; drop the cached user.
 			if (currentUser?.id === account.id) clearCurrentUserCache();
-			setMessage("Permissions updated");
+			notify.success("Permissions updated");
 		} catch (error) {
-			setMessage(error instanceof Error ? error.message : "Unable to update permissions");
+			notify.error(error, "Could not update permissions");
 		} finally {
 			setSaving(false);
 		}
@@ -75,7 +76,7 @@ export default function AccountPermissionsPage() {
 			// A full reload drops the stale cached session so the navigation reflects the new role.
 			window.location.assign(`/accounts/${transferTarget.id}/permissions`);
 		} catch (error) {
-			setMessage(error instanceof Error ? error.message : "Unable to transfer the primary admin role");
+			notify.error(error, "Could not transfer the primary admin role");
 			setTransferring(false);
 		}
 	}

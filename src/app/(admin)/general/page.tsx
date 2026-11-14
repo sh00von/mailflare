@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { notify } from "@/lib/notify";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -33,9 +34,9 @@ export default function GeneralSettingsPage() {
 		try {
 			const settings = await saveGeneralSettings({ outboundAttachmentMaxMb: maxMb });
 			setMaxMb(settings.outboundAttachmentMaxMb);
-			setStatus("Attachment limit saved");
+			notify.success("Attachment limit saved");
 		} catch (error) {
-			setStatus(error instanceof Error ? error.message : "Could not save settings");
+			notify.error(error, "Could not save settings");
 		} finally { setSaving(false); }
 	}
 
