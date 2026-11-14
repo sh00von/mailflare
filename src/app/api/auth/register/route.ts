@@ -46,19 +46,20 @@ export async function POST(request: Request) {
 		return NextResponse.json({ error: firstRunParsed.error.flatten() }, { status: 400 });
 	}
 	const reqBody = body as Record<string, unknown>;
-	if (!verifyCaptcha(reqBody.captchaAnswer, reqBody.captchaToken)) {
-		return NextResponse.json({ error: "Invalid security code. Please try again." }, { status: 400 });
-	}
-
-	if (firstRunParsed.data.resetEmail && isDisposableEmail(firstRunParsed.data.resetEmail)) {
-		return NextResponse.json({ error: "Please provide a permanent, non-disposable email address for account recovery." }, { status: 400 });
-	}
-
+	// If a verification code is provided, the captcha was already verified when the code was dispatched.
+	// Re-verifying would fail because single-use captcha nonces are immediately burned to prevent replay.
 	if (!firstRunParsed.data.verificationCode) {
+		if (!verifyCaptcha(reqBody.captchaAnswer, reqBody.captchaToken)) {
+			return NextResponse.json({ error: "Invalid security code. Please try again." }, { status: 400 });
+		}
 		return NextResponse.json(
 			{ error: "Please enter the 6-digit verification code sent to your email." },
 			{ status: 400 },
 		);
+	}
+
+	if (firstRunParsed.data.resetEmail && isDisposableEmail(firstRunParsed.data.resetEmail)) {
+		return NextResponse.json({ error: "Please provide a permanent, non-disposable email address for account recovery." }, { status: 400 });
 	}
 
 	const codeCheck = await verifyRegistrationCode(

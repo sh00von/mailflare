@@ -31,9 +31,9 @@ export function TrialStatusBanner() {
 	if (isExpired) {
 		return (
 			<aside aria-label="Subscription status" className="w-full bg-neutral-900 text-white px-4 py-2 text-xs shadow-xs transition-all">
-				<div className="mx-auto flex max-w-7xl items-center justify-between gap-3">
-					<div className="flex items-center gap-2">
-						<span className="inline-flex h-2 w-2 rounded-full bg-amber-400" />
+				<div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2.5">
+					<div className="flex flex-wrap items-center gap-2">
+						<span className="inline-flex h-2 w-2 rounded-full bg-amber-400 shrink-0" />
 						<span className="font-semibold text-white">
 							14-Day Pro Trial ended:
 						</span>
@@ -43,7 +43,7 @@ export function TrialStatusBanner() {
 					</div>
 					<Link
 						href="/admin/plan"
-						className="inline-flex items-center gap-1.5 rounded-full bg-blue-600 px-3.5 py-1 text-xs font-semibold text-white shadow-2xs hover:bg-blue-500 transition-colors shrink-0"
+						className="inline-flex min-h-[36px] items-center gap-1.5 rounded-full bg-blue-600 px-3.5 py-1 text-xs font-semibold text-white shadow-2xs hover:bg-blue-500 transition-colors shrink-0"
 					>
 						<span>Upgrade from $1.99/mo</span>
 						<ArrowRight className="h-3 w-3" />
@@ -55,9 +55,9 @@ export function TrialStatusBanner() {
 
 	return (
 		<aside aria-label="Trial status" className="w-full bg-blue-50/90 border-b border-blue-100 px-4 py-1.5 text-xs text-blue-900 transition-all">
-			<div className="mx-auto flex max-w-7xl items-center justify-between gap-2">
-				<div className="flex items-center gap-2">
-					<span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600/10 text-blue-700">
+			<div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2">
+				<div className="flex flex-wrap items-center gap-2">
+					<span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600/10 text-blue-700">
 						<Clock className="h-3 w-3" />
 					</span>
 					<span>
@@ -71,7 +71,7 @@ export function TrialStatusBanner() {
 				<div className="flex items-center gap-3">
 					<Link
 						href="/admin/plan"
-						className="inline-flex items-center gap-1 font-semibold text-blue-700 hover:text-blue-900 hover:underline"
+						className="inline-flex min-h-[36px] items-center gap-1 font-semibold text-blue-700 hover:text-blue-900 hover:underline"
 					>
 						<span>Explore Plans (from $1.99/mo)</span>
 						<ArrowRight className="h-3 w-3" />
@@ -79,7 +79,7 @@ export function TrialStatusBanner() {
 					<button
 						type="button"
 						onClick={() => setDismissed(true)}
-						className="text-blue-400 hover:text-blue-600 text-xs px-1 cursor-pointer"
+						className="min-h-[36px] min-w-[36px] flex items-center justify-center text-blue-400 hover:text-blue-600 text-sm font-bold cursor-pointer"
 						aria-label="Dismiss banner"
 					>
 						×

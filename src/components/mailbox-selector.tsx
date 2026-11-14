@@ -303,7 +303,7 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 			)}
 
 			{open && (
-				<div className="absolute right-0 top-14 w-[360px] overflow-hidden rounded-[28px] border border-neutral-200 bg-popover p-3 shadow-2xl shadow-neutral-900/20 max-h-[82vh] overflow-y-auto z-90">
+				<div className="absolute right-0 top-14 w-[min(calc(100vw-1.5rem),360px)] overflow-hidden rounded-[28px] border border-neutral-200 bg-popover p-3 shadow-2xl shadow-neutral-900/20 max-h-[82vh] overflow-y-auto z-90">
 					<div className="rounded-[22px] bg-white px-5 py-5 shadow-xs">
 						<div className="flex items-center gap-4">
 							<AccountAvatar

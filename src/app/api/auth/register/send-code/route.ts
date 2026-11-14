@@ -5,7 +5,7 @@ import { verifyCaptcha } from "@/lib/auth/captcha";
 import { readJsonBody } from "@/lib/http/request";
 import { RequestBodyTooLargeError } from "@/lib/http/errors";
 import { isDisposableEmail } from "@/lib/auth/disposable-emails";
-import { generateVerificationCode, sendVerificationCodeEmail } from "@/lib/auth/email-verification";
+import { generateVerificationCode, hasActiveVerificationChallenge, sendVerificationCodeEmail } from "@/lib/auth/email-verification";
 import { z } from "zod";
 
 const sendCodeSchema = z.object({
@@ -42,7 +42,8 @@ export async function POST(request: Request) {
 
 	const { email, captchaAnswer, captchaToken } = parsed.data;
 
-	if (!captchaAnswer || !captchaToken || !verifyCaptcha(captchaAnswer, captchaToken)) {
+	const isResend = await hasActiveVerificationChallenge(env, email);
+	if (!isResend && (!captchaAnswer || !captchaToken || !verifyCaptcha(captchaAnswer, captchaToken))) {
 		return NextResponse.json({ error: "Invalid security code. Please solve the captcha and try again." }, { status: 400 });
 	}
 

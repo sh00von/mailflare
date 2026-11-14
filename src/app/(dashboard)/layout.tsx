@@ -43,8 +43,8 @@ export default function DashboardLayout({
                     <SidebarResizeBoundary />
                   </SidebarAside>
                   <div className="flex min-h-0 min-w-0 flex-col">
-                    <header className="flex h-16 w-full shrink-0 items-center gap-3 pr-4 text-sm">
-                      <MobileMenuButton className="ml-2" />
+                    <header className="flex h-16 w-full shrink-0 items-center gap-2 sm:gap-3 px-2 sm:pr-4 text-sm">
+                      <MobileMenuButton className="ml-1 sm:ml-2" />
                       <MailSearchInput mobileEnd />
                       <AdminHeaderButton />
                       <MailboxSelector />
@@ -52,7 +52,7 @@ export default function DashboardLayout({
                     <DnsSkippedBanner />
                     <TrialStatusBanner />
                     <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
-                      <main id="main-content" tabIndex={-1} className="focus:outline-none min-h-0 min-w-0 flex-1 overflow-y-auto rounded-t-3xl bg-white overscroll-contain md:mb-4 md:mr-4 md:rounded-2xl scrollbar-gutter-stable">
+                      <main id="main-content" tabIndex={-1} className="focus:outline-none min-h-0 min-w-0 flex-1 overflow-y-auto rounded-t-3xl bg-white overscroll-contain pb-[max(4.5rem,env(safe-area-inset-bottom))] md:pb-0 md:mb-4 md:mr-4 md:rounded-2xl scrollbar-gutter-stable">
                         {children}
                       </main>
                     </div>

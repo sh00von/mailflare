@@ -156,3 +156,29 @@ export async function verifyRegistrationCode(
 
 	return { ok: true };
 }
+
+/**
+ * Checks if there is an existing, unexpired registration verification challenge for this email.
+ * Used to allow legitimate resends without requiring solving another captcha.
+ */
+export async function hasActiveVerificationChallenge(
+	env: CloudflareEnv,
+	email: string,
+): Promise<boolean> {
+	const cleanEmail = email.trim().toLowerCase();
+	const db = getDb(env);
+	const [challenge] = await db
+		.select({ id: webauthnChallenges.id })
+		.from(webauthnChallenges)
+		.where(
+			and(
+				eq(webauthnChallenges.purpose, "register"),
+				eq(webauthnChallenges.bindingHash, cleanEmail),
+				gt(webauthnChallenges.expiresAt, new Date()),
+				isNull(webauthnChallenges.usedAt),
+			),
+		)
+		.limit(1);
+
+	return !!challenge;
+}

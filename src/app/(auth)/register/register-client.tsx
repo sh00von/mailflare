@@ -18,6 +18,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CaptchaField } from "@/components/auth/captcha-field";
+import { OtpInput } from "@/components/auth/otp-input";
 import {
 	checkExistingMx,
 	submitPrimaryDomain,
@@ -442,24 +443,22 @@ export function RegisterClient() {
 						<p className="mt-1 text-xs text-blue-700">Enter it below to verify your email and activate your workspace.</p>
 					</div>
 
-					<div className="space-y-2">
-						<Label htmlFor="verificationCode" className={AUTH_LABEL_CLASS}>
-							Verification code
-						</Label>
-						<Input
-							id="verificationCode"
-							name="verificationCode"
-							type="text"
-							inputMode="numeric"
-							pattern="[0-9]*"
-							maxLength={6}
-							placeholder="123456"
-							autoFocus
+					<div className="space-y-3 py-1">
+						<div className="flex items-center justify-between">
+							<Label htmlFor="verificationCode" className={AUTH_LABEL_CLASS}>
+								6-digit security code
+							</Label>
+							<span className="text-xs font-mono text-neutral-400">
+								{verificationCode.length} / 6
+							</span>
+						</div>
+						<OtpInput
 							value={verificationCode}
-							onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ""))}
-							className={`${AUTH_INPUT_CLASS} text-center font-mono text-2xl tracking-[0.3em] font-semibold`}
-							required
+							onChange={setVerificationCode}
+							disabled={loading}
+							autoFocus
 						/>
+						<input type="hidden" name="verificationCode" value={verificationCode} />
 					</div>
 
 					{errorBox}

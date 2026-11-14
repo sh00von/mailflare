@@ -19,7 +19,7 @@ export function FloatingComposer({ showButton = false }: { showButton?: boolean 
 					type="button"
 					onClick={openComposer}
 					aria-label={"Compose"}
-					className="fixed right-[max(1rem,env(safe-area-inset-right))] bottom-[max(1rem,env(safe-area-inset-bottom))] z-30 flex h-12 items-center gap-3 h-14 rounded-2xl bg-compose px-5 text-base font-medium text-on-compose shadow-md transition-shadow hover:shadow-lg active:shadow-sm md:hidden"
+					className="fixed right-[max(1rem,env(safe-area-inset-right))] bottom-[max(1.25rem,env(safe-area-inset-bottom))] z-30 flex min-h-[48px] h-13 items-center gap-3 rounded-2xl bg-compose px-5 text-base font-medium text-on-compose shadow-md transition-all active:scale-95 hover:shadow-lg md:hidden"
 				>
 					<MailPlus size={19} />
 					Compose

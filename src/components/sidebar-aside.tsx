@@ -52,10 +52,10 @@ export function MobileMenuButton({ className }: { className?: string }) {
 	if (!mobile) return null;
 	return (
 		<>
-			<button type="button" data-mobile-menu onClick={toggle} aria-label={"Open menu"} aria-expanded={mobileOpen} className={clsx("flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-neutral-600 hover:bg-neutral-200 md:hidden", className)}>
-				<Menu size={20} />
+			<button type="button" data-mobile-menu onClick={toggle} aria-label={"Open menu"} aria-expanded={mobileOpen} className={clsx("flex h-11 w-11 min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full text-neutral-600 hover:bg-neutral-200 md:hidden", className)}>
+				<Menu size={22} />
 			</button>
-			<Link href="/inbox" aria-label={"Inbox"} className="-ml-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full hover:bg-neutral-200 md:hidden">
+			<Link href="/inbox" aria-label={"Inbox"} className="-ml-1 flex h-11 w-11 min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full hover:bg-neutral-200 md:hidden">
 				<img src={branding.iconUrl} height={28} width={28} alt="" />
 			</Link>
 		</>

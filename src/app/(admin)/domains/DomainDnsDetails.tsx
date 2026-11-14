@@ -15,7 +15,7 @@ function CopyValueButton({ value }: { value: string }) {
 			type="button"
 			variant="outline"
 			size="sm"
-			className="h-7 shrink-0 gap-1.5 bg-white px-2.5 text-xs"
+			className="h-8 sm:h-7 min-h-[36px] shrink-0 gap-1.5 bg-white px-3 sm:px-2.5 text-xs active:scale-95 transition-all"
 			onClick={() => {
 				void navigator.clipboard.writeText(value).then(() => {
 					setCopied(true);
@@ -36,7 +36,9 @@ export default function DomainDnsDetails({
 }: DomainDnsDetailsProps) {
 	const [checking, setChecking] = useState(false);
 	const audit = dns.audit;
-	const serverMailHost = process.env.NEXT_PUBLIC_MAIL_HOSTNAME || `mail.${domain.hostname}`;
+	const serverMailHost = (process.env.NEXT_PUBLIC_MAIL_HOSTNAME || `mail.${domain.hostname}`)
+		.replace(/^https?:\/\//, "")
+		.replace(/\/.*$/, "");
 	const mailHost = serverMailHost;
 
 	const expectedValues: Record<DnsAuthRecord, { host: string; type: string; value: string } | null> = {
@@ -194,7 +196,7 @@ export default function DomainDnsDetails({
 											{item.found.length > 0 ? item.found.join(", ") : item.name}
 										</span>
 									) : expected ? (
-										<div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
+										<div className="flex min-w-0 flex-wrap items-center justify-start sm:justify-end gap-2">
 											<span className="min-w-0 break-all rounded-md border border-neutral-200 bg-white px-2.5 py-1 font-mono text-xs text-neutral-700">
 												{expected.type} &middot; {expected.host} &rarr; {expected.value}
 											</span>

@@ -40,7 +40,7 @@ export function SectionNavSheet({ label, title, children, className }: SectionNa
 				onClick={() => setOpen(true)}
 				aria-haspopup="dialog"
 				aria-expanded={open}
-				className="fixed bottom-4 left-1/2 z-40 flex -translate-x-1/2 items-center gap-2 rounded-full bg-neutral-900 px-4 py-2.5 text-sm font-medium text-white shadow-lg md:hidden"
+				className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2 z-40 flex min-h-[44px] -translate-x-1/2 items-center gap-2 rounded-full bg-neutral-900 px-5 py-2.5 text-sm font-medium text-white shadow-lg active:scale-95 transition-transform md:hidden"
 			>
 				<span className="max-w-[60vw] truncate">{label}</span>
 				<ChevronUp size={16} aria-hidden="true" />
@@ -56,7 +56,7 @@ export function SectionNavSheet({ label, title, children, className }: SectionNa
 				aria-hidden={hidden}
 				inert={hidden}
 				className={clsx(
-					"fixed inset-x-0 bottom-0 z-[110] max-h-[85dvh] overflow-y-auto overscroll-contain rounded-t-3xl bg-white pb-[env(safe-area-inset-bottom)] shadow-2xl transition-transform duration-300 ease-out motion-reduce:transition-none",
+					"fixed inset-x-0 bottom-0 z-[110] max-h-[85dvh] overflow-y-auto overscroll-contain rounded-t-3xl bg-white pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl transition-transform duration-300 ease-out motion-reduce:transition-none",
 					"md:static md:z-auto md:max-h-none md:translate-y-0 md:overflow-visible md:rounded-none md:bg-transparent md:pb-0 md:shadow-none",
 					open ? "translate-y-0" : "translate-y-full",
 					className,

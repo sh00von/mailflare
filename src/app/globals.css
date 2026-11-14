@@ -84,6 +84,22 @@
 	--color-amber-700: #e37400;
 	--color-amber-800: #c26401;
 	--color-amber-900: #b06000;
+
+	/* Mobile safe areas */
+	--sat: env(safe-area-inset-top, 0px);
+	--sar: env(safe-area-inset-right, 0px);
+	--sab: env(safe-area-inset-bottom, 0px);
+	--sal: env(safe-area-inset-left, 0px);
+}
+
+html {
+	-webkit-text-size-adjust: 100%;
+	text-size-adjust: 100%;
+}
+
+button, a, input, select, textarea {
+	touch-action: manipulation;
+	-webkit-tap-highlight-color: transparent;
 }
 
 @theme inline {

@@ -878,7 +878,7 @@ export function ComposeForm({
 					footerContent={attachmentContent}
 					toolbarStart={
 						<div className="flex items-center max-md:contents">
-							<Button type="button" variant="secondary" size="sm" onClick={dismiss} className="md:hidden max-md:h-10 max-md:px-3.5 max-md:text-[15px]">
+							<Button type="button" variant="secondary" size="sm" onClick={dismiss} className="md:hidden max-md:h-11 max-md:min-h-[44px] max-md:px-3.5 max-md:text-[15px]">
 								Cancel
 							</Button>
 							<div className="flex items-center max-md:order-last max-md:ml-auto">
@@ -886,7 +886,7 @@ export function ComposeForm({
 									type="submit"
 									size="sm"
 									disabled={loading || loadingDraft || !fromAddr}
-									className="rounded-r-none px-4 max-md:h-10 max-md:px-5 max-md:text-[15px]"
+									className="rounded-r-none px-4 max-md:h-11 max-md:min-h-[44px] max-md:px-5 max-md:text-[15px]"
 								>
 									{loading ? "Preparing…" : scheduledAt ? "Schedule" : "Send"}
 								</Button>
@@ -920,7 +920,7 @@ export function ComposeForm({
 									aria-label={"Attach files"}
 									onClick={() => attachmentInput.current?.click()}
 									disabled={loading || loadingDraft}
-									className="rounded-md p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 disabled:pointer-events-none disabled:opacity-50 max-md:px-2"
+									className="rounded-md p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 disabled:pointer-events-none disabled:opacity-50 max-md:h-11 max-md:w-11 max-md:min-h-[44px] max-md:min-w-[44px] max-md:inline-flex max-md:items-center max-md:justify-center"
 								>
 									<Paperclip className="h-4 w-4" />
 								</button>
@@ -933,7 +933,7 @@ export function ComposeForm({
 									onClick={() => setTrackOpens(!trackOpens)}
 									disabled={loading || loadingDraft}
 									className={cn(
-										"rounded-md p-1.5 hover:bg-neutral-100 disabled:pointer-events-none disabled:opacity-50 max-md:px-2",
+										"rounded-md p-1.5 hover:bg-neutral-100 disabled:pointer-events-none disabled:opacity-50 max-md:h-11 max-md:w-11 max-md:min-h-[44px] max-md:min-w-[44px] max-md:inline-flex max-md:items-center max-md:justify-center",
 										trackOpens ? "text-blue-600 hover:text-blue-700" : "text-neutral-500 hover:text-neutral-900",
 									)}
 								>
@@ -950,7 +950,7 @@ export function ComposeForm({
 											type="button"
 											aria-label={"Remind me if no reply"}
 											className={cn(
-												"rounded-md p-1.5 hover:bg-neutral-100 disabled:pointer-events-none disabled:opacity-50 max-md:px-2",
+												"rounded-md p-1.5 hover:bg-neutral-100 disabled:pointer-events-none disabled:opacity-50 max-md:h-11 max-md:w-11 max-md:min-h-[44px] max-md:min-w-[44px] max-md:inline-flex max-md:items-center max-md:justify-center",
 												followUpDays ? "text-amber-600 hover:text-amber-700" : "text-neutral-500 hover:text-neutral-900",
 											)}
 										>
@@ -966,7 +966,7 @@ export function ComposeForm({
 									aria-label={"Delete draft"}
 									onClick={() => void deleteDraftAndClose()}
 									disabled={loading || loadingDraft || deletingDraft}
-									className="rounded-md p-1.5 text-neutral-500 hover:bg-red-50 hover:text-red-600 disabled:pointer-events-none disabled:opacity-50 max-md:px-2"
+									className="rounded-md p-1.5 text-neutral-500 hover:bg-red-50 hover:text-red-600 disabled:pointer-events-none disabled:opacity-50 max-md:h-11 max-md:w-11 max-md:min-h-[44px] max-md:min-w-[44px] max-md:inline-flex max-md:items-center max-md:justify-center"
 								>
 									<Trash2 className="h-4 w-4" />
 								</button>

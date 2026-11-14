@@ -4,6 +4,15 @@ import { getSecurityHeaders } from "./src/lib/security/headers";
 const nextConfig: NextConfig = {
 	distDir: ".next-node",
 	poweredByHeader: false,
+	env: {
+		NEXT_PUBLIC_MAIL_HOSTNAME: (
+			process.env.MAIL_HOSTNAME ||
+			process.env.NEXT_PUBLIC_MAIL_HOSTNAME ||
+			""
+		)
+			.replace(/^https?:\/\//, "")
+			.replace(/\/.*$/, ""),
+	},
 	turbopack: {
 		root: import.meta.dirname,
 	},
