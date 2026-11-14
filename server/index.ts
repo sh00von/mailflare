@@ -23,6 +23,7 @@ import { applyPendingMigrations } from "@/lib/migrations/service";
 import type { InboundQueueMessage } from "@/lib/email/inbound";
 import type { ImportJobMessage } from "@/lib/import/jobs-types";
 import { createNodeRuntime } from "./runtime/env";
+import { autoSeedIfEmpty } from "./runtime/seed";
 
 function isInboundQueueMessage(payload: unknown): payload is InboundQueueMessage {
 	return typeof payload === "object" && payload !== null && "rawR2Key" in payload && "from" in payload && "to" in payload;
@@ -56,8 +57,25 @@ async function main() {
 		process.exit(1);
 	}
 
-	const migrated = (await applyPendingMigrations(env.DB)).applied;
-	if (migrated.length) console.log(`Applied ${migrated.length} migration(s): ${migrated.join(", ")}`);
+	let retries = 15;
+	while (retries > 0) {
+		try {
+			const migrated = (await applyPendingMigrations(env.DB)).applied;
+			if (migrated.length) console.log(`Applied ${migrated.length} migration(s): ${migrated.join(", ")}`);
+			break;
+		} catch (err: unknown) {
+			retries--;
+			const msg = err instanceof Error ? err.message : String(err);
+			if (retries === 0) {
+				console.error("Fatal error connecting to database or applying migrations:", msg);
+				throw err;
+			}
+			console.log(`Waiting for database to be ready... (${msg}) Retrying in 2s... (${retries} attempts left)`);
+			await new Promise((r) => setTimeout(r, 2000));
+		}
+	}
+
+	await autoSeedIfEmpty(env.DB);
 
 	runtime.inboundQueue.setConsumer(async (body) => {
 		if (isInboundQueueMessage(body)) await processInboundMessage(env, body);

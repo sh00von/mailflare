@@ -19,6 +19,7 @@
 *.key
 *.cert
 scripts/empty-db.mjs
+scripts/dump-neon.mjs
 
 # Production & Build outputs
 /.next/

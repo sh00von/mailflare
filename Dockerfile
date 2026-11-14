@@ -28,6 +28,7 @@ COPY --chown=node:node --from=build /app/public ./public
 COPY --chown=node:node --from=build /app/drizzle ./drizzle
 COPY --chown=node:node --from=build /app/package.json /app/next.config.ts ./
 COPY --chown=node:node --from=build /app/src/lib/security/headers.ts ./src/lib/security/headers.ts
+COPY --chown=node:node --from=build /app/scripts/neon-dump.sql ./scripts/neon-dump.sql
 RUN mkdir -p /data && chown node:node /data
 USER node
 VOLUME ["/data"]

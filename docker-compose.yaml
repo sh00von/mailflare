@@ -1,4 +1,30 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: replyot-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: replyot
+      POSTGRES_USER: replyot
+      POSTGRES_PASSWORD: b8f49a2ce081d643891db80e7cf15c2d
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U replyot -d replyot"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postfix:
+    image: boky/postfix:latest
+    container_name: replyot-postfix
+    restart: unless-stopped
+    environment:
+      - ALLOW_EMPTY_SENDER_DOMAINS=true
+      - MYNETWORKS=127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+    volumes:
+      - postfix-spool:/var/spool/postfix
+
   replyot:
     image: ghcr.io/sh00von/replyot:latest
     restart: unless-stopped
@@ -9,9 +35,9 @@ services:
       - .env.docker
     environment:
       PORT: 4008
+      DATABASE_URL: ${DATABASE_URL:-postgresql://replyot:b8f49a2ce081d643891db80e7cf15c2d@postgres:5432/replyot}
       SMTP_URL: ${SMTP_URL:-smtp://postfix:587}
       SMTP_TLS_REJECT_UNAUTHORIZED: "false"
-      DATABASE_URL: ${DATABASE_URL}
       APP_URL: ${APP_URL}
       ADMIN_APP_URL: ${ADMIN_APP_URL}
       MAIL_APP_URL: ${MAIL_APP_URL}
@@ -36,18 +62,10 @@ services:
     volumes:
       - replyot-data:/data
     depends_on:
+      - postgres
       - postfix
 
-  postfix:
-    image: boky/postfix:latest
-    container_name: replyot-postfix
-    restart: unless-stopped
-    environment:
-      - ALLOW_EMPTY_SENDER_DOMAINS=true
-      - MYNETWORKS=127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
-    volumes:
-      - postfix-spool:/var/spool/postfix
-
 volumes:
+  postgres-data:
   replyot-data:
   postfix-spool:
