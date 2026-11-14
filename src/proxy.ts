@@ -1,38 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-// Clean /admin/* route mappings to internal (admin) pages
-const ADMIN_REWRITES: Record<string, string> = {
-	"/admin": "/domains",
-	"/admin/": "/domains",
-	"/admin/domains": "/domains",
-	"/admin/mailboxes": "/accounts",
-	"/admin/plan": "/plan",
-	"/admin/workspaces": "/workspaces",
-	"/admin/spam-filter": "/spam-filter",
-	"/admin/backups": "/backups",
-	"/admin/audit-logs": "/audit-logs",
-	"/admin/activity": "/activity",
-	"/admin/general": "/general",
-};
-
-// Clean /mail/* route mappings to internal (dashboard)/(settings) pages
-const MAIL_REWRITES: Record<string, string> = {
-	"/mail": "/inbox",
-	"/mail/": "/inbox",
-	"/mail/inbox": "/inbox",
-	"/mail/sent": "/sent",
-	"/mail/drafts": "/drafts",
-	"/mail/trash": "/trash",
-	"/mail/spam": "/spam",
-	"/mail/starred": "/starred",
-	"/mail/archived": "/archived",
-	"/mail/scheduled": "/scheduled",
-	"/mail/snoozed": "/snoozed",
-	"/mail/compose": "/compose",
-	"/mail/import-export": "/import-export",
-	"/mail/settings": "/settings",
-};
-
 // Legacy root paths redirecting to clean canonical URLs
 const LEGACY_REDIRECTS: Record<string, string> = {
 	"/dash": "/admin",
@@ -113,38 +80,7 @@ export function proxy(request: NextRequest) {
 		return NextResponse.redirect(new URL(`/mail/settings/${remainder}${search}`, request.url), 308);
 	}
 
-	// 3. /admin/* Namespace Rewrites
-	if (ADMIN_REWRITES[pathname]) {
-		return NextResponse.rewrite(new URL(`${ADMIN_REWRITES[pathname]}${search}`, request.url));
-	}
-	if (pathname.startsWith("/admin/mailboxes/")) {
-		const remainder = pathname.slice("/admin/mailboxes/".length);
-		return NextResponse.rewrite(new URL(`/accounts/${remainder}${search}`, request.url));
-	}
-	if (pathname.startsWith("/admin/")) {
-		const remainder = pathname.slice("/admin/".length);
-		return NextResponse.rewrite(new URL(`/${remainder}${search}`, request.url));
-	}
-
-	// 4. /mail/* Namespace Rewrites
-	if (MAIL_REWRITES[pathname]) {
-		return NextResponse.rewrite(new URL(`${MAIL_REWRITES[pathname]}${search}`, request.url));
-	}
-	if (pathname.startsWith("/mail/folders/")) {
-		const remainder = pathname.slice("/mail/folders/".length);
-		return NextResponse.rewrite(new URL(`/folders/${remainder}${search}`, request.url));
-	}
-	if (pathname.startsWith("/mail/settings/")) {
-		const remainder = pathname.slice("/mail/settings/".length);
-		return NextResponse.rewrite(new URL(`/settings/${remainder}${search}`, request.url));
-	}
-	if (pathname.startsWith("/mail/")) {
-		const remainder = pathname.slice("/mail/".length);
-		return NextResponse.rewrite(new URL(`/${remainder}${search}`, request.url));
-	}
-
-	// 5. Root Marketing Domain
-	// / serves the landing page; /login serves unified sign-in
+	// Native rewrites for /admin/* and /mail/* are handled cleanly by next.config.ts rewrites()
 	return NextResponse.next();
 }
 

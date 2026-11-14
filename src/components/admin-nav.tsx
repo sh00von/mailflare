@@ -94,7 +94,7 @@ export function AdminNav({ className }: { className?: string }) {
     return user.isPrimaryAdmin || user.canManageUsers;
   }
 
-  const mailAppUrl = process.env.NEXT_PUBLIC_MAIL_APP_URL || "/mail/inbox";
+  const mailAppUrl = "/mail/inbox";
 
   return (
     <SidebarScaffold className={className} header={<SidebarHeader href={mailAppUrl} label={"Admin"} />} footer={<SidebarFooter />}>

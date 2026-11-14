@@ -21,7 +21,7 @@ const checkoutSchema = z.object({
 });
 
 function resolveAdminBaseUrl(request: Request): string {
-	const configured = process.env.ADMIN_APP_URL?.trim().replace(/\/+$/, "");
+	const configured = process.env.APP_URL?.trim().replace(/\/+$/, "");
 	if (configured) return configured;
 	const url = new URL(request.url);
 	return `${url.protocol}//${url.host}`;

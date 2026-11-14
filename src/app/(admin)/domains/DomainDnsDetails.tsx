@@ -66,11 +66,10 @@ export default function DomainDnsDetails({
 
 	const mxReady = audit?.mx.status === "ok";
 	const mailOrigin =
-		process.env.NEXT_PUBLIC_MAIL_APP_URL?.replace(/\/+$/, "") ||
-		(typeof window !== "undefined" && window.location.hostname.startsWith("admin.")
-			? `${window.location.protocol}//${window.location.host.replace(/^admin\./, "")}`
+		(typeof window !== "undefined"
+			? `${window.location.protocol}//${window.location.host}`
 			: "");
-	const mailUrl = `${mailOrigin}/inbox`;
+	const mailUrl = `${mailOrigin}/mail/inbox`;
 
 	return (
 		<div className="space-y-5 px-4 pb-5 pt-4 sm:px-5">

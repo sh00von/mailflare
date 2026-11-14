@@ -174,57 +174,7 @@ async function main() {
 			return;
 		}
 
-		// 3. /admin/* Namespace Internal Rewrites
-		const adminRewrites: Record<string, string> = {
-			"/admin": "/domains",
-			"/admin/": "/domains",
-			"/admin/domains": "/domains",
-			"/admin/mailboxes": "/accounts",
-			"/admin/plan": "/plan",
-			"/admin/workspaces": "/workspaces",
-			"/admin/spam-filter": "/spam-filter",
-			"/admin/backups": "/backups",
-			"/admin/audit-logs": "/audit-logs",
-			"/admin/activity": "/activity",
-			"/admin/general": "/general",
-		};
-
-		if (adminRewrites[pathname]) {
-			parsed.pathname = adminRewrites[pathname];
-		} else if (pathname.startsWith("/admin/mailboxes/")) {
-			parsed.pathname = `/accounts/${pathname.slice("/admin/mailboxes/".length)}`;
-		} else if (pathname.startsWith("/admin/")) {
-			parsed.pathname = `/${pathname.slice("/admin/".length)}`;
-		}
-
-		// 4. /mail/* Namespace Internal Rewrites
-		const mailRewrites: Record<string, string> = {
-			"/mail": "/inbox",
-			"/mail/": "/inbox",
-			"/mail/inbox": "/inbox",
-			"/mail/sent": "/sent",
-			"/mail/drafts": "/drafts",
-			"/mail/trash": "/trash",
-			"/mail/spam": "/spam",
-			"/mail/starred": "/starred",
-			"/mail/archived": "/archived",
-			"/mail/scheduled": "/scheduled",
-			"/mail/snoozed": "/snoozed",
-			"/mail/compose": "/compose",
-			"/mail/import-export": "/import-export",
-			"/mail/settings": "/settings",
-		};
-
-		if (mailRewrites[pathname]) {
-			parsed.pathname = mailRewrites[pathname];
-		} else if (pathname.startsWith("/mail/folders/")) {
-			parsed.pathname = `/folders/${pathname.slice("/mail/folders/".length)}`;
-		} else if (pathname.startsWith("/mail/settings/")) {
-			parsed.pathname = `/settings/${pathname.slice("/mail/settings/".length)}`;
-		} else if (pathname.startsWith("/mail/")) {
-			parsed.pathname = `/${pathname.slice("/mail/".length)}`;
-		}
-
+		// Next.js handles /admin/* and /mail/* rewrites natively via next.config.ts rewrites()
 		void handle(request, response, parsed);
 	});
 

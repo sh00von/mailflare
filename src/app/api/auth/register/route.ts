@@ -135,7 +135,6 @@ export async function POST(request: Request) {
 		);
 	}
 
-	const adminAppUrl = process.env.ADMIN_APP_URL?.trim().replace(/\/+$/, "") || process.env.MAIL_APP_URL?.trim().replace(/\/+$/, "") || "";
 	const cookieDomain = process.env.COOKIE_DOMAIN?.trim() || undefined;
 	const sessionToken = await createSession(env, userId);
 
@@ -152,13 +151,9 @@ export async function POST(request: Request) {
 		}
 	}
 
-	const finalRedirect = adminAppUrl
-		? `${adminAppUrl}/admin/domains`
-		: "/admin/domains";
-
 	const response = NextResponse.json({
 		ok: true,
-		redirect: finalRedirect,
+		redirect: "/admin/domains",
 	});
 	response.headers.set("Cache-Control", "no-store");
 	const isHttps = request.headers.get("x-forwarded-proto") === "https" || request.url.startsWith("https://");
