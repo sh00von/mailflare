@@ -8,7 +8,11 @@ import type { MailboxOption } from "@/components/mailbox-provider";
 import type { EmailPageTitleInput } from "./types";
 import type { MessageFolderConfig } from "./types";
 import type { PageRange } from "./types";
-import type { PermanentDeleteFolder } from "@/app/api/messages/bulk/types";
+import type { BulkMessageAction, BulkMessagePlacement, PermanentDeleteFolder } from "@/app/api/messages/bulk/types";
+import { isBulkMoveAction } from "@/app/api/messages/bulk/utils";
+import { notify } from "@/lib/notify";
+import { toUserMessage } from "@/lib/notify-utils";
+import { bulkActionToastLabel, type BulkToastContext } from "./bulk-toast-utils";
 import { throwIfDeleteSkipped } from "@/lib/messages/permanent-delete-utils";
 import type { EmptyFolderResponse } from "@/app/api/messages/empty/types";
 
@@ -94,21 +98,53 @@ export function formatEmailPageTitle({ location, total, unread, emailAddress, in
 	return `${location} (${count})${suffix}`;
 }
 
-export async function runBulkMessageAction(messageIds: string[], action: string, notify = true, folderId?: string) {
+/** Put messages back where a move found them (the move's Undo). */
+export async function undoBulkMove(previous: BulkMessagePlacement[]): Promise<boolean> {
+	const response = await authFetch("/api/messages/bulk", {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ action: "restore", items: previous }),
+	});
+	const result = await notify.fromResponse(response, { success: "Action undone", error: "Could not undo" });
+	if (result.ok) dispatchMessagesChanged();
+	return result.ok;
+}
+
+/**
+ * The one way the client runs a bulk message action (toolbar, single message, drag and drop). On success it
+ * toasts the result, with Undo for moves; read/unread get no toast since the change is visible. Failures throw an
+ * Error whose message is safe to show (callers pass it to `notify.error`). Pass `toast: false` to stay silent.
+ */
+export async function runBulkMessageAction(
+	messageIds: string[],
+	action: BulkMessageAction,
+	dispatchChange = true,
+	folderId?: string,
+	toast?: Partial<BulkToastContext> | false,
+) {
 	const response = await authFetch("/api/messages/bulk", {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify({ messageIds, action, folderId }),
 	});
 
-	if (!response.ok) throw new Error("Unable to update selected messages");
+	if (!response.ok) {
+		throw new Error(toUserMessage(await response.json().catch(() => null), "Could not update the selected messages", response.status));
+	}
 	await throwIfDeleteSkipped(response, action);
+	const previous = isBulkMoveAction(action)
+		? ((await response.json().catch(() => null)) as { previous?: BulkMessagePlacement[] } | null)?.previous
+		: undefined;
 	const readChanged = action === "read" || action === "unread";
 	if (readChanged) markMessagesReadInCaches(messageIds, action === "read");
-	if (notify) {
+	if (dispatchChange) {
 		if (readChanged) dispatchMessagesChanged({ kind: "read", messageIds, read: action === "read" });
 		else dispatchMessagesChanged();
 	}
+	if (toast === false) return;
+	const label = bulkActionToastLabel(action, { ...toast, count: toast?.count ?? messageIds.length, previous });
+	if (!label) return;
+	notify.success(label, previous?.length ? { action: { label: "Undo", onClick: () => void undoBulkMove(previous) } } : undefined);
 }
 
 /**

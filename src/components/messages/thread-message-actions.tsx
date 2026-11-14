@@ -3,6 +3,7 @@
 import { createElement, useEffect, useState } from "react";
 import { Ban, FileCode2, Forward, Info, Mail, MailOpen, MoreVertical, Reply, ReplyAll, Star } from "@/components/icons";
 import { useCompose } from "@/components/compose/compose-context";
+import { notify } from "@/lib/notify";
 import { MessageSourceDialog } from "@/components/messages/message-source-dialog";
 import { MessageActionMenu, MessageActionMenuItem, MessageActionMenuSeparator } from "@/components/message-actions/action-menu";
 import { getOwnAddressForMessage } from "@/app/(dashboard)/inbox/[messageId]/utils";
@@ -36,7 +37,6 @@ export function ThreadMessageActions({
 	const [starred, setStarred] = useState(message.starred);
 	const [sourceOpen, setSourceOpen] = useState(false);
 	const [pending, setPending] = useState(false);
-	const [error, setError] = useState<string | null>(null);
 	const canReplyAll = hasAdditionalRecipients(message, ownAddresses);
 	const moveActions = getMoveMessageActions(message.status, message.direction);
 	const replyFromAddress = ownAddresses.length > 0
@@ -47,11 +47,10 @@ export function ThreadMessageActions({
 
 	async function onToggleStar() {
 		setPending(true);
-		setError(null);
 		try {
 			setStarred((await toggleMessageStar(message.id)).starred);
 		} catch (nextError) {
-			setError(nextError instanceof Error ? nextError.message : "Unable to update star");
+			notify.error(nextError, "Unable to update star");
 		} finally {
 			setPending(false);
 		}
@@ -59,7 +58,6 @@ export function ThreadMessageActions({
 
 	async function onReply(mode: ReplyMode) {
 		setPending(true);
-		setError(null);
 		try {
 			const draftId = await createReplyDraft({
 				mailboxId,
@@ -74,7 +72,7 @@ export function ThreadMessageActions({
 			});
 			openDraftComposer(draftId);
 		} catch (nextError) {
-			setError(nextError instanceof Error ? nextError.message : "Could not start reply");
+			notify.error(nextError, "Could not start reply");
 		} finally {
 			setPending(false);
 		}
@@ -82,7 +80,6 @@ export function ThreadMessageActions({
 
 	async function onForward() {
 		setPending(true);
-		setError(null);
 		try {
 			const draftId = await createForwardDraft({
 				mailboxId,
@@ -93,7 +90,7 @@ export function ThreadMessageActions({
 			});
 			openDraftComposer(draftId);
 		} catch (nextError) {
-			setError(nextError instanceof Error ? nextError.message : "Could not start forward");
+			notify.error(nextError, "Could not start forward");
 		} finally {
 			setPending(false);
 		}
@@ -101,11 +98,10 @@ export function ThreadMessageActions({
 
 	async function onMessageAction(action: Parameters<typeof runSingleMessageAction>[1]) {
 		setPending(true);
-		setError(null);
 		try {
 			await runSingleMessageAction(message.id, action);
 		} catch (nextError) {
-			setError(nextError instanceof Error ? nextError.message : "Could not update message");
+			notify.error(nextError, "Could not update message");
 		} finally {
 			setPending(false);
 		}
@@ -114,12 +110,13 @@ export function ThreadMessageActions({
 	async function onBlock() {
 		if (!mailboxId) return;
 		setPending(true);
-		setError(null);
 		try {
 			await blockMessageContact({ mailboxId, senderAddress: message.fromAddr });
-			await runSingleMessageAction(message.id, "trash");
+			// Undo would bring the message back but not unblock the sender, so this toast has no Undo.
+			await runSingleMessageAction(message.id, "trash", false);
+			notify.success("Sender blocked and message moved to Trash");
 		} catch (nextError) {
-			setError(nextError instanceof Error ? nextError.message : "Could not block contact");
+			notify.error(nextError, "Could not block contact");
 		} finally {
 			setPending(false);
 		}
@@ -127,7 +124,6 @@ export function ThreadMessageActions({
 
 	return (
 		<div className="flex items-center gap-0.5">
-			{error && <span role="alert" className="mr-1 max-w-32 truncate text-xs text-red-600" title={error}>{error}</span>}
 			{onToggleDetails && (
 				<Tooltip label={"Details"}>
 					<Button

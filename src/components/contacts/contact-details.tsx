@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { notify } from "@/lib/notify";
 import { formatUserDate } from "@/lib/time/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -78,7 +79,7 @@ export function ContactDetailsTrigger({
 				detail: { email: updated.email, displayName: nextName },
 			}));
 		} catch (saveError) {
-			setError(saveError instanceof Error ? saveError.message : "Unable to update contact");
+			notify.error(saveError, "Could not update contact");
 		} finally {
 			setSaving(false);
 		}

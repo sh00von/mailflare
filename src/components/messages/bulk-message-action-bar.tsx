@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { notify } from "@/lib/notify";
 import type { BulkMessageAction } from "@/app/api/messages/bulk/types";
 import { BulkMessageToolbar } from "./bulk-message-toolbar";
 import type { BulkMessageActionBarProps } from "./types";
@@ -17,24 +18,24 @@ export function BulkMessageActionBar({
 	onClearSelection,
 }: BulkMessageActionBarProps) {
 	const [pending, setPending] = useState(false);
-	const [error, setError] = useState<string | null>(null);
 	const hasUnreadSelection = selectedMessages.some((message) => !message.read);
 
-	async function runAction(action: BulkMessageAction, folderId?: string) {
+	async function runAction(action: BulkMessageAction, folderId?: string, folderName?: string) {
 		if (selectedMessages.length === 0) return;
 
 		setPending(true);
-		setError(null);
 		try {
 			await runBulkMessageAction(
 				selectedMessages.map((message) => message.id),
 				action,
 				true,
 				folderId,
+				{ count: selectedMessages.length, folderName },
 			);
 			onClearSelection();
 		} catch (actionError) {
-			setError(actionError instanceof PartialDeleteError ? "Some messages could not be deleted because they are no longer in Trash or Spam." : "Could not update message");
+			if (actionError instanceof PartialDeleteError) notify.error("Some messages could not be deleted because they are no longer in Trash or Spam.");
+			else notify.error(actionError, "Could not update message");
 		} finally {
 			setPending(false);
 		}
@@ -56,7 +57,6 @@ export function BulkMessageActionBar({
 					folder={folder}
 				/>
 			</div>
-			{error && <p role="alert" className="mt-1 text-sm font-medium text-red-700">{error}</p>}
 		</div>
 	);
 }

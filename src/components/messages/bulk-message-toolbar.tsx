@@ -105,7 +105,7 @@ export function BulkMessageToolbar({
 								<DropdownMenu.Separator className="my-1 h-px bg-neutral-100" />
 								<DropdownMenu.Label className={menuLabelClass}>Folders</DropdownMenu.Label>
 								{folders.map((item) => (
-									<DropdownMenu.Item key={item.id} className={menuItemClass} onSelect={() => onAction("folder", item.id)}>
+									<DropdownMenu.Item key={item.id} className={menuItemClass} onSelect={() => onAction("folder", item.id, item.name)}>
 										<Folder className="h-4 w-4 shrink-0" style={{ color: item.color }} />
 										<span className="truncate">{item.name}</span>
 									</DropdownMenu.Item>

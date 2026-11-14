@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { notify } from "@/lib/notify";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent } from "react";
 import { Archive, ChevronLeft, ChevronRight, Inbox, ListFilter, Mail, MailOpen, Search, Trash2 } from "@/components/icons";
@@ -333,7 +334,6 @@ export function MessageFolderPage({
 	const [internalUnreadOnly, setInternalUnreadOnly] = useState(false);
 	const [pendingBulkAction, setPendingBulkAction] = useState(false);
 	const [emptyingFolder, setEmptyingFolder] = useState(false);
-	const [actionError, setActionError] = useState<string | null>(null);
 	const [openingMessageId, setOpeningMessageId] = useState<string | null>(null);
 	const openingTimer = useRef<number | null>(null);
 	const [conversationView] = useConversationView();
@@ -474,22 +474,16 @@ export function MessageFolderPage({
 		}
 	}
 
-	useEffect(() => {
-		if (!actionError) return;
-		const timer = setTimeout(() => setActionError(null), 6000);
-		return () => clearTimeout(timer);
-	}, [actionError]);
-
-	async function runSelectedActionReportingErrors(action: BulkMessageAction, folderId?: string) {
-		setActionError(null);
+	async function runSelectedActionReportingErrors(action: BulkMessageAction, folderId?: string, folderName?: string) {
 		try {
-			await runSelectedAction(action, folderId);
+			await runSelectedAction(action, folderId, folderName);
 		} catch (error) {
-			setActionError(error instanceof PartialDeleteError ? "Some messages could not be deleted because they are no longer in Trash or Spam." : "Could not update message");
+			if (error instanceof PartialDeleteError) notify.error("Some messages could not be deleted because they are no longer in Trash or Spam.");
+			else notify.error(error, "Could not update message");
 		}
 	}
 
-	async function runSelectedAction(action: BulkMessageAction, folderId?: string) {
+	async function runSelectedAction(action: BulkMessageAction, folderId?: string, folderName?: string) {
 		if (selectedIds.length === 0) return;
 		if (action === "delete") {
 			const ids = expandSelectedIds(selectedIds);
@@ -514,7 +508,8 @@ export function MessageFolderPage({
 			if (inboxUnreadDelta) dispatchMessageCountsDelta({ inboxUnreadDelta });
 		}
 		try {
-			await runBulkMessageAction(expandSelectedIds(selectedIds), action, true, folderId);
+			// The toast counts what the user selected (conversations in conversation view), not expanded ids.
+			await runBulkMessageAction(expandSelectedIds(selectedIds), action, true, folderId, { count: selectedIds.length, noun: grouped ? "conversation" : "message", folderName });
 			setSelectedMessages([]);
 		} catch (error) {
 			if (readValue !== null) {
@@ -625,12 +620,6 @@ export function MessageFolderPage({
 				)}
 			</div>
 
-			{actionError && (
-				<p role="alert" className="shrink-0 border-b border-red-100 bg-red-50 px-6 py-2 text-sm font-medium text-red-700">
-					{actionError}
-				</p>
-			)}
-
 			<div className="min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-gutter-stable">
 				{config.folder === "inbox" && !config.folderId && offset === 0 && !mailboxesLoading && <DueFollowUps mailboxId={selectedMailbox?.id} />}
 				<div role="list" aria-label={title} className="divide-y divide-neutral-100">
@@ -647,9 +636,9 @@ export function MessageFolderPage({
 							currentAccountName={currentAccountName}
 							onSelectedChange={updateSelectedMessage}
 							onMessageAction={(messageId, action) => {
-								setActionError(null);
-								return runBulkMessageAction(expandSelectedIds([messageId]), action, action !== "read" && action !== "unread").catch((error) => {
-									setActionError(error instanceof PartialDeleteError ? "Some messages could not be deleted because they are no longer in Trash or Spam." : "Could not update message");
+								return runBulkMessageAction(expandSelectedIds([messageId]), action, action !== "read" && action !== "unread", undefined, { count: 1, noun: grouped ? "conversation" : "message" }).catch((error) => {
+									if (error instanceof PartialDeleteError) notify.error("Some messages could not be deleted because they are no longer in Trash or Spam.");
+									else notify.error(error, "Could not update message");
 									throw error;
 								});
 							}}

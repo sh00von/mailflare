@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { notify } from "@/lib/notify";
 import { CheckCircle2, Copy, Download } from "@/components/icons";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,6 @@ export function MessageSourceDialog({ messageId, open, onOpenChange }: MessageSo
 	const [error, setError] = useState<string | null>(null);
 	const [loading, setLoading] = useState(false);
 	const [copied, setCopied] = useState(false);
-	const [copyError, setCopyError] = useState(false);
 	const summary = useMemo(() => source === null ? null : summarizeMessageSource(source), [source]);
 
 	useEffect(() => {
@@ -22,7 +22,6 @@ export function MessageSourceDialog({ messageId, open, onOpenChange }: MessageSo
 		setSource(null);
 		setError(null);
 		setCopied(false);
-		setCopyError(false);
 		setLoading(true);
 		fetchMessageSource(messageId, controller.signal)
 			.then((value) => {
@@ -77,8 +76,7 @@ export function MessageSourceDialog({ messageId, open, onOpenChange }: MessageSo
 						<div className="flex flex-wrap items-center justify-between gap-3">
 							<Button type="button" variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700" onClick={() => downloadMessageSource(source, messageId)}><Download className="h-4 w-4" />Download Original</Button>
 							<div className="flex items-center gap-2">
-								{copyError && <span role="alert" className="text-xs text-red-600">Could not copy</span>}
-								<Button type="button" size="sm" onClick={() => { void copyMessageSource(source).then(() => { setCopied(true); setCopyError(false); }).catch(() => { setCopied(false); setCopyError(true); }); }}><Copy className="h-4 w-4" />{copied ? "Copied" : "Copy to clipboard"}</Button>
+								<Button type="button" size="sm" onClick={() => { void copyMessageSource(source).then(() => setCopied(true)).catch(() => { setCopied(false); notify.error("Could not copy to the clipboard"); }); }}><Copy className="h-4 w-4" />{copied ? "Copied" : "Copy to clipboard"}</Button>
 							</div>
 						</div>
 						<pre className="max-h-[40vh] overflow-auto rounded-lg border border-neutral-200 bg-neutral-50 p-4 font-mono text-xs leading-relaxed text-neutral-700 whitespace-pre">{source}</pre>

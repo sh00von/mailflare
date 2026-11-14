@@ -1,6 +1,7 @@
 "use client";
 
 import { createElement, Fragment, useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { notify } from "@/lib/notify";
 import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Archive, ArchiveRestore, Ban, BellOff, Clock, FileCode2, Forward, Mail, MailOpen, MoreVertical, Reply, ReplyAll, ShieldAlert, ShieldCheck, Trash2 } from "@/components/icons";
@@ -51,13 +52,12 @@ export function MessageActions({
 	bodyHtml,
 }: MessageActionsProps) {
 	const router = useRouter();
-	const { openDraftComposer, showNotice } = useCompose();
+	const { openDraftComposer } = useCompose();
 	const { backHref: listHref } = useMessageListVisibility();
 	const { shortcutsEnabled } = useShortcuts();
 	const [pendingAction, setPendingAction] = useState<
 		BulkMessageAction | "unsubscribe" | ReplyMode | "forward" | "block" | null
 	>(null);
-	const [error, setError] = useState<string | null>(null);
 	const [visibleCount, setVisibleCount] = useState(0);
 	const actionsRef = useRef<HTMLDivElement>(null);
 	const [sourceOpen, setSourceOpen] = useState(false);
@@ -65,14 +65,13 @@ export function MessageActions({
 
 	const runAction = useCallback(async (action: BulkMessageAction) => {
 		setPendingAction(action);
-		setError(null);
 		try {
 			await runSingleMessageAction(messageId, action);
 			const redirect = getMessageActionRedirect(action, listHref);
 			if (redirect) router.push(redirect);
 			router.refresh();
-		} catch {
-			setError("Could not update message");
+		} catch (actionError) {
+			notify.error(actionError, "Could not update message");
 		} finally {
 			setPendingAction(null);
 		}
@@ -84,13 +83,13 @@ export function MessageActions({
 	const deleteForever = useCallback(async () => {
 		if (!window.confirm(getPermanentDeleteConfirmText(1))) return;
 		setPendingAction("delete");
-		setError(null);
 		try {
 			await runSingleMessageAction(messageId, "delete");
 			router.push(getMessageBackHref(direction, status));
 			router.refresh();
 		} catch (deleteError) {
-			setError(deleteError instanceof PartialDeleteError ? "Some messages could not be deleted because they are no longer in Trash or Spam." : "Could not delete message");
+			if (deleteError instanceof PartialDeleteError) notify.error("Some messages could not be deleted because they are no longer in Trash or Spam.");
+			else notify.error(deleteError, "Could not delete message");
 			setPendingAction(null);
 		}
 	}, [messageId, direction, status, router]);
@@ -111,7 +110,6 @@ export function MessageActions({
 
 	const handleReply = useCallback(async (mode: ReplyMode) => {
 		setPendingAction(mode);
-		setError(null);
 		try {
 			const draftId = await createReplyDraft({
 				mailboxId,
@@ -126,7 +124,7 @@ export function MessageActions({
 			});
 			openDraftComposer(draftId);
 		} catch (replyError) {
-			setError(replyError instanceof Error ? replyError.message : "Could not start reply");
+			notify.error(replyError, "Could not start reply");
 		} finally {
 			setPendingAction(null);
 		}
@@ -185,18 +183,17 @@ export function MessageActions({
 	useHotkeys(shortcuts, { enabled: shortcutsEnabled });
 
 	async function onUnsubscribe() {
-		setError(null);
 		if (unsubscribeUrl) {
 			setPendingAction("unsubscribe");
 			try {
 				const result = await requestUnsubscribe(messageId);
 				if (result.method === "link") {
 					openUnsubscribeUrl(result.url);
-					showNotice("Unsubscribe page opened in a new tab");
+					notify.success("Unsubscribe page opened in a new tab");
 				} else if (result.method === "mailto") {
-					showNotice("Unsubscribe email sent");
+					notify.success("Unsubscribe email sent");
 				} else {
-					showNotice("Unsubscribed");
+					notify.success("Unsubscribed");
 				}
 			} catch {
 				openUnsubscribeUrl(unsubscribeUrl);
@@ -209,7 +206,7 @@ export function MessageActions({
 		if (!confirmTrashWithoutUnsubscribe()) return;
 		setPendingAction("unsubscribe");
 		if (!mailboxId) {
-			setError("Could not create trash rule");
+			notify.error("Could not create trash rule");
 			setPendingAction(null);
 			return;
 		}
@@ -217,8 +214,8 @@ export function MessageActions({
 		try {
 			await createTrashSenderRule({ mailboxId, senderAddress });
 			await runAction("trash");
-		} catch {
-			setError("Could not create trash rule");
+		} catch (ruleError) {
+			notify.error(ruleError, "Could not create trash rule");
 			setPendingAction(null);
 		}
 	}
@@ -226,7 +223,6 @@ export function MessageActions({
 	async function handleForward() {
 		if (!message || !messageMeta) return;
 		setPendingAction("forward");
-		setError(null);
 		try {
 			const draftId = await createForwardDraft({
 				mailboxId,
@@ -237,33 +233,33 @@ export function MessageActions({
 			});
 			openDraftComposer(draftId);
 		} catch (forwardError) {
-			setError(forwardError instanceof Error ? forwardError.message : "Could not start forward");
+			notify.error(forwardError, "Could not start forward");
 		} finally {
 			setPendingAction(null);
 		}
 	}
 	async function onBlockContact() {
-		setError(null);
 		if (!mailboxId) {
-			setError("Could not block contact");
+			notify.error("Could not block contact");
 			return;
 		}
 
 		setPendingAction("block");
 		try {
 			await blockMessageContact({ mailboxId, senderAddress });
-			await runSingleMessageAction(messageId, "trash");
+			// Undo would bring the message back but not unblock the sender, so this toast has no Undo.
+			await runSingleMessageAction(messageId, "trash", false);
+			notify.success("Sender blocked and message moved to Trash");
 			router.push(listHref);
 			router.refresh();
 		} catch (blockError) {
-			setError(blockError instanceof Error ? blockError.message : "Could not block contact");
+			notify.error(blockError, "Could not block contact");
 		} finally {
 			setPendingAction(null);
 		}
 	}
 
 	async function onUnsubscribeDeleteAll() {
-		setError(null);
 		setPendingAction("unsubscribe");
 		try {
 			const preview = await requestUnsubscribe(messageId, { action: "unsubscribe_and_trash", previewOnly: true });
@@ -271,10 +267,10 @@ export function MessageActions({
 			if (!window.confirm(`Move ${count} past emails from this sender to Trash?`)) return;
 			const result = await requestUnsubscribe(messageId, { action: "unsubscribe_and_trash" });
 			if (result.method === "link") openUnsubscribeUrl(result.url);
-			showNotice(`Unsubscribed and moved ${result.trashedCount ?? 0} emails to Trash`);
+			notify.success(`Unsubscribed and moved ${result.trashedCount ?? 0} emails to Trash`);
 			router.refresh();
-		} catch {
-			setError("Could not unsubscribe");
+		} catch (unsubscribeError) {
+			notify.error(unsubscribeError, "Could not unsubscribe");
 		} finally {
 			setPendingAction(null);
 		}
@@ -386,7 +382,6 @@ export function MessageActions({
 
 	return (
 		<div className="flex min-w-0 flex-1 items-center gap-2 text-neutral-600">
-			{error && <span role="alert" className="text-xs text-red-600">{error}</span>}
 
 			<div ref={actionsRef} className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
 				{inlineActions.slice(0, visibleCount).map((action, index) => {

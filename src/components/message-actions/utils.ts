@@ -1,8 +1,7 @@
 import type { BulkMessageAction } from "@/app/api/messages/bulk/types";
+import { runBulkMessageAction } from "@/components/messages/utils";
+import type { BulkToastContext } from "@/components/messages/bulk-toast-utils";
 import { authFetch } from "@/lib/auth/client";
-import { throwIfDeleteSkipped } from "@/lib/messages/permanent-delete-utils";
-import { dispatchMessagesChanged } from "@/lib/messages/change-events";
-import { markMessagesReadInCaches } from "@/hooks/utils";
 import { getEmailAddress, normalizeEmailAddress, splitEmailAddressList } from "@/lib/email/address";
 import { getLatestEmailContent } from "@/lib/email/reply-content-utils";
 import { formatUserDate } from "@/lib/time/utils";
@@ -39,25 +38,13 @@ export function getMessageBackHref(
   return direction === "inbound" ? "/inbox" : "/sent";
 }
 
-export async function runSingleMessageAction(
+/** One message through the shared bulk helper, so it gets the same toast and Undo as the toolbar. */
+export function runSingleMessageAction(
   messageId: string,
   action: BulkMessageAction,
+  toast?: Partial<BulkToastContext> | false,
 ) {
-  const response = await authFetch("/api/messages/bulk", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ messageIds: [messageId], action }),
-  });
-
-  if (!response.ok) {
-    throw new Error("Unable to update message");
-  }
-
-  await throwIfDeleteSkipped(response, action);
-  const readChanged = action === "read" || action === "unread";
-  if (readChanged) markMessagesReadInCaches([messageId], action === "read");
-  if (readChanged) dispatchMessagesChanged({ kind: "read", messageIds: [messageId], read: action === "read" });
-  else dispatchMessagesChanged();
+  return runBulkMessageAction([messageId], action, true, undefined, toast);
 }
 
 export function openUnsubscribeUrl(url: string) {

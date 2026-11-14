@@ -62,7 +62,7 @@ export type BulkMessageToolbarProps = {
 	selectedCount: number;
 	hasUnreadSelection: boolean;
 	hideSelectedCount?: boolean;
-	onAction: (action: BulkMessageAction, folderId?: string) => void;
+	onAction: (action: BulkMessageAction, folderId?: string, folderName?: string) => void;
 	onClearSelection: () => void;
 	pending: boolean;
 	/** Folder being listed; archived, spam and trash offer a way back instead of the same move. */

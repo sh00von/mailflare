@@ -379,7 +379,7 @@ export function DashboardNav({ className }: { className?: string }) {
                   iconColor: folder.color,
                   count: counts.customFolders[folder.id]?.unread,
                   onMessageDrop: (messageIds: string[]) =>
-                    void moveMessagesToCustomFolder(messageIds, folder.id),
+                    void moveMessagesToCustomFolder(messageIds, folder.id, folder.name),
                 }}
               />
             ),

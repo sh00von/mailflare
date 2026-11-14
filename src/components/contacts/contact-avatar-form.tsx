@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { notify } from "@/lib/notify";
 import { Camera, LoaderCircle } from "@/components/icons";
 import { dispatchContactAvatarChanged } from "@/lib/contacts/avatar-client";
 import { normalizeEmailAddress } from "@/lib/email/address";
@@ -42,7 +43,7 @@ export function ContactAvatarForm({
 			onAvatarChange(true);
 			dispatchContactAvatarChanged({ email: normalizeEmailAddress(address), hasAvatar: true });
 		} catch (error) {
-			setStatus(error instanceof Error ? error.message : "Upload failed");
+			notify.error(error, "Could not upload the picture");
 		} finally {
 			setBusy(false);
 		}
@@ -56,7 +57,7 @@ export function ContactAvatarForm({
 			onAvatarChange(false);
 			dispatchContactAvatarChanged({ email: normalizeEmailAddress(address), hasAvatar: false });
 		} catch (error) {
-			setStatus(error instanceof Error ? error.message : "Unable to remove profile picture");
+			notify.error(error, "Could not remove the picture");
 		} finally {
 			setBusy(false);
 		}

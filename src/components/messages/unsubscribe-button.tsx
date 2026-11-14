@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { MailCheck } from "@/components/icons";
-import { useCompose } from "@/components/compose/compose-context";
+import { notify } from "@/lib/notify";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { openUnsubscribeUrl } from "@/components/message-actions/utils";
@@ -14,7 +14,6 @@ import { requestUnsubscribe } from "./unsubscribe-button-utils";
  * outcome and keeps an "Unsubscribed" state instead of offering it twice.
  */
 export function MessageUnsubscribeButton({ messageId, variant = "header" }: { messageId: string; variant?: "header" | "row" }) {
-	const { showNotice } = useCompose();
 	const [pending, setPending] = useState(false);
 	const [done, setDone] = useState(false);
 	const [confirmOpen, setConfirmOpen] = useState(false);
@@ -23,20 +22,21 @@ export function MessageUnsubscribeButton({ messageId, variant = "header" }: { me
 	async function onUnsubscribe() {
 		setConfirmOpen(false);
 		setPending(true);
-		showNotice("Unsubscribing…", { tone: "loading" });
+		// The outcome replaces the loading toast in place.
+		const toastId = notify.loading("Unsubscribing…");
 		try {
 			const result = await requestUnsubscribe(messageId);
 			setDone(true);
 			if (result.method === "link") {
 				openUnsubscribeUrl(result.url);
-				showNotice("Unsubscribe page opened in a new tab");
+				notify.success("Unsubscribe page opened in a new tab", { id: toastId });
 			} else if (result.method === "mailto") {
-				showNotice("Unsubscribe email sent");
+				notify.success("Unsubscribe email sent", { id: toastId });
 			} else {
-				showNotice("Unsubscribed");
+				notify.success("Unsubscribed", { id: toastId });
 			}
-		} catch {
-			showNotice("Could not unsubscribe", { tone: "error" });
+		} catch (error) {
+			notify.error(error, "Could not unsubscribe", { id: toastId });
 		} finally {
 			setPending(false);
 		}

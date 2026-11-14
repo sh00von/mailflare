@@ -8,11 +8,13 @@ import { getMailboxAccessLevel } from "@/lib/mailboxes/access";
 import { createAuditLog } from "@/lib/mailboxes/audit";
 import { permanentlyDeleteMessages } from "@/lib/email/permanent-delete";
 import { applySpamFeedback } from "@/lib/spam/feedback";
+import { readPlacements, restoreMessagePlacements } from "./restore";
 import type { BulkMessagePayload } from "./types";
 import {
 	getReadValueForBulkAction,
 	getStatusForBulkAction,
 	isAllowedBulkMessageAction,
+	isBulkMoveAction,
 	isPermanentlyDeletableStatus,
 } from "./utils";
 
@@ -24,6 +26,8 @@ export async function POST(request: Request) {
 	}
 
 	const payload = (await request.json()) as BulkMessagePayload;
+	// Undo of a move: the client sends back the placements that move returned.
+	if (payload.action === "restore") return restoreMessagePlacements(env, user, payload.items);
 	const messageIds = payload.messageIds?.filter(Boolean) ?? [];
 	if (messageIds.length === 0 || !isAllowedBulkMessageAction(payload.action)) {
 		return NextResponse.json({ error: "Invalid bulk message action" }, { status: 400 });
@@ -80,6 +84,10 @@ export async function POST(request: Request) {
 	if (allowedMessageIds.length === 0) {
 		return NextResponse.json({ error: "No accessible messages" }, { status: 404 });
 	}
+	// Where each message was before this move, so the client can offer Undo.
+	const previous = isBulkMoveAction(payload.action)
+		? await readPlacements(db, selectedMessages.filter((message) => allowedMessageIds.includes(message.id)))
+		: undefined;
 	if (payload.action === "delete") {
 		// Only mail already in Trash or Spam can be destroyed; anything else is skipped.
 		const deletable = selectedMessages.filter(
@@ -90,14 +98,14 @@ export async function POST(request: Request) {
 	}
 	if (payload.action === "spam") {
 		for (const messageId of allowedMessageIds) await applySpamFeedback(env, user, messageId, "spam");
-		return NextResponse.json({ ok: true });
+		return NextResponse.json({ ok: true, previous });
 	}
 	if (payload.action === "inbox") {
 		const spamMessageIds = selectedMessages.filter((message) => message.status === "spam" && allowedMessageIds.includes(message.id)).map((message) => message.id);
 		const normalMessageIds = allowedMessageIds.filter((messageId) => !spamMessageIds.includes(messageId));
 		for (const messageId of spamMessageIds) await applySpamFeedback(env, user, messageId, "ham");
 		if (normalMessageIds.length) await db.update(messages).set(values).where(inArray(messages.id, normalMessageIds));
-		return NextResponse.json({ ok: true });
+		return NextResponse.json({ ok: true, previous });
 	}
 
 	await db.update(messages).set(values).where(inArray(messages.id, allowedMessageIds));
@@ -112,5 +120,5 @@ export async function POST(request: Request) {
 		),
 	);
 
-	return NextResponse.json({ ok: true });
+	return NextResponse.json({ ok: true, ...(previous ? { previous } : {}) });
 }
