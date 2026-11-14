@@ -624,7 +624,7 @@ export default function PlanAndUsagePage() {
                   </div>
 
                   <Button asChild size="sm" variant="outline" className="rounded-lg border-neutral-300 hover:bg-neutral-50">
-                    <Link href="/accounts">
+                    <Link href="/admin/mailboxes">
                       {isStorage ? "Assign to Inbox" : "Add Mailbox"}
                     </Link>
                   </Button>

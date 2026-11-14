@@ -41,7 +41,7 @@ export function HomePricing({ signedIn, appName }: { signedIn: boolean; appName:
 	];
 
 	const ctaHref = signedIn
-		? `/plan?cycle=${cycle}&mailboxes=${mailboxes}`
+		? `/admin/plan?cycle=${cycle}&mailboxes=${mailboxes}`
 		: `/register?plan=pro&cycle=${cycle}&mailboxes=${mailboxes}`;
 
 	return (

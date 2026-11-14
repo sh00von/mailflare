@@ -79,8 +79,8 @@ export async function POST(request: Request) {
 		plan: parsed.data.plan,
 		cycle: parsed.data.cycle,
 		mailboxes: parsed.data.mailboxes,
-		successUrl: `${baseUrl}/dash/plan?billing=success&session_id={CHECKOUT_SESSION_ID}`,
-		cancelUrl: `${baseUrl}/dash/plan?billing=canceled`,
+		successUrl: `${baseUrl}/admin/plan?billing=success&session_id={CHECKOUT_SESSION_ID}`,
+		cancelUrl: `${baseUrl}/admin/plan?billing=canceled`,
 	});
 
 	return NextResponse.json({ url: session.url });

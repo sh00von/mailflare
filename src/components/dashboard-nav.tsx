@@ -100,7 +100,7 @@ export function DashboardNav({ className }: { className?: string }) {
   const { minimal, mobile } = useSidebar();
   const user = useCurrentUser();
   const isAdmin = Boolean(user?.role === "admin" || user?.isPrimaryAdmin || user?.canManageDomains || user?.canManageUsers);
-  const adminAppUrl = process.env.NEXT_PUBLIC_ADMIN_APP_URL || "/dash";
+  const adminAppUrl = process.env.NEXT_PUBLIC_ADMIN_APP_URL || "/admin/domains";
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
   const [foldersOpen, setFoldersOpen] = useState(false);

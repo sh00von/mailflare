@@ -411,12 +411,12 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 					<div className="mt-2 overflow-hidden rounded-[22px] bg-white">
 						{user?.role === "admin" && (
 							<Link
-								href="/dash"
+								href="/admin/domains"
 								onClick={() => setOpen(false)}
 								className={`flex items-center gap-3 border-t border-neutral-100 px-5 py-4 text-sm font-medium text-neutral-800 hover:bg-row-hover ${adminActive ? "bg-blue-50" : ""}`}
 							>
 								<ShieldCheck size={18} className="text-neutral-600" />
-								Admin
+								Admin Console
 								{adminActive && <Check className="ml-auto h-4 w-4 text-blue-600" />}
 							</Link>
 						)}

@@ -14,8 +14,8 @@ export function getAccountInitial(value: string): string {
 
 export function isAdminPath(pathname: string): boolean {
 	return (
+		pathname.startsWith("/admin") ||
 		pathname.startsWith("/dash") ||
-		pathname === "/admin" ||
 		pathname.startsWith("/mailboxes") ||
 		pathname.startsWith("/domains") ||
 		pathname.startsWith("/api-keys") ||

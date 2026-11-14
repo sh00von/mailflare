@@ -94,29 +94,137 @@ async function main() {
 		if (clientIp) request.headers["x-replyot-client-ip"] = clientIp;
 		const host = (request.headers["x-forwarded-host"] ?? request.headers.host ?? "").toString().toLowerCase();
 		const parsed = parse(request.url ?? "/", true);
-		const adminBase = process.env.ADMIN_APP_URL?.trim().replace(/\/+$/, "");
-		const mailBase = process.env.MAIL_APP_URL?.trim().replace(/\/+$/, "");
-		const adminHost = adminBase ? new URL(adminBase).host.toLowerCase() : "";
-		const mailHost = mailBase ? new URL(mailBase).host.toLowerCase() : "";
+		const appBase = process.env.APP_URL?.trim().replace(/\/+$/, "");
+		const appHost = appBase ? new URL(appBase).host.toLowerCase() : "";
 
-		const isAdminHost = host.startsWith("app.") || host.startsWith("admin.") || (adminHost ? host === adminHost : false);
-		const isMailHost = host.startsWith("mail.") || host.startsWith("webmail.") || (mailHost ? host === mailHost : false);
+		// 1. Customer Branded Webmail CNAME (e.g. mail.company.com)
+		const isCustomerCname =
+			appHost &&
+			host !== appHost &&
+			!host.endsWith(`.${appHost}`) &&
+			(host.startsWith("mail.") || host.startsWith("webmail."));
 
-		if (parsed.pathname === "/") {
-			if (isAdminHost) {
-				parsed.pathname = "/domains";
-			} else if (isMailHost) {
-				parsed.pathname = "/inbox";
-			}
-		} else if (parsed.pathname === "/dash") {
-			parsed.pathname = "/domains";
-		} else if (parsed.pathname?.startsWith("/dash/")) {
-			parsed.pathname = parsed.pathname.slice("/dash".length) || "/domains";
-		} else if (parsed.pathname === "/mail") {
+		if (isCustomerCname && parsed.pathname === "/") {
 			parsed.pathname = "/inbox";
-		} else if (parsed.pathname?.startsWith("/mail/")) {
-			parsed.pathname = parsed.pathname.slice("/mail".length) || "/inbox";
+			void handle(request, response, parsed);
+			return;
 		}
+
+		const pathname = parsed.pathname ?? "/";
+
+		// 2. Legacy Redirects (308 Permanent)
+		const legacyRedirects: Record<string, string> = {
+			"/dash": "/admin",
+			"/dash/": "/admin",
+			"/dash/domains": "/admin/domains",
+			"/dash/accounts": "/admin/mailboxes",
+			"/dash/plan": "/admin/plan",
+			"/dash/workspaces": "/admin/workspaces",
+			"/dash/spam-filter": "/admin/spam-filter",
+			"/dash/backups": "/admin/backups",
+			"/dash/audit-logs": "/admin/audit-logs",
+			"/dash/activity": "/admin/activity",
+			"/dash/general": "/admin/general",
+			"/domains": "/admin/domains",
+			"/accounts": "/admin/mailboxes",
+			"/plan": "/admin/plan",
+			"/workspaces": "/admin/workspaces",
+			"/spam-filter": "/admin/spam-filter",
+			"/backups": "/admin/backups",
+			"/audit-logs": "/admin/audit-logs",
+			"/activity": "/admin/activity",
+			"/general": "/admin/general",
+			"/inbox": "/mail/inbox",
+			"/sent": "/mail/sent",
+			"/drafts": "/mail/drafts",
+			"/trash": "/mail/trash",
+			"/spam": "/mail/spam",
+			"/starred": "/mail/starred",
+			"/archived": "/mail/archived",
+			"/scheduled": "/mail/scheduled",
+			"/snoozed": "/mail/snoozed",
+			"/settings": "/mail/settings",
+		};
+
+		if (legacyRedirects[pathname]) {
+			const target = `${legacyRedirects[pathname]}${parsed.search || ""}`;
+			response.writeHead(308, { Location: target }).end();
+			return;
+		}
+
+		if (pathname.startsWith("/dash/")) {
+			const remainder = pathname.slice("/dash/".length);
+			const target = remainder === "accounts" ? "mailboxes" : remainder;
+			response.writeHead(308, { Location: `/admin/${target}${parsed.search || ""}` }).end();
+			return;
+		}
+		if (pathname.startsWith("/accounts/")) {
+			const remainder = pathname.slice("/accounts/".length);
+			response.writeHead(308, { Location: `/admin/mailboxes/${remainder}${parsed.search || ""}` }).end();
+			return;
+		}
+		if (pathname.startsWith("/folders/")) {
+			const remainder = pathname.slice("/folders/".length);
+			response.writeHead(308, { Location: `/mail/folders/${remainder}${parsed.search || ""}` }).end();
+			return;
+		}
+		if (pathname.startsWith("/settings/")) {
+			const remainder = pathname.slice("/settings/".length);
+			response.writeHead(308, { Location: `/mail/settings/${remainder}${parsed.search || ""}` }).end();
+			return;
+		}
+
+		// 3. /admin/* Namespace Internal Rewrites
+		const adminRewrites: Record<string, string> = {
+			"/admin": "/domains",
+			"/admin/": "/domains",
+			"/admin/domains": "/domains",
+			"/admin/mailboxes": "/accounts",
+			"/admin/plan": "/plan",
+			"/admin/workspaces": "/workspaces",
+			"/admin/spam-filter": "/spam-filter",
+			"/admin/backups": "/backups",
+			"/admin/audit-logs": "/audit-logs",
+			"/admin/activity": "/activity",
+			"/admin/general": "/general",
+		};
+
+		if (adminRewrites[pathname]) {
+			parsed.pathname = adminRewrites[pathname];
+		} else if (pathname.startsWith("/admin/mailboxes/")) {
+			parsed.pathname = `/accounts/${pathname.slice("/admin/mailboxes/".length)}`;
+		} else if (pathname.startsWith("/admin/")) {
+			parsed.pathname = `/${pathname.slice("/admin/".length)}`;
+		}
+
+		// 4. /mail/* Namespace Internal Rewrites
+		const mailRewrites: Record<string, string> = {
+			"/mail": "/inbox",
+			"/mail/": "/inbox",
+			"/mail/inbox": "/inbox",
+			"/mail/sent": "/sent",
+			"/mail/drafts": "/drafts",
+			"/mail/trash": "/trash",
+			"/mail/spam": "/spam",
+			"/mail/starred": "/starred",
+			"/mail/archived": "/archived",
+			"/mail/scheduled": "/scheduled",
+			"/mail/snoozed": "/snoozed",
+			"/mail/compose": "/compose",
+			"/mail/import-export": "/import-export",
+			"/mail/settings": "/settings",
+		};
+
+		if (mailRewrites[pathname]) {
+			parsed.pathname = mailRewrites[pathname];
+		} else if (pathname.startsWith("/mail/folders/")) {
+			parsed.pathname = `/folders/${pathname.slice("/mail/folders/".length)}`;
+		} else if (pathname.startsWith("/mail/settings/")) {
+			parsed.pathname = `/settings/${pathname.slice("/mail/settings/".length)}`;
+		} else if (pathname.startsWith("/mail/")) {
+			parsed.pathname = `/${pathname.slice("/mail/".length)}`;
+		}
+
 		void handle(request, response, parsed);
 	});
 

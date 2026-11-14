@@ -15,7 +15,7 @@ export function HomeHeroActions() {
 				{hasUser ? "Open your inbox" : "Get started"}
 			</Link>
 			<Link
-				href={hasUser ? "/dash/plan" : "/login"}
+				href={hasUser ? "/admin/plan" : "/login"}
 				className="inline-flex h-12 items-center justify-center rounded-full border border-neutral-300 bg-white px-7 text-[15px] font-medium text-blue-600 transition hover:border-blue-100 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
 			>
 				{hasUser ? "Manage your plan" : "Sign in"}

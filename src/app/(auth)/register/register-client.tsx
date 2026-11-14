@@ -107,7 +107,7 @@ export function RegisterClient() {
 				setCaptchaReset((v) => v + 1);
 				return;
 			}
-			window.location.assign(data.redirect ?? "/dash/domains");
+			window.location.assign(data.redirect ?? "/admin/domains");
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "Registration failed");
 			setCaptchaReset((v) => v + 1);

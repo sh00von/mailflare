@@ -359,7 +359,7 @@ export default function DomainsPage() {
             </p>
           </div>
           <Button asChild size="sm" className="bg-blue-600 hover:bg-blue-700 text-white shrink-0">
-            <Link href="/dash/plan">View Plans &amp; Activate &rarr;</Link>
+            <Link href="/admin/plan">View Plans &amp; Activate &rarr;</Link>
           </Button>
         </div>
       )}

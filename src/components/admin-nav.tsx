@@ -39,26 +39,26 @@ type AdminNavLink = {
 const sections: { id?: string; labelKey?: string; links: AdminNavLink[] }[] = [
   {
     // label: "Overview",
-    links: [{ href: "/dash/domains", labelKey: "Overview", icon: Settings }],
+    links: [{ href: "/admin/domains", labelKey: "Overview", icon: Settings }],
   },
   {
     id: "Email",
     labelKey: "Email",
     links: [
-      { href: "/dash/domains", labelKey: "Domains", icon: Globe2, permission: "domains" },
-      { href: "/dash/spam-filter", labelKey: "Spam filter", icon: ShieldCheck, permission: "primary" },
+      { href: "/admin/domains", labelKey: "Domains", icon: Globe2, permission: "domains" },
+      { href: "/admin/spam-filter", labelKey: "Spam filter", icon: ShieldCheck, permission: "primary" },
     ],
   },
   {
     id: "Administration",
     labelKey: "Administration",
     links: [
-      { href: "/dash/general", labelKey: "General", icon: Settings, permission: "primary" },
-      { href: "/dash/accounts", labelKey: "Accounts", icon: Users },
-      { href: "/dash/plan", label: "Plan & Usage", icon: BadgeDollarSign },
-      { href: "/dash/workspaces", label: "Workspaces", icon: Globe2, permission: "primary" },
-      { href: "/dash/activity", labelKey: "Activity", icon: Activity, permission: "primary" },
-      { href: "/dash/backups", labelKey: "Backups", icon: DatabaseBackup, permission: "primary" },
+      { href: "/admin/general", labelKey: "General", icon: Settings, permission: "primary" },
+      { href: "/admin/mailboxes", label: "Mailboxes", icon: Users },
+      { href: "/admin/plan", label: "Plan & Usage", icon: BadgeDollarSign },
+      { href: "/admin/workspaces", label: "Workspaces", icon: Globe2, permission: "primary" },
+      { href: "/admin/activity", labelKey: "Activity", icon: Activity, permission: "primary" },
+      { href: "/admin/backups", labelKey: "Backups", icon: DatabaseBackup, permission: "primary" },
     ],
   },
 ];

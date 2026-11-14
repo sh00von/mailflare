@@ -29,7 +29,7 @@ export async function completeLogin(
 			.where(eq(users.id, userId))
 			.limit(1);
 		if (userRow?.role === "admin" || userRow?.isPrimaryAdmin) {
-			redirectUrl = "/dash";
+			redirectUrl = "/admin/domains";
 		}
 	} catch {}
 

@@ -173,8 +173,8 @@ export async function POST(request: Request) {
 	}
 
 	const finalRedirect = adminAppUrl
-		? `${adminAppUrl}/dash/domains`
-		: "/dash/domains";
+		? `${adminAppUrl}/admin/domains`
+		: "/admin/domains";
 
 	const response = NextResponse.json({
 		ok: true,

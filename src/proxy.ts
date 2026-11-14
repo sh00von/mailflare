@@ -1,103 +1,149 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-const ADMIN_PATHS = [
-	"/admin",
-	"/domains",
-	"/accounts",
-	"/general",
-	"/plan",
-	"/workspaces",
-	"/spam-filter",
-	"/activity",
-	"/backups",
-	"/audit-logs",
-];
+// Clean /admin/* route mappings to internal (admin) pages
+const ADMIN_REWRITES: Record<string, string> = {
+	"/admin": "/domains",
+	"/admin/": "/domains",
+	"/admin/domains": "/domains",
+	"/admin/mailboxes": "/accounts",
+	"/admin/plan": "/plan",
+	"/admin/workspaces": "/workspaces",
+	"/admin/spam-filter": "/spam-filter",
+	"/admin/backups": "/backups",
+	"/admin/audit-logs": "/audit-logs",
+	"/admin/activity": "/activity",
+	"/admin/general": "/general",
+};
 
-const MAIL_PATHS = [
-	"/inbox",
-	"/sent",
-	"/drafts",
-	"/spam",
-	"/trash",
-	"/starred",
-	"/archived",
-	"/scheduled",
-	"/snoozed",
-	"/folders",
-	"/compose",
-	"/settings",
-	"/import-export",
-];
+// Clean /mail/* route mappings to internal (dashboard)/(settings) pages
+const MAIL_REWRITES: Record<string, string> = {
+	"/mail": "/inbox",
+	"/mail/": "/inbox",
+	"/mail/inbox": "/inbox",
+	"/mail/sent": "/sent",
+	"/mail/drafts": "/drafts",
+	"/mail/trash": "/trash",
+	"/mail/spam": "/spam",
+	"/mail/starred": "/starred",
+	"/mail/archived": "/archived",
+	"/mail/scheduled": "/scheduled",
+	"/mail/snoozed": "/snoozed",
+	"/mail/compose": "/compose",
+	"/mail/import-export": "/import-export",
+	"/mail/settings": "/settings",
+};
 
-const AUTH_PATHS = [
-	"/login",
-	"/register",
-	"/forgot-password",
-	"/reset-password",
-];
-
-function matchesPrefix(pathname: string, prefixes: string[]): boolean {
-	return prefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
-}
+// Legacy root paths redirecting to clean canonical URLs
+const LEGACY_REDIRECTS: Record<string, string> = {
+	"/dash": "/admin",
+	"/dash/": "/admin",
+	"/dash/domains": "/admin/domains",
+	"/dash/accounts": "/admin/mailboxes",
+	"/dash/plan": "/admin/plan",
+	"/dash/workspaces": "/admin/workspaces",
+	"/dash/spam-filter": "/admin/spam-filter",
+	"/dash/backups": "/admin/backups",
+	"/dash/audit-logs": "/admin/audit-logs",
+	"/dash/activity": "/admin/activity",
+	"/dash/general": "/admin/general",
+	"/domains": "/admin/domains",
+	"/accounts": "/admin/mailboxes",
+	"/plan": "/admin/plan",
+	"/workspaces": "/admin/workspaces",
+	"/spam-filter": "/admin/spam-filter",
+	"/backups": "/admin/backups",
+	"/audit-logs": "/admin/audit-logs",
+	"/activity": "/admin/activity",
+	"/general": "/admin/general",
+	"/inbox": "/mail/inbox",
+	"/sent": "/mail/sent",
+	"/drafts": "/mail/drafts",
+	"/trash": "/mail/trash",
+	"/spam": "/mail/spam",
+	"/starred": "/mail/starred",
+	"/archived": "/mail/archived",
+	"/scheduled": "/mail/scheduled",
+	"/snoozed": "/mail/snoozed",
+	"/settings": "/mail/settings",
+};
 
 export function proxy(request: NextRequest) {
 	const { pathname, search } = request.nextUrl;
+	const host = (
+		request.headers.get("x-forwarded-host") ??
+		request.headers.get("host") ??
+		request.nextUrl.host
+	).toLowerCase();
 
-	// Support /dash (admin) and /mail (webmail) path shortcuts on any domain
-	if (pathname === "/dash") {
-		return NextResponse.rewrite(new URL(`/domains${search}`, request.url));
-	}
-	if (pathname.startsWith("/dash/")) {
-		const target = pathname.slice("/dash".length) || "/domains";
-		return NextResponse.rewrite(new URL(`${target}${search}`, request.url));
-	}
-	if (pathname === "/mail") {
+	const appBase = process.env.APP_URL?.trim().replace(/\/+$/, "");
+	const appHost = appBase ? new URL(appBase).host.toLowerCase() : "";
+
+	// 1. Customer Branded Webmail CNAME (e.g. mail.company.com)
+	const isCustomerCname =
+		appHost &&
+		host !== appHost &&
+		!host.endsWith(`.${appHost}`) &&
+		(host.startsWith("mail.") || host.startsWith("webmail."));
+
+	if (isCustomerCname && pathname === "/") {
 		return NextResponse.rewrite(new URL(`/inbox${search}`, request.url));
 	}
+
+	// 2. Legacy Direct Redirects (Canonical namespace enforcement)
+	if (LEGACY_REDIRECTS[pathname]) {
+		return NextResponse.redirect(new URL(`${LEGACY_REDIRECTS[pathname]}${search}`, request.url), 308);
+	}
+
+	// Dynamic prefix redirects
+	if (pathname.startsWith("/dash/")) {
+		const remainder = pathname.slice("/dash/".length);
+		const target = remainder === "accounts" ? "mailboxes" : remainder;
+		return NextResponse.redirect(new URL(`/admin/${target}${search}`, request.url), 308);
+	}
+	if (pathname.startsWith("/accounts/")) {
+		const remainder = pathname.slice("/accounts/".length);
+		return NextResponse.redirect(new URL(`/admin/mailboxes/${remainder}${search}`, request.url), 308);
+	}
+	if (pathname.startsWith("/folders/")) {
+		const remainder = pathname.slice("/folders/".length);
+		return NextResponse.redirect(new URL(`/mail/folders/${remainder}${search}`, request.url), 308);
+	}
+	if (pathname.startsWith("/settings/")) {
+		const remainder = pathname.slice("/settings/".length);
+		return NextResponse.redirect(new URL(`/mail/settings/${remainder}${search}`, request.url), 308);
+	}
+
+	// 3. /admin/* Namespace Rewrites
+	if (ADMIN_REWRITES[pathname]) {
+		return NextResponse.rewrite(new URL(`${ADMIN_REWRITES[pathname]}${search}`, request.url));
+	}
+	if (pathname.startsWith("/admin/mailboxes/")) {
+		const remainder = pathname.slice("/admin/mailboxes/".length);
+		return NextResponse.rewrite(new URL(`/accounts/${remainder}${search}`, request.url));
+	}
+	if (pathname.startsWith("/admin/")) {
+		const remainder = pathname.slice("/admin/".length);
+		return NextResponse.rewrite(new URL(`/${remainder}${search}`, request.url));
+	}
+
+	// 4. /mail/* Namespace Rewrites
+	if (MAIL_REWRITES[pathname]) {
+		return NextResponse.rewrite(new URL(`${MAIL_REWRITES[pathname]}${search}`, request.url));
+	}
+	if (pathname.startsWith("/mail/folders/")) {
+		const remainder = pathname.slice("/mail/folders/".length);
+		return NextResponse.rewrite(new URL(`/folders/${remainder}${search}`, request.url));
+	}
+	if (pathname.startsWith("/mail/settings/")) {
+		const remainder = pathname.slice("/mail/settings/".length);
+		return NextResponse.rewrite(new URL(`/settings/${remainder}${search}`, request.url));
+	}
 	if (pathname.startsWith("/mail/")) {
-		const target = pathname.slice("/mail".length) || "/inbox";
-		return NextResponse.rewrite(new URL(`${target}${search}`, request.url));
+		const remainder = pathname.slice("/mail/".length);
+		return NextResponse.rewrite(new URL(`/${remainder}${search}`, request.url));
 	}
 
-	const host = (request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? request.nextUrl.host).toLowerCase();
-	const adminBase = process.env.ADMIN_APP_URL?.trim().replace(/\/+$/, "");
-	const mailBase = process.env.MAIL_APP_URL?.trim().replace(/\/+$/, "");
-
-	const adminHost = adminBase ? new URL(adminBase).host.toLowerCase() : "";
-	const mailHost = mailBase ? new URL(mailBase).host.toLowerCase() : "";
-
-	const isAdminHost = host.startsWith("app.") || host.startsWith("admin.") || (adminHost ? host === adminHost : false);
-	const isMailHost = host.startsWith("mail.") || host.startsWith("webmail.") || (mailHost ? host === mailHost : false);
-
-	// Admin Subdomain (e.g. app.replyot.com / app.localhost:4008)
-	if (isAdminHost) {
-		if (pathname === "/") {
-			return NextResponse.rewrite(new URL(`/domains${search}`, request.url));
-		}
-		// If accessing a mail path while on admin subdomain, redirect to mail portal
-		if (mailBase && matchesPrefix(pathname, MAIL_PATHS)) {
-			return NextResponse.redirect(new URL(`${pathname}${search}`, mailBase));
-		}
-		return NextResponse.next();
-	}
-
-	// Webmail Subdomain (e.g. mail.replyot.com / mail.localhost:4008 / custom CNAME)
-	if (isMailHost) {
-		if (pathname === "/") {
-			return NextResponse.rewrite(new URL(`/inbox${search}`, request.url));
-		}
-		// If accessing an admin path while on webmail subdomain, redirect to admin console
-		if (adminBase && matchesPrefix(pathname, ADMIN_PATHS)) {
-			return NextResponse.redirect(new URL(`${pathname}${search}`, adminBase));
-		}
-		// Workspace registration belongs on the admin portal
-		if (adminBase && pathname === "/register") {
-			return NextResponse.redirect(new URL(`/register${search}`, adminBase));
-		}
-		return NextResponse.next();
-	}
-
-	// Root Marketing Domain (e.g. replyot.com / localhost:4008)
+	// 5. Root Marketing Domain
 	// / serves the landing page; /login serves unified sign-in
 	return NextResponse.next();
 }
