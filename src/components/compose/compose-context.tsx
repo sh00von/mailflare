@@ -1,8 +1,13 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useContext, useRef, useState } from "react";
 import type { ReactNode } from "react";
+import { notify } from "@/lib/notify";
+import { ComposeNoticeToast } from "./compose-notice-toast";
 import type { SendNoticeParts } from "./send-notice-utils";
+
+/** One slot: a new send notice replaces the previous one, as the composer expects. */
+const COMPOSE_NOTICE_TOAST_ID = "compose-notice";
 
 export type ComposeNoticeAction = { label: string; onClick: () => void | Promise<void> };
 
@@ -31,8 +36,7 @@ type ComposeContextValue = {
 	openComposer: () => void;
 	openDraftComposer: (draftId: string) => void;
 	closeComposer: () => void;
-	notice: ComposeNotice | null;
-	/** Shows a toast and returns its id; `actions` adds buttons, `durationMs` overrides the default 3.2s. */
+	/** Shows the send toast (replacing any previous one) and returns its id; `actions` adds buttons, `durationMs` overrides the default. */
 	showNotice: (message: string | null, options?: ComposeNoticeOptions) => number | null;
 	/** Whether a notice id is still the latest one; async actions use it to avoid replacing a newer toast. */
 	isCurrentNotice: (id: number) => boolean;
@@ -66,18 +70,7 @@ export function ComposeProvider({ children }: { children: ReactNode }) {
 	function rememberOpener() {
 		opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
 	}
-	const [notice, setNotice] = useState<ComposeNotice | null>(null);
 	const noticeId = useRef(0);
-
-	useEffect(() => {
-		if (!notice) return;
-		// A countdown notice normally replaces itself when it reaches zero. The extra
-		// grace keeps that transition ahead of dismissal and still clears the notice if
-		// the layout has no toast mounted.
-		const timeout = Math.max(0, notice.durationMs) + (notice.onCountdownEnd ? 2000 : 0);
-		const timer = setTimeout(() => setNotice(null), timeout);
-		return () => clearTimeout(timer);
-	}, [notice]);
 
 	return (
 		<ComposeContext.Provider
@@ -101,21 +94,31 @@ export function ComposeProvider({ children }: { children: ReactNode }) {
 					opener.current = null;
 					if (previous) requestAnimationFrame(() => { if (previous.isConnected) previous.focus(); });
 				},
-				notice,
 				showNotice: (message, options) => {
 					const id = ++noticeId.current;
-					setNotice(message ? {
+					if (!message) {
+						notify.dismiss(COMPOSE_NOTICE_TOAST_ID);
+						return null;
+					}
+					const tone = options?.tone ?? "success";
+					const notice: ComposeNotice = {
 						id,
 						message,
 						parts: options?.parts,
 						actions: options?.actions ?? [],
-						tone: options?.tone ?? "success",
-						durationMs: options?.durationMs ?? (options?.tone === "loading" ? 120_000 : 3200),
+						tone,
+						// Same timing rules as every toast: errors and anything with buttons stay longer.
+						durationMs: options?.durationMs ?? (tone === "loading" ? 120_000 : tone === "error" || options?.actions?.length ? 8000 : 4000),
 						countdown: options?.countdown,
 						onCountdownEnd: options?.onCountdownEnd,
 						poll: options?.poll,
-					} : null);
-					return message ? id : null;
+					};
+					// A countdown notice normally replaces itself when it reaches zero; the grace keeps that
+					// transition ahead of dismissal.
+					const duration = Math.max(0, notice.durationMs) + (notice.onCountdownEnd ? 2000 : 0);
+					// `key` remounts the content per notice so countdown and polling state never leak between sends.
+					notify.custom(() => <ComposeNoticeToast key={id} notice={notice} />, { id: COMPOSE_NOTICE_TOAST_ID, duration });
+					return id;
 				},
 				isCurrentNotice: (id) => noticeId.current === id,
 			}}

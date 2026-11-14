@@ -54,7 +54,8 @@ export function Toaster() {
 			} as CSSProperties}
 			toastOptions={{
 				classNames: {
-					toast: "!gap-3 !px-4 !py-3 !shadow-lg font-sans",
+					// Only Sonner-styled toasts; custom ones (the composer notice) draw their own card.
+					toast: "font-sans data-[styled=true]:!gap-3 data-[styled=true]:!px-4 data-[styled=true]:!py-3 data-[styled=true]:!shadow-lg",
 					title: "!text-sm !font-medium !leading-5",
 					description: "!text-[13px] !leading-5 !text-neutral-600",
 					actionButton: "!h-8 !rounded-md !bg-transparent !px-2.5 !text-sm !font-semibold !text-blue-600 hover:!bg-blue-50",
