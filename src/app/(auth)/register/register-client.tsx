@@ -96,7 +96,7 @@ export function RegisterClient() {
 				orgName: orgName.trim() || undefined,
 				plan,
 				enableSending: true,
-				skipDns: false,
+				skipDns: !allDnsVerified,
 			});
 			if (!ok) {
 				setError(
@@ -280,16 +280,23 @@ export function RegisterClient() {
 								<RefreshCw className={`h-4 w-4 ${dnsChecking ? "animate-spin" : ""}`} />
 								{dnsChecking ? "Checking..." : "Check again"}
 							</Button>
-							<Button type="button" className={AUTH_PRIMARY_BUTTON_CLASS} disabled={!allDnsVerified} onClick={() => setStep(3)}>
+							<Button type="button" className={AUTH_PRIMARY_BUTTON_CLASS} onClick={() => setStep(3)}>
 								Next
 							</Button>
 						</div>
 					</div>
-					{!allDnsVerified && (
-						<p className="text-center text-xs text-neutral-500">
-							You can continue once every setting shows Found.
+					<div className="flex flex-col items-center gap-1.5 pt-1 text-center">
+						<button
+							type="button"
+							onClick={() => setStep(3)}
+							className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline"
+						>
+							I&apos;ll configure DNS later (Skip this step) &rarr;
+						</button>
+						<p className="text-[11px] text-neutral-400">
+							DNS propagation may take a few minutes. You can access your account right away.
 						</p>
-					)}
+					</div>
 				</div>
 			) : (
 				<form method="post" onSubmit={onAccountSubmit} className="space-y-6">

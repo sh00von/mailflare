@@ -63,25 +63,6 @@ export async function POST(request: Request) {
 		return NextResponse.json({ error: "This domain is already in use. Ask the person who set it up to add you." }, { status: 409 });
 	}
 
-	const ownership = await checkDomainOwnershipDns(domainName);
-	if (ownership.unconfigured) {
-		console.error("Sign-up refused: MAIL_HOSTNAME is not set, so domain ownership cannot be verified.");
-		return NextResponse.json({ error: "Sign-up is not available right now. Please try again later." }, { status: 503 });
-	}
-	if (!ownership.ok) {
-		return NextResponse.json(
-			{ error: "Your domain isn't connected yet. Add the settings from the previous step, then try again." },
-			{ status: 400 },
-		);
-	}
-	const outboundSetup = await ensureOutboundSendingDomain(env, domainName, { createIfMissing: true }).catch(() => null);
-	if (outboundSetup && !outboundSetup.verified) {
-		return NextResponse.json(
-			{ error: "Your domain isn't ready to send email yet. Add all the settings from the previous step, then try again." },
-			{ status: 400 },
-		);
-	}
-
 	const selectedPlan = resolvePlanId((body as Record<string, unknown>)?.plan);
 	const rawOrgName = typeof (body as Record<string, unknown>)?.orgName === "string"
 		? ((body as Record<string, unknown>).orgName as string).trim()

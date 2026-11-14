@@ -5,8 +5,6 @@ import { getDb } from "@/db";
 import { domains } from "@/db/schema";
 import { getEnv } from "@/lib/cloudflare";
 import { allowLoginAttempt } from "@/lib/auth/rate-limit";
-import { preflightDomain } from "@/lib/domains/preflight";
-import { ensureOutboundSendingDomain } from "@/lib/email/resend-domain-setup";
 import { setupDomainSchema } from "@/lib/validators";
 import { readJsonBody } from "@/lib/http/request";
 import { RequestBodyTooLargeError } from "@/lib/http/errors";
@@ -54,35 +52,32 @@ export async function POST(request: Request) {
 	}
 
 	try {
-		const domain = await preflightDomain(env, parsed.data.hostname);
-		const expectedMx = (process.env.MAIL_HOSTNAME?.trim() || `mail.${domain.hostname}`).toLowerCase().replace(/\.$/, "");
-		const [currentMx, rootTxt, dmarcTxt] = await Promise.all([
-			safeResolveMx(domain.hostname),
-			safeResolveTxt(domain.hostname),
-			safeResolveTxt(`_dmarc.${domain.hostname}`),
+		const domainHostname = normalized;
+		const serverMailHost = (process.env.MAIL_HOSTNAME?.trim() || `mail.${domainHostname}`).toLowerCase().replace(/\.$/, "");
+		const [currentMx, rootTxt, dmarcTxt, dkimTxt] = await Promise.all([
+			safeResolveMx(domainHostname),
+			safeResolveTxt(domainHostname),
+			safeResolveTxt(`_dmarc.${domainHostname}`),
+			safeResolveTxt(`default._domainkey.${domainHostname}`),
 		]);
 
-		const mxAdded = currentMx.some((mx) => mx === expectedMx);
-		const spfAdded = rootTxt.some((txt) => txt.toLowerCase().startsWith("v=spf1") && txt.toLowerCase().includes(expectedMx));
+		const mxAdded = currentMx.some((mx) => mx === serverMailHost);
+		const spfAdded = rootTxt.some((txt) => txt.toLowerCase().startsWith("v=spf1") && (txt.toLowerCase().includes(serverMailHost) || txt.toLowerCase().includes("ip4:")));
 		const dmarcAdded = dmarcTxt.some((txt) => txt.toLowerCase().startsWith("v=dmarc1"));
+		const dkimAdded = dkimTxt.some((txt) => txt.toLowerCase().startsWith("v=dkim1"));
 
-		// Only create the domain in Resend/SES after the caller proves ownership via MX, SPF, and DMARC.
-		const ownershipVerified = mxAdded && spfAdded && dmarcAdded;
-		const outboundSetup = await ensureOutboundSendingDomain(env, domain.hostname, {
-			createIfMissing: ownershipVerified,
-		}).catch((err) => {
-			console.error("[setup/domain/mx] Outbound domain setup failed:", err);
-			return null;
-		});
+		const serverIp = process.env.SERVER_IP?.trim();
+		const spfValue = serverIp ? `v=spf1 ip4:${serverIp} ~all` : `v=spf1 a:${serverMailHost} ~all`;
+
 		const requiredRecords = [
-			{ type: "MX", name: "@", value: expectedMx, priority: 10, added: mxAdded },
-			{ type: "TXT", name: "@", value: `v=spf1 a:${expectedMx} ~all`, added: spfAdded },
-			{ type: "TXT", name: "_dmarc", value: "v=DMARC1; p=none", added: dmarcAdded },
-			...(outboundSetup?.records ?? []),
+			{ type: "MX", name: "@", value: serverMailHost, priority: 10, added: mxAdded },
+			{ type: "TXT", name: "@", value: spfValue, added: spfAdded },
+			{ type: "TXT", name: "default._domainkey", value: "v=DKIM1; k=rsa; p=...", added: dkimAdded },
+			{ type: "TXT", name: "_dmarc", value: "v=DMARC1; p=quarantine; pct=100; adkim=r; aspf=r", added: dmarcAdded },
 		];
 
 		return NextResponse.json({
-			hasExistingMx: false,
+			hasExistingMx: currentMx.length > 0 && !mxAdded,
 			currentMx,
 			requiredRecords,
 		});

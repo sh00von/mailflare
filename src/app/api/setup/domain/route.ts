@@ -4,7 +4,6 @@ import { getDb } from "@/db";
 import { domains } from "@/db/schema";
 import { getEnv } from "@/lib/cloudflare";
 import { allowLoginAttempt } from "@/lib/auth/rate-limit";
-import { preflightDomain } from "@/lib/domains/preflight";
 import { setupDomainSchema } from "@/lib/validators";
 import { readJsonBody } from "@/lib/http/request";
 import { RequestBodyTooLargeError } from "@/lib/http/errors";
@@ -33,10 +32,10 @@ export async function POST(request: Request) {
 		return NextResponse.json({ error: "This domain is already in use. Ask the person who set it up to add you." }, { status: 409 });
 	}
 
-	try {
-		return NextResponse.json({ domain: await preflightDomain(env, normalized) });
-	} catch (err) {
-		const message = err instanceof Error ? err.message : "Domain check failed";
-		return NextResponse.json({ error: message }, { status: 502 });
-	}
+	return NextResponse.json({
+		domain: {
+			hostname: normalized,
+			zone: { id: "self-hosted", name: normalized },
+		},
+	});
 }

@@ -81,7 +81,16 @@ export async function submitRegistration(
 		),
 	});
 
-	const data = (await res.json()) as RegisterResult;
+	const text = await res.text();
+	let data: RegisterResult;
+	try {
+		data = JSON.parse(text) as RegisterResult;
+	} catch {
+		return {
+			ok: false,
+			data: { error: text || `Registration request failed (${res.status})` },
+		};
+	}
 	if (res.ok) clearClientSessionToken();
 	return { ok: res.ok, data };
 }
