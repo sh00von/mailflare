@@ -76,12 +76,6 @@ export function useMessagePolling(): MessageRealtimeState {
 					}
 					return;
 				}
-				if (parsed.type === "agent_draft" && parsed.draftId && parsed.mailboxId) {
-					window.dispatchEvent(new CustomEvent("replyot:agent-draft", { detail: parsed }));
-					dispatchMessagesChanged();
-					if (fromSocket) channel?.postMessage({ type: "notification", payload } satisfies RealtimeChannelMessage);
-					return;
-				}
 			} catch { return; }
 			const event = parseNewMessageEvent(payload);
 			if (!event) return;

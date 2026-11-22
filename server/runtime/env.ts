@@ -37,7 +37,6 @@ export function createNodeRuntime(): NodeRuntime {
 	const redisUrl = config.redis.url;
 	const inboundQueue = openQueue("replyot-inbound", { redisUrl, concurrency: 10 });
 	const outboundQueue = openQueue("replyot-outbound", { redisUrl, concurrency: 10 });
-	const agentQueue = openQueue("replyot-agent", { redisUrl, concurrency: 5 });
 	const realtime = new RealtimeHubRegistry();
 	const publicDir = resolve(process.env.PUBLIC_DIR?.trim() || "./public");
 
@@ -47,20 +46,15 @@ export function createNodeRuntime(): NodeRuntime {
 		EMAIL: mailer,
 		INBOUND_QUEUE: inboundQueue,
 		OUTBOUND_QUEUE: outboundQueue,
-		AGENT_QUEUE: agentQueue,
 		REDIS_URL: config.redis.url,
 		RSPAMD_URL: config.rspamd.url,
 		RSPAMD_ENABLED: config.rspamd.enabled ? "true" : "false",
-		AI_MODEL: process.env.AI_MODEL?.trim(),
-		AI_BASE_URL: process.env.AI_BASE_URL?.trim(),
-		AI_API_KEY: process.env.AI_API_KEY?.trim(),
 		REALTIME: realtime.namespace(),
 		ASSETS: openAssets(publicDir),
 		IMAGES: undefined as unknown as CloudflareEnv["IMAGES"],
 		WORKER_SELF_REFERENCE: undefined as unknown as CloudflareEnv["WORKER_SELF_REFERENCE"],
 		LOGIN_RATE_LIMIT: openRateLimiter(20, 60),
 		DEVICE_LOGIN_RATE_LIMIT: openRateLimiter(10, 60),
-		AGENT_RATE_LIMIT: openRateLimiter(120, 60),
 		B2_KEY_ID: config.storage.b2KeyId,
 		B2_APPLICATION_KEY: config.storage.b2ApplicationKey,
 		B2_BUCKET: config.storage.b2Bucket,
@@ -106,7 +100,6 @@ export function createNodeRuntime(): NodeRuntime {
 		mailer: mailer as unknown as Mailer,
 		inboundQueue: inboundQueue as unknown as MailflareQueue,
 		outboundQueue: outboundQueue as unknown as MailflareQueue,
-		agentQueue: agentQueue as unknown as MailflareQueue,
 		realtime,
 	};
 }

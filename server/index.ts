@@ -289,7 +289,6 @@ async function main() {
 		submissionTlsServer?.close();
 		runtime.inboundQueue.stop();
 		runtime.outboundQueue.stop();
-		runtime.agentQueue.stop();
 		server.close(() => process.exit(0));
 		setTimeout(() => process.exit(0), 5000).unref();
 	};

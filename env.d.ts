@@ -66,11 +66,6 @@ interface CloudflareEnv {
 	EMAIL: SendEmail;
 	BUCKET: R2Bucket;
 	INBOUND_QUEUE: Queue<import("./src/lib/email/inbound").InboundQueueMessage>;
-	AGENT_QUEUE?: Queue<{ kind: "agent.draft"; jobId: string }>;
-	AI?: Ai;
-	AI_MODEL?: string;
-	AI_BASE_URL?: string;
-	AI_API_KEY?: string;
 	// The outbound queue also carries webhook retries and import job chunks so that scheduled redelivery needs no extra binding.
 	OUTBOUND_QUEUE: Queue<
 		| import("./src/lib/email/send").OutboundQueueMessage
@@ -105,7 +100,6 @@ interface CloudflareEnv {
 	ABUSECH_AUTH_KEY?: string;
 	/** "off" disables the RDAP domain-age check in spam analysis. */
 	SPAM_DOMAIN_AGE_CHECK?: string;
-	AGENT_RATE_LIMIT?: RateLimit;
 	/**
 	 * Backblaze B2 storage. When all four are set, B2 replaces the R2 binding for raw mail, attachments, Drive,
 	 * avatars, branding and backups. B2_ENDPOINT is the S3-compatible host, e.g. s3.us-west-004.backblazeb2.com.

@@ -9,6 +9,5 @@ export type NodeRuntime = {
 	mailer: Mailer;
 	inboundQueue: MailflareQueue;
 	outboundQueue: MailflareQueue;
-	agentQueue: MailflareQueue;
 	realtime: RealtimeHubRegistry;
 };

@@ -241,14 +241,11 @@ export const config = {
 		loginWindowSeconds: 60,
 		deviceLoginAttempts: parseNum(optional("RATE_LIMIT_DEVICE_MAX"), 10),
 		deviceLoginWindowSeconds: 60,
-		agentAttempts: parseNum(optional("RATE_LIMIT_AGENT_MAX"), 120),
-		agentWindowSeconds: 60,
 	},
 
 	concurrency: {
 		inboundQueueConcurrency: parseNum(optional("INBOUND_QUEUE_CONCURRENCY"), 10),
 		outboundQueueConcurrency: parseNum(optional("OUTBOUND_QUEUE_CONCURRENCY"), 10),
-		agentQueueConcurrency: parseNum(optional("AGENT_QUEUE_CONCURRENCY"), 5),
 		maxConnectionsPerIp: parseNum(optional("MAX_CONNECTIONS_PER_IP"), 10),
 		maxSmtpClients: parseNum(optional("MAX_SMTP_CLIENTS"), 100),
 	},

@@ -212,7 +212,7 @@ function MessageDetailContent({ messageId }: { messageId: string }) {
     return (
       <>
         <div className="flex h-12 items-center gap-3 border-b border-transparent px-2 py-2">
-          <MessageReadingHeaderButton assistantVisible={false} />
+          <MessageReadingHeaderButton />
           <div className="flex items-center gap-2" aria-hidden="true">
             {Array.from({ length: 4 }, (_, index) => (
               <Skeleton key={index} className="h-8 w-8 rounded-full" />
@@ -249,7 +249,7 @@ function MessageDetailContent({ messageId }: { messageId: string }) {
   return (<>
 
     <div className={clsx("flex py-2 h-12 items-center px-2 border-b sticky top-0 bg-white z-40 gap-3", scrolled ? "border-neutral-200" : "border-transparent")}>
-      <MessageReadingHeaderButton assistantVisible={false} />
+      <MessageReadingHeaderButton />
       {/* <div className="min-w-0 flex-1" /> */}
       {/* <div className="flex items-center flex-row gap-6">
 					<Link
