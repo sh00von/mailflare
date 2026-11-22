@@ -649,7 +649,7 @@ export function MessageFolderPage({
 						type="button"
 						aria-pressed={!unreadOnly && filterTag === "all"}
 						onClick={() => { setUnreadOnly(false); setFilterTag("all"); }}
-						className={`inline-flex items-center gap-1 rounded-full px-3 py-1 font-medium cursor-pointer transition-all duration-150 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500 ${
+						className={`inline-flex items-center gap-1 rounded-full px-3 py-1 font-medium cursor-pointer transition-colors duration-150 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500 ${
 							!unreadOnly && filterTag === "all"
 								? "bg-blue-600 text-white shadow-2xs font-semibold"
 								: "bg-white text-neutral-600 border border-neutral-200 hover:bg-neutral-100 hover:text-neutral-900"
@@ -661,7 +661,7 @@ export function MessageFolderPage({
 						type="button"
 						aria-pressed={unreadOnly}
 						onClick={() => { setUnreadOnly(true); setFilterTag("unread"); }}
-						className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-medium cursor-pointer transition-all duration-150 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500 ${
+						className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-medium cursor-pointer transition-colors duration-150 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500 ${
 							unreadOnly
 								? "bg-blue-600 text-white shadow-2xs font-semibold"
 								: "bg-white text-neutral-600 border border-neutral-200 hover:bg-neutral-100 hover:text-neutral-900"
@@ -674,7 +674,7 @@ export function MessageFolderPage({
 						type="button"
 						aria-pressed={filterTag === "starred"}
 						onClick={() => { setUnreadOnly(false); setFilterTag(filterTag === "starred" ? "all" : "starred"); }}
-						className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-medium cursor-pointer transition-all duration-150 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-amber-500 ${
+						className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-medium cursor-pointer transition-colors duration-150 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-amber-500 ${
 							filterTag === "starred"
 								? "bg-amber-500 text-white shadow-2xs font-semibold"
 								: "bg-white text-neutral-600 border border-neutral-200 hover:bg-neutral-100 hover:text-neutral-900"
@@ -687,7 +687,7 @@ export function MessageFolderPage({
 						type="button"
 						aria-pressed={filterTag === "attachments"}
 						onClick={() => { setUnreadOnly(false); setFilterTag(filterTag === "attachments" ? "all" : "attachments"); }}
-						className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-medium cursor-pointer transition-all duration-150 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-indigo-500 ${
+						className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-medium cursor-pointer transition-colors duration-150 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-indigo-500 ${
 							filterTag === "attachments"
 								? "bg-indigo-600 text-white shadow-2xs font-semibold"
 								: "bg-white text-neutral-600 border border-neutral-200 hover:bg-neutral-100 hover:text-neutral-900"
@@ -701,6 +701,7 @@ export function MessageFolderPage({
 						<button
 							type="button"
 							onClick={toggleDensity}
+							aria-label={density === "compact" ? "Switch to Comfortable layout" : "Switch to Compact 1-line layout"}
 							title={density === "compact" ? "Switch to Comfortable layout" : "Switch to Compact 1-line layout"}
 							className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-2.5 py-1 text-[11px] font-medium text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 transition-colors cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500 whitespace-nowrap"
 						>

@@ -42,7 +42,7 @@ export function HomeInboxPreview() {
 				<Menu className="h-4 w-4 text-neutral-400" />
 				<div className="flex h-9 flex-1 items-center gap-2.5 rounded-xl bg-neutral-100/80 px-3 text-xs text-neutral-500">
 					<Search className="h-3.5 w-3.5 text-neutral-400" />
-					<span className="truncate">Search messages, teammates, or labels...</span>
+					<span className="truncate">Search messages, teammates, or labels…</span>
 					<span className="ml-auto hidden rounded border border-neutral-300/80 bg-white px-1.5 py-0.5 font-mono text-[10px] text-neutral-500 sm:inline">/</span>
 				</div>
 				<div className="flex items-center gap-2">

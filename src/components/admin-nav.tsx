@@ -102,7 +102,7 @@ export function AdminNav({ className }: { className?: string }) {
           <a
             href={mailAppUrl}
             className={cn(
-              "flex items-center gap-2.5 rounded-xl border border-neutral-200/80 bg-neutral-50 px-3 py-2 text-xs font-medium text-neutral-700 shadow-2xs transition-all hover:border-neutral-300 hover:bg-white hover:text-neutral-900",
+              "flex items-center gap-2.5 rounded-xl border border-neutral-200/80 bg-neutral-50 px-3 py-2 text-xs font-medium text-neutral-700 shadow-2xs transition-colors hover:border-neutral-300 hover:bg-white hover:text-neutral-900",
               minimal && "justify-center px-0 py-2.5 border-0 bg-transparent hover:bg-neutral-100"
             )}
             title="Open Webmail"
