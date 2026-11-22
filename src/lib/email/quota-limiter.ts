@@ -2,14 +2,16 @@ import { eq } from "drizzle-orm";
 import type { AppDatabase } from "@/db";
 import { users, workspaces } from "@/db/schema";
 import { getSharedRedis } from "@/lib/redis/client";
+import { config } from "@/lib/config";
 
 export const PLAN_DAILY_LIMITS: Record<string, number> = {
-	starter: 250,
-	pro: 1_000,
-	business: 5_000,
+	starter: config.plans.starter.dailySendLimit,
+	pro: config.plans.pro.dailySendLimit,
+	business: config.plans.business.dailySendLimit,
+	free: config.plans.free.dailySendLimit,
 };
 
-export const DEFAULT_DAILY_LIMIT = 250;
+export const DEFAULT_DAILY_LIMIT = config.plans.starter.dailySendLimit;
 
 export interface QuotaCheckResult {
 	allowed: boolean;

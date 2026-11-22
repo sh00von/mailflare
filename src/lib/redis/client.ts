@@ -1,9 +1,10 @@
 import Redis from "ioredis";
+import { config } from "@/lib/config";
 
 let redisInstance: Redis | null = null;
 
 export function getSharedRedis(redisUrl?: string): Redis | null {
-	const url = redisUrl || process.env.REDIS_URL;
+	const url = redisUrl || config.redis.url;
 	if (!url) return null;
 
 	if (!redisInstance) {

@@ -3,6 +3,7 @@ import { getDb } from "@/db";
 import { domains, mailboxes, users } from "@/db/schema";
 import { formatEmailAddress } from "@/lib/email/address";
 import { getOutboundProviderConfig, sendThroughProvider } from "@/lib/email/outbound-provider";
+import { config } from "@/lib/config";
 import type { SystemMailInput } from "@/lib/email/system-mail-types";
 
 /**
@@ -37,7 +38,7 @@ export async function pickSystemSender(
 	env: CloudflareEnv,
 	hostname?: string,
 ): Promise<{ address: string; name: string } | null> {
-	const systemEnvFrom = (process.env.SYSTEM_FROM_EMAIL || (env as Record<string, any>)?.SYSTEM_FROM_EMAIL)?.trim();
+	const systemEnvFrom = (config.email.systemFromEmail || (env as Record<string, any>)?.SYSTEM_FROM_EMAIL)?.trim();
 	if (systemEnvFrom) {
 		return { address: systemEnvFrom, name: "Mailflare" };
 	}
@@ -68,8 +69,9 @@ export async function pickSystemSender(
 	const usable = rows.filter((row) => row.provider !== "cloudflare" || row.cloudflareSending);
 	const chosen = usable.find((row) => row.role === "admin") ?? usable[0];
 	if (!chosen) {
-		const defaultHost = (process.env.MAIL_HOSTNAME || (env as Record<string, any>)?.MAIL_HOSTNAME || "ordify.site").trim();
-		return { address: `no-reply@${defaultHost}`, name: "Replyot" };
+		const defaultHost = (config.email.mailHostname || (env as Record<string, any>)?.MAIL_HOSTNAME || hostname || "").trim();
+		if (!defaultHost) return null;
+		return { address: `no-reply@${defaultHost}`, name: "Mailflare" };
 	}
-	return { address: `${chosen.localPart}@${chosen.hostname}`, name: chosen.displayName ?? "Replyot" };
+	return { address: `${chosen.localPart}@${chosen.hostname}`, name: chosen.displayName ?? "Mailflare" };
 }

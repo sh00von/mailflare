@@ -1,5 +1,6 @@
 import { mkdirSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { config } from "@/lib/config";
 import { getDatabaseConfig, withDatabase } from "@/db/with-database";
 import { withStorage } from "@/lib/storage";
 import { openFileBucket } from "./file-bucket";
@@ -9,17 +10,12 @@ import { openQueue, type MailflareQueue } from "./queue";
 import { RealtimeHubRegistry } from "./realtime";
 import type { NodeRuntime } from "./types";
 
-function optional(name: string): string | undefined {
-	const value = process.env[name]?.trim();
-	return value || undefined;
-}
-
 function mailerConfig(): MailerConfig {
 	const smtp =
-		optional("SMTP_URL") ??
-		(optional("POSTFIX_HOST")
-			? `smtp://${optional("POSTFIX_HOST")}:${optional("POSTFIX_PORT") ?? "25"}`
-			: process.env.NODE_ENV === "production" || optional("REPLYOT_RUNTIME") === "node"
+		config.email.smtpUrl ??
+		(config.email.postfixHost
+			? `smtp://${config.email.postfixHost}:${config.email.postfixPort}`
+			: config.isProduction || process.env.REPLYOT_RUNTIME === "node"
 				? "smtp://postfix:25"
 				: undefined);
 	if (smtp) return { kind: "smtp", url: smtp };
@@ -32,19 +28,18 @@ function mailerConfig(): MailerConfig {
  * so application code does not know which platform it runs on.
  */
 export function createNodeRuntime(): NodeRuntime {
-	const dataDir = resolve(optional("DATA_DIR") ?? "./data");
+	const dataDir = resolve(process.env.DATA_DIR?.trim() || "./data");
 	mkdirSync(join(dataDir, "blobs"), { recursive: true });
 
-	// DATABASE_URL configures PostgreSQL
 	const database = undefined;
 	const bucket = openFileBucket(join(dataDir, "blobs"));
 	const mailer = openMailer(mailerConfig());
-	const redisUrl = optional("REDIS_URL");
+	const redisUrl = config.redis.url;
 	const inboundQueue = openQueue("replyot-inbound", { redisUrl, concurrency: 10 });
 	const outboundQueue = openQueue("replyot-outbound", { redisUrl, concurrency: 10 });
 	const agentQueue = openQueue("replyot-agent", { redisUrl, concurrency: 5 });
 	const realtime = new RealtimeHubRegistry();
-	const publicDir = resolve(optional("PUBLIC_DIR") ?? "./public");
+	const publicDir = resolve(process.env.PUBLIC_DIR?.trim() || "./public");
 
 	const env = {
 		DB: database,
@@ -53,12 +48,12 @@ export function createNodeRuntime(): NodeRuntime {
 		INBOUND_QUEUE: inboundQueue,
 		OUTBOUND_QUEUE: outboundQueue,
 		AGENT_QUEUE: agentQueue,
-		REDIS_URL: redisUrl,
-		RSPAMD_URL: optional("RSPAMD_URL"),
-		RSPAMD_ENABLED: optional("RSPAMD_ENABLED"),
-		AI_MODEL: optional("AI_MODEL"),
-		AI_BASE_URL: optional("AI_BASE_URL"),
-		AI_API_KEY: optional("AI_API_KEY"),
+		REDIS_URL: config.redis.url,
+		RSPAMD_URL: config.rspamd.url,
+		RSPAMD_ENABLED: config.rspamd.enabled ? "true" : "false",
+		AI_MODEL: process.env.AI_MODEL?.trim(),
+		AI_BASE_URL: process.env.AI_BASE_URL?.trim(),
+		AI_API_KEY: process.env.AI_API_KEY?.trim(),
 		REALTIME: realtime.namespace(),
 		ASSETS: openAssets(publicDir),
 		IMAGES: undefined as unknown as CloudflareEnv["IMAGES"],
@@ -66,41 +61,40 @@ export function createNodeRuntime(): NodeRuntime {
 		LOGIN_RATE_LIMIT: openRateLimiter(20, 60),
 		DEVICE_LOGIN_RATE_LIMIT: openRateLimiter(10, 60),
 		AGENT_RATE_LIMIT: openRateLimiter(120, 60),
-		B2_KEY_ID: optional("B2_KEY_ID"),
-		B2_APPLICATION_KEY: optional("B2_APPLICATION_KEY"),
-		B2_BUCKET: optional("B2_BUCKET"),
-		B2_ENDPOINT: optional("B2_ENDPOINT"),
-		S3_BUCKET: optional("S3_BUCKET") ?? optional("S3_BUCKET_NAME"),
-		S3_BUCKET_NAME: optional("S3_BUCKET_NAME"),
-		S3_ENDPOINT: optional("S3_ENDPOINT"),
-		S3_FORCE_PATH_STYLE: optional("S3_FORCE_PATH_STYLE"),
-		S3_REGION: optional("S3_REGION") ?? optional("AWS_REGION"),
-		S3_ACCESS_KEY_ID: optional("S3_ACCESS_KEY_ID") ?? optional("AWS_ACCESS_KEY_ID"),
-		S3_SECRET_ACCESS_KEY: optional("S3_SECRET_ACCESS_KEY") ?? optional("AWS_SECRET_ACCESS_KEY"),
-		CF_TOKEN: optional("CF_TOKEN"),
-		CF_API_KEY: optional("CF_API_KEY"),
-		CF_EMAIL: optional("CF_EMAIL"),
-		AWS_ACCESS_KEY_ID: optional("AWS_ACCESS_KEY_ID"),
-		AWS_SECRET_ACCESS_KEY: optional("AWS_SECRET_ACCESS_KEY"),
-		AWS_REGION: optional("AWS_REGION"),
-		OUTBOUND_PROVIDER: optional("OUTBOUND_PROVIDER"),
-		SYSTEM_FROM_EMAIL: optional("SYSTEM_FROM_EMAIL"),
-		STRIPE_SECRET_KEY: optional("STRIPE_SECRET_KEY"),
-		STRIPE_WEBHOOK_SECRET: optional("STRIPE_WEBHOOK_SECRET"),
-		STRIPE_PRICE_STARTER: optional("STRIPE_PRICE_STARTER"),
-		STRIPE_PRICE_PRO: optional("STRIPE_PRICE_PRO"),
-		STRIPE_PRICE_BUSINESS: optional("STRIPE_PRICE_BUSINESS"),
-		CAPTCHA_SECRET: optional("CAPTCHA_SECRET"),
-		GITHUB_UPDATE_TOKEN: optional("GITHUB_UPDATE_TOKEN"),
-		GITHUB_UPDATE_REF: optional("GITHUB_UPDATE_REF"),
-		GITHUB_UPDATE_REPO: optional("GITHUB_UPDATE_REPO"),
-		// Marks the runtime for the few places that must behave differently.
+		B2_KEY_ID: config.storage.b2KeyId,
+		B2_APPLICATION_KEY: config.storage.b2ApplicationKey,
+		B2_BUCKET: config.storage.b2Bucket,
+		B2_ENDPOINT: config.storage.b2Endpoint,
+		S3_BUCKET: config.storage.s3Bucket,
+		S3_BUCKET_NAME: config.storage.s3Bucket,
+		S3_ENDPOINT: config.storage.s3Endpoint,
+		S3_FORCE_PATH_STYLE: config.storage.s3ForcePathStyle ? "true" : "false",
+		S3_REGION: config.storage.s3Region,
+		S3_ACCESS_KEY_ID: config.storage.s3AccessKeyId,
+		S3_SECRET_ACCESS_KEY: config.storage.s3SecretAccessKey,
+		CF_TOKEN: process.env.CF_TOKEN?.trim(),
+		CF_API_KEY: process.env.CF_API_KEY?.trim(),
+		CF_EMAIL: process.env.CF_EMAIL?.trim(),
+		AWS_ACCESS_KEY_ID: config.storage.s3AccessKeyId,
+		AWS_SECRET_ACCESS_KEY: config.storage.s3SecretAccessKey,
+		AWS_REGION: config.storage.s3Region,
+		OUTBOUND_PROVIDER: config.email.outboundProvider,
+		SYSTEM_FROM_EMAIL: config.email.systemFromEmail,
+		STRIPE_SECRET_KEY: config.stripe.secretKey,
+		STRIPE_WEBHOOK_SECRET: config.stripe.webhookSecret,
+		STRIPE_PRICE_STARTER: config.stripe.priceStarter,
+		STRIPE_PRICE_PRO: config.stripe.pricePro,
+		STRIPE_PRICE_BUSINESS: config.stripe.priceBusiness,
+		CAPTCHA_SECRET: config.auth.captchaSecret,
+		GITHUB_UPDATE_TOKEN: config.deploy.githubUpdateToken,
+		GITHUB_UPDATE_REF: config.deploy.githubUpdateRef,
+		GITHUB_UPDATE_REPO: config.deploy.githubUpdateRepo,
 		REPLYOT_RUNTIME: "node",
-		APP_URL: optional("APP_URL")?.replace(/\/$/, ""),
-		INBOUND_WEBHOOK_SECRET: optional("INBOUND_WEBHOOK_SECRET"),
-		VAPID_PUBLIC_KEY: optional("VAPID_PUBLIC_KEY"),
-		VAPID_PRIVATE_KEY: optional("VAPID_PRIVATE_KEY"),
-		VAPID_SUBJECT: optional("VAPID_SUBJECT"),
+		APP_URL: config.urls.appUrl,
+		INBOUND_WEBHOOK_SECRET: config.email.inboundWebhookSecret,
+		VAPID_PUBLIC_KEY: config.push.vapidPublicKey,
+		VAPID_PRIVATE_KEY: config.push.vapidPrivateKey,
+		VAPID_SUBJECT: config.push.vapidSubject,
 	} as unknown as CloudflareEnv;
 	const storageEnv = withDatabase(withStorage(env));
 	realtime.bindEnv(storageEnv);

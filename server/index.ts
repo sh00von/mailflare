@@ -24,6 +24,7 @@ import type { InboundQueueMessage } from "@/lib/email/inbound";
 import type { ImportJobMessage } from "@/lib/import/jobs-types";
 import { createNodeRuntime } from "./runtime/env";
 import { autoSeedIfEmpty } from "./runtime/seed";
+import { config } from "@/lib/config";
 
 function isInboundQueueMessage(payload: unknown): payload is InboundQueueMessage {
 	return typeof payload === "object" && payload !== null && "rawR2Key" in payload && "from" in payload && "to" in payload;
@@ -46,9 +47,9 @@ import { startSmtpSubmissionListener } from "./runtime/smtp-submission";
  * schedule, the same jobs worker.ts spreads across Cloudflare products.
  */
 async function main() {
-	const port = Number(process.env.PORT ?? 4008);
-	const host = process.env.HOST ?? "0.0.0.0";
-	const dev = process.env.NODE_ENV !== "production";
+	const port = config.server.port;
+	const host = config.server.host;
+	const dev = config.isDevelopment;
 	const runtime = createNodeRuntime();
 	const { env } = runtime;
 	globalThis.__replyotNodeEnv = env;
@@ -94,7 +95,7 @@ async function main() {
 	// Set TRUST_PROXY=1 when a reverse proxy terminates in front of this
 	// process; the client IP it appended to x-forwarded-for is then trusted.
 	// Direct exposure must leave it unset so only the socket IP is trusted.
-	const trustProxy = ["1", "true", "yes"].includes((process.env.TRUST_PROXY ?? "").toLowerCase());
+	const trustProxy = config.server.trustProxy;
 
 	const server = createServer((request, response) => {
 		// The only client IP that cannot be forged is the socket's. Next sees
@@ -241,41 +242,41 @@ async function main() {
 		return null;
 	})();
 
-	const smtpTls = process.env.SMTP_TLS_KEY && process.env.SMTP_TLS_CERT
-		? { keyPath: process.env.SMTP_TLS_KEY, certPath: process.env.SMTP_TLS_CERT }
+	const smtpTls = config.email.tlsKeyPath && config.email.tlsCertPath
+		? { keyPath: config.email.tlsKeyPath, certPath: config.email.tlsCertPath }
 		: defaultTls;
 
-	const smtpPort = Number(process.env.SMTP_INBOUND_PORT ?? 25);
+	const smtpPort = config.email.inboundPort;
 	if (smtpPort > 0) {
 		startSmtpListener(env, runtime.mailer, {
 			port: smtpPort,
-			host: process.env.SMTP_INBOUND_HOST,
-			maxSize: Number(process.env.SMTP_MAX_SIZE ?? 36 * 1024 * 1024),
-			hostname: process.env.MAIL_HOSTNAME,
+			host: config.email.inboundHost,
+			maxSize: config.email.maxSize,
+			hostname: config.email.mailHostname,
 			tls: smtpTls,
 		});
 	}
 
-	const submissionPort = Number(process.env.SMTP_SUBMISSION_PORT ?? 587);
+	const submissionPort = config.email.submissionPort;
 	let submissionServer: ReturnType<typeof startSmtpSubmissionListener> | undefined;
 	if (submissionPort > 0) {
 		submissionServer = startSmtpSubmissionListener(env, runtime.mailer, {
 			port: submissionPort,
-			host: process.env.SMTP_SUBMISSION_HOST,
+			host: config.email.submissionHost,
 			secure: false,
-			hostname: process.env.MAIL_HOSTNAME,
+			hostname: config.email.mailHostname,
 			tls: smtpTls,
 		});
 	}
 
-	const submissionTlsPort = Number(process.env.SMTP_SUBMISSION_TLS_PORT ?? 465);
+	const submissionTlsPort = config.email.submissionTlsPort;
 	let submissionTlsServer: ReturnType<typeof startSmtpSubmissionListener> | undefined;
 	if (submissionTlsPort > 0 && smtpTls) {
 		submissionTlsServer = startSmtpSubmissionListener(env, runtime.mailer, {
 			port: submissionTlsPort,
-			host: process.env.SMTP_SUBMISSION_HOST,
+			host: config.email.submissionHost,
 			secure: true,
-			hostname: process.env.MAIL_HOSTNAME,
+			hostname: config.email.mailHostname,
 			tls: smtpTls,
 		});
 	}

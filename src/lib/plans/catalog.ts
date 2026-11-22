@@ -1,3 +1,5 @@
+import { config } from "@/lib/config";
+
 export type PlanId = "free" | "starter" | "pro" | "business";
 export type WorkspaceStatus = "trialing" | "active" | "suspended";
 export type BillingCycle = "monthly" | "yearly";
@@ -17,108 +19,23 @@ export type PlanDefinition = {
 	hourlySendLimit: number;
 	maxAttachmentMb: number;
 	highlighted?: boolean;
-	features: string[];
+	features: readonly string[] | string[];
 };
-
-const GIB = 1024 ** 3;
-const MIB = 1024 ** 2;
 
 export const TRIAL_DAYS = 14;
 
 export const PLANS: Record<PlanId, PlanDefinition> = {
 	free: {
-		id: "free",
-		name: "Free Forever",
-		tagline: "Essential custom domain webmail for personal use & developers",
-		priceMonthlyUsd: 0,
-		priceAnnualUsd: 0,
-		maxDomains: 1,
-		maxMailboxes: 1,
-		storageLimitBytes: 500 * MIB,
-		storagePerMailboxBytes: 500 * MIB,
-		storageLabel: "500 MB",
-		dailySendLimit: 50,
-		hourlySendLimit: 20,
-		maxAttachmentMb: 15,
-		features: [
-			"1 Custom Domain",
-			"1 Mailbox (500 MB Storage)",
-			"SPF, DKIM & DMARC Deliverability",
-			"Modern Webmail & Mobile PWA",
-			"50 Emails / day",
-		],
+		...config.plans.free,
 	},
 	starter: {
-		id: "starter",
-		name: "Starter",
-		tagline: "Perfect for solo founders, freelancers & independent creators",
-		priceMonthlyUsd: 1.99,
-		priceAnnualUsd: 19.0, // ~$1.58/mo (~17% discount)
-		maxDomains: 1,
-		maxMailboxes: 2,
-		storageLimitBytes: 2 * GIB,
-		storagePerMailboxBytes: 1 * GIB,
-		storageLabel: "2 GB (1 GB / mailbox)",
-		dailySendLimit: 200,
-		hourlySendLimit: 50,
-		maxAttachmentMb: 25,
-		features: [
-			"1 Custom Domain",
-			"Up to 2 Team Mailboxes",
-			"2 GB Dedicated Storage (1 GB/mailbox)",
-			"Unlimited Email Aliases",
-			"Custom Email Signatures",
-			"200 Emails / day",
-		],
+		...config.plans.starter,
 	},
 	pro: {
-		id: "pro",
-		name: "Pro Workspace",
-		tagline: "High-performance email workspace for startups and growing teams",
-		priceMonthlyUsd: 4.99,
-		priceAnnualUsd: 49.0, // ~$4.08/mo (~17% discount)
-		maxDomains: 3,
-		maxMailboxes: 5,
-		storageLimitBytes: 10 * GIB,
-		storagePerMailboxBytes: 2 * GIB,
-		storageLabel: "10 GB (2 GB / mailbox)",
-		dailySendLimit: 500,
-		hourlySendLimit: 100,
-		maxAttachmentMb: 25,
-		highlighted: true,
-		features: [
-			"Up to 3 Custom Domains",
-			"Up to 5 Team Mailboxes",
-			"10 GB Storage (2 GB / mailbox)",
-			"Auto-forwarding & Blocklists",
-			"Priority Inbound & Outbound Delivery",
-			"500 Emails / day (Gmail matched)",
-			"24/7 Deliverability Health Monitoring",
-		],
+		...config.plans.pro,
 	},
 	business: {
-		id: "business",
-		name: "Business",
-		tagline: "Expanded capacity and dedicated spam defense for organizations",
-		priceMonthlyUsd: 9.99,
-		priceAnnualUsd: 99.0, // ~$8.25/mo (~17% discount)
-		maxDomains: 10,
-		maxMailboxes: 15,
-		storageLimitBytes: 30 * GIB,
-		storagePerMailboxBytes: 2 * GIB,
-		storageLabel: "30 GB (2 GB / mailbox)",
-		dailySendLimit: 1500,
-		hourlySendLimit: 300,
-		maxAttachmentMb: 50,
-		features: [
-			"Up to 10 Custom Domains",
-			"Up to 15 Team Mailboxes",
-			"30 GB Storage (2 GB / mailbox)",
-			"Dedicated Spam Reputation & Filters",
-			"1,500 Emails / day High Throughput",
-			"Audit Logs & Compliance Backups",
-			"Priority Engineering Support",
-		],
+		...config.plans.business,
 	},
 };
 

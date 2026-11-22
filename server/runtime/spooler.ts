@@ -2,8 +2,9 @@ import { createWriteStream, existsSync, mkdirSync, readFileSync, rmSync } from "
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Readable } from "node:stream";
+import { config } from "@/lib/config";
 
-export const MEMORY_SPOOL_THRESHOLD_BYTES = 2 * 1024 * 1024; // 2 MB
+export const MEMORY_SPOOL_THRESHOLD_BYTES = config.attachments.memoryThresholdBytes;
 
 export interface SpoolResult {
 	buffer: Buffer;

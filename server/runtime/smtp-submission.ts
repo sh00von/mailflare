@@ -9,6 +9,7 @@ import { buildSnippet, parseRawMime } from "@/lib/email/parse";
 import { checkRecipientsSuppressed } from "@/lib/email/suppression";
 import { checkDailyOutboundQuota, incrementDailyOutboundQuota } from "@/lib/email/quota-limiter";
 import { spoolIncomingStream } from "./spooler";
+import { config } from "@/lib/config";
 import { newId } from "@/lib/ids";
 import type { Mailer } from "./mailer";
 
@@ -49,7 +50,7 @@ export function startSmtpSubmissionListener(
 		disabledCommands: options.tls ? [] : ["STARTTLS"],
 		key,
 		cert,
-		size: 36 * 1024 * 1024,
+		size: config.email.maxSize,
 
 		async onAuth(
 			auth: SMTPServerAuthentication,
