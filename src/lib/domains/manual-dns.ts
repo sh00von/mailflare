@@ -1,4 +1,5 @@
 import type { DomainDnsView } from "@/lib/domains/service";
+import { config } from "@/lib/config";
 
 /**
  * The DNS a self-hosted install needs when Replyot is not managing the
@@ -7,7 +8,7 @@ import type { DomainDnsView } from "@/lib/domains/service";
  * SMTP relay expect.
  */
 export async function getManualDomainDns(env: CloudflareEnv, hostname: string): Promise<DomainDnsView> {
-	const rawMailHost = process.env.MAIL_HOSTNAME?.trim() || `mail.${hostname}`;
+	const rawMailHost = config.email.mailHostname || `mail.${hostname}`;
 	const mailHost = rawMailHost.replace(/^https?:\/\//i, "").replace(/\/.*$/, "");
 	const spfContent = `v=spf1 a:${mailHost} ~all`.trim();
 	const records = [

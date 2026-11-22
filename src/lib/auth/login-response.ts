@@ -7,6 +7,7 @@ import { ACCOUNTS_COOKIE, rememberLogin } from "@/lib/auth/accounts";
 import { createSession, SESSION_COOKIE } from "@/lib/auth/session";
 import { recordAuthActivity } from "@/lib/auth/activity";
 import type { AuthActivityAction } from "@/lib/auth/activity-types";
+import { config } from "@/lib/config";
 
 /**
  * The one place a verified sign-in turns into a session: cookie, Bearer token
@@ -38,7 +39,7 @@ export async function completeLogin(
 	});
 	const isHttps = request.headers.get("x-forwarded-proto") === "https" || request.url.startsWith("https://");
 	let cookieDomain: string | undefined;
-	const rawCookieDomain = process.env.COOKIE_DOMAIN?.trim();
+	const rawCookieDomain = config.urls.cookieDomain;
 	if (rawCookieDomain) {
 		const cleanDomain = rawCookieDomain.replace(/^\./, "").toLowerCase();
 		const reqHost = (

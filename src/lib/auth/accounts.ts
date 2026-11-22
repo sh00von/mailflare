@@ -2,6 +2,7 @@ import { and, eq, gt, inArray } from "drizzle-orm";
 import { getDb } from "@/db";
 import { sessions, users } from "@/db/schema";
 import { hashSessionToken, SESSION_COOKIE } from "@/lib/auth/session";
+import { config } from "@/lib/config";
 
 /**
  * Browser-wide set of signed-in accounts. Holds session tokens only; the
@@ -24,7 +25,7 @@ export function serializeAccountTokens(tokens: string[]): string {
 
 export function cookieOptions(maxAge = COOKIE_MAX_AGE, request?: Request) {
 	let cookieDomain: string | undefined;
-	const rawCookieDomain = process.env.COOKIE_DOMAIN?.trim();
+	const rawCookieDomain = config.urls.cookieDomain;
 	if (rawCookieDomain && request) {
 		const cleanDomain = rawCookieDomain.replace(/^\./, "").toLowerCase();
 		const reqHost = (
@@ -38,7 +39,7 @@ export function cookieOptions(maxAge = COOKIE_MAX_AGE, request?: Request) {
 	}
 	return {
 		httpOnly: true,
-		secure: process.env.NODE_ENV === "production",
+		secure: config.isProduction,
 		sameSite: "lax" as const,
 		path: "/",
 		...(cookieDomain ? { domain: cookieDomain } : {}),

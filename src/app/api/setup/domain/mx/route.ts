@@ -8,6 +8,7 @@ import { allowLoginAttempt } from "@/lib/auth/rate-limit";
 import { setupDomainSchema } from "@/lib/validators";
 import { readJsonBody } from "@/lib/http/request";
 import { RequestBodyTooLargeError } from "@/lib/http/errors";
+import { config } from "@/lib/config";
 
 async function safeResolveMx(hostname: string): Promise<string[]> {
 	try {
@@ -53,7 +54,7 @@ export async function POST(request: Request) {
 
 	try {
 		const domainHostname = normalized;
-		const serverMailHost = (process.env.MAIL_HOSTNAME?.trim() || `mail.${domainHostname}`).toLowerCase().replace(/\.$/, "");
+		const serverMailHost = (config.email.mailHostname || `mail.${domainHostname}`).toLowerCase().replace(/\.$/, "");
 		const [currentMx, rootTxt, dmarcTxt, dkimTxt] = await Promise.all([
 			safeResolveMx(domainHostname),
 			safeResolveTxt(domainHostname),
@@ -66,7 +67,7 @@ export async function POST(request: Request) {
 		const dmarcAdded = dmarcTxt.some((txt) => txt.toLowerCase().startsWith("v=dmarc1"));
 		const dkimAdded = dkimTxt.some((txt) => txt.toLowerCase().startsWith("v=dkim1"));
 
-		const serverIp = process.env.SERVER_IP?.trim();
+		const serverIp = config.email.serverIp;
 		const spfValue = serverIp ? `v=spf1 ip4:${serverIp} ~all` : `v=spf1 a:${serverMailHost} ~all`;
 
 		const requiredRecords = [

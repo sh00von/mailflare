@@ -1,4 +1,5 @@
 import type { SpamIntelligenceInput, SpamIntelligenceProvider, SpamSignal } from "../types";
+import { config } from "@/lib/config";
 
 export interface RspamdCheckOptions {
 	rspamdUrl?: string;
@@ -28,8 +29,8 @@ export class RspamdIntelligenceProvider implements SpamIntelligenceProvider {
 	private readonly timeoutMs: number;
 
 	constructor(options?: RspamdCheckOptions) {
-		this.baseUrl = (options?.rspamdUrl || process.env.RSPAMD_URL || "http://rspamd:11333").replace(/\/$/, "");
-		this.enabled = options?.enabled !== false && process.env.RSPAMD_ENABLED !== "false";
+		this.baseUrl = (options?.rspamdUrl || config.rspamd.url || "http://rspamd:11333").replace(/\/$/, "");
+		this.enabled = options?.enabled !== false && config.rspamd.enabled;
 		this.timeoutMs = options?.timeoutMs ?? 3000;
 	}
 

@@ -1,4 +1,5 @@
 import { resolveMx, resolveTxt } from "node:dns/promises";
+import { config } from "@/lib/config";
 
 export type DomainOwnershipCheck = {
 	ok: boolean;
@@ -15,7 +16,7 @@ export type DomainOwnershipCheck = {
  * point MX at their own `mail.` host for another provider, so it would prove nothing about pointing at us.
  */
 export function ourMailHost(): string | null {
-	return process.env.MAIL_HOSTNAME?.trim().toLowerCase().replace(/\.$/, "") || null;
+	return config.email.mailHostname?.toLowerCase().replace(/\.$/, "") || null;
 }
 
 /** Whether an SPF record authorises `host` through an exact `a:`, `mx:` or `include:` mechanism, or a bare `mx`. */

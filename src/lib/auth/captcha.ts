@@ -1,4 +1,5 @@
 import { createHmac, randomBytes, randomInt, timingSafeEqual } from "node:crypto";
+import { config } from "@/lib/config";
 
 // No look-alike pairs (0/O, 1/I, 2/Z, 5/S, 6/G, 8/B), which a stroke font makes ambiguous.
 const CAPTCHA_CHARS = "3479ACDEFHJKLMNPQRTUVWXY";
@@ -6,7 +7,7 @@ const CAPTCHA_LENGTH = 5;
 const CAPTCHA_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
 
 // Server secret fallback in case an explicit CAPTCHA_SECRET is not configured
-let runtimeSecret = process.env.CAPTCHA_SECRET || process.env.SESSION_SECRET;
+let runtimeSecret = config.auth.captchaSecret || config.auth.sessionSecret;
 if (!runtimeSecret) {
 	runtimeSecret = randomBytes(32).toString("hex");
 }

@@ -1,4 +1,5 @@
 import { queryDns } from "@/lib/dns-query";
+import { config } from "@/lib/config";
 
 export interface DnsCheckItem {
 	valid: boolean;
@@ -33,7 +34,7 @@ export interface DomainDnsContext {
 export async function inspectDomainDnsHealth(domain: DomainDnsContext): Promise<DnsAuditReport> {
 	const hostname = domain.hostname.trim().toLowerCase();
 	const selector = domain.dkimSelector || "default";
-	const expectedMxHost = domain.expectedMx || process.env.MAIL_HOSTNAME || "mail." + hostname;
+	const expectedMxHost = domain.expectedMx || config.email.mailHostname || "mail." + hostname;
 
 	// 1. Check MX
 	let mxValid = false;

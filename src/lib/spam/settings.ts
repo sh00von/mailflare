@@ -4,6 +4,7 @@ import { getDb } from "@/db";
 import { appSettings } from "@/db/schema";
 import { queryDns } from "@/lib/dns-query";
 import { checkRspamdHealth } from "./providers/rspamd";
+import { config } from "@/lib/config";
 import type { SpamBrand, SpamIntelligenceConfig, SpamIntelligenceStatus } from "./types";
 
 export const SPAM_SETTINGS_ID = "default";
@@ -52,7 +53,7 @@ function envFlagOff(value: string | undefined) {
 
 export async function getSpamIntelligenceConfig(env: CloudflareEnv): Promise<SpamIntelligenceConfig> {
 	const stored = await readStoredSettings(env);
-	const rspamdUrl = env.RSPAMD_URL?.trim() || process.env.RSPAMD_URL?.trim() || "http://rspamd:11333";
+	const rspamdUrl = env.RSPAMD_URL?.trim() || config.rspamd.url || "http://rspamd:11333";
 	const rspamdEnabled = env.RSPAMD_ENABLED?.trim() !== "false" && process.env.RSPAMD_ENABLED !== "false";
 
 	return {
@@ -70,7 +71,7 @@ export async function getSpamIntelligenceStatus(env: CloudflareEnv): Promise<Spa
 	const source = (saved: string | null | undefined, fromEnv: string | undefined) =>
 		saved ? ("settings" as const) : fromEnv?.trim() ? ("env" as const) : null;
 
-	const rspamdUrl = env.RSPAMD_URL?.trim() || process.env.RSPAMD_URL?.trim() || "http://rspamd:11333";
+	const rspamdUrl = env.RSPAMD_URL?.trim() || config.rspamd.url || "http://rspamd:11333";
 	const health = await checkRspamdHealth(rspamdUrl);
 
 	return {
