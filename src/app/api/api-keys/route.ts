@@ -4,7 +4,8 @@ import { z } from "zod";
 import { getEnv } from "@/lib/cloudflare";
 import { getDb } from "@/db";
 import { apiKeys } from "@/db/schema";
-import { requireUser } from "@/lib/auth/cookies";
+import { requireSessionUser } from "@/lib/api/auth";
+import { API_KEY_SCOPES } from "@/lib/api/scopes";
 import { generateApiKey, scopesToJson } from "@/lib/api-keys";
 import { newId } from "@/lib/ids";
 import { getMailboxAccessLevel } from "@/lib/mailboxes/access";
@@ -12,13 +13,15 @@ import { hasValidSessionMutationOrigin } from "@/lib/auth/origin";
 
 const createKeySchema = z.object({
 	name: z.string().trim().min(1).max(100),
-	scopes: z.array(z.string()).min(1),
+	scopes: z.array(z.enum(API_KEY_SCOPES)).min(1),
 	mailboxIds: z.array(z.string().min(1)).max(30),
 });
 
 export async function GET(request: Request) {
 	const env = getEnv();
-	const user = await requireUser(env, request);
+	const auth = await requireSessionUser(env, request);
+	if (auth.error) return auth.error;
+	const user = auth.user;
 	const db = getDb(env);
 	const rows = await db
 		.select({
@@ -46,7 +49,9 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
 	const env = getEnv();
-	const user = await requireUser(env, request);
+	const auth = await requireSessionUser(env, request);
+	if (auth.error) return auth.error;
+	const user = auth.user;
 	if (!hasValidSessionMutationOrigin(request)) {
 		return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
 	}
@@ -88,7 +93,9 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
 	const env = getEnv();
-	const user = await requireUser(env, request);
+	const auth = await requireSessionUser(env, request);
+	if (auth.error) return auth.error;
+	const user = auth.user;
 	if (!hasValidSessionMutationOrigin(request)) {
 		return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
 	}

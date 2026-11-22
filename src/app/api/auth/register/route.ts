@@ -88,7 +88,9 @@ export async function POST(request: Request) {
 		return NextResponse.json({ error: "This domain is already in use. Ask the person who set it up to add you." }, { status: 409 });
 	}
 
-	const selectedPlan = resolvePlanId((body as Record<string, unknown>)?.plan);
+	// Cap self-service trial registrations to starter/pro; paid tiers upgrade via verified Stripe billing.
+	const requestedPlan = resolvePlanId((body as Record<string, unknown>)?.plan);
+	const selectedPlan = requestedPlan === "business" ? "pro" : requestedPlan;
 	const rawOrgName = typeof (body as Record<string, unknown>)?.orgName === "string"
 		? ((body as Record<string, unknown>).orgName as string).trim()
 		: "";

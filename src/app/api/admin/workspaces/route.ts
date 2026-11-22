@@ -4,7 +4,7 @@ import { z } from "zod";
 import { getDb } from "@/db";
 import { users, workspaces } from "@/db/schema";
 import { isPrimaryAdmin } from "@/lib/auth/admin";
-import { requireUser } from "@/lib/auth/cookies";
+import { requireSessionUser } from "@/lib/api/auth";
 import { hasValidSessionMutationOrigin } from "@/lib/auth/origin";
 import { getEnv } from "@/lib/cloudflare";
 import { getPlanDefinition, resolvePlanId, TRIAL_DAYS } from "@/lib/plans/catalog";
@@ -19,7 +19,9 @@ const updateSchema = z.object({
 
 export async function GET(request: Request) {
 	const env = getEnv();
-	const user = await requireUser(env, request);
+	const auth = await requireSessionUser(env, request);
+	if (auth.error) return auth.error;
+	const user = auth.user;
 	if (!isPrimaryAdmin(user)) {
 		return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 	}
@@ -81,7 +83,9 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
 	const env = getEnv();
-	const user = await requireUser(env, request);
+	const auth = await requireSessionUser(env, request);
+	if (auth.error) return auth.error;
+	const user = auth.user;
 	if (!isPrimaryAdmin(user)) {
 		return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 	}

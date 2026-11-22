@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/db";
 import { requireTeamAdmin } from "../../utils";
 import { canManageUserAccount, isPrimaryAdmin } from "@/lib/auth/admin";
+import { hasValidSessionMutationOrigin } from "@/lib/auth/origin";
 import { selectAccountById } from "../utils";
 import { disableMfa } from "@/lib/auth/mfa";
 import { createAuditLog } from "@/lib/mailboxes/audit";
@@ -16,6 +17,9 @@ import type { AccountRouteParams } from "../types";
 export async function DELETE(request: Request, { params }: AccountRouteParams) {
 	const access = await requireTeamAdmin(request);
 	if (access.error) return access.error;
+	if (!hasValidSessionMutationOrigin(request)) {
+		return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
+	}
 	const { id } = await params;
 	const account = await selectAccountById(getDb(access.env), id);
 	if (!account) return authError("invalid_request", 404);

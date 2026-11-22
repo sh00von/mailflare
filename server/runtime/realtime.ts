@@ -8,6 +8,9 @@ import type { RevisionPing, RevisionNotification } from "@/lib/realtime/types";
  * `REALTIME.getByName(userId).fetch("/notify")` calls the app already makes
  * land in `notify`.
  */
+const MAX_SOCKETS_PER_USER = 10;
+const MIN_REVISION_PING_INTERVAL_MS = 500;
+
 export class RealtimeHubRegistry {
 	private readonly sockets = new Map<string, Set<WebSocket>>();
 	private env: CloudflareEnv | null = null;
@@ -18,14 +21,25 @@ export class RealtimeHubRegistry {
 
 	attach(userId: string, socket: WebSocket) {
 		const set = this.sockets.get(userId) ?? new Set();
+		if (set.size >= MAX_SOCKETS_PER_USER) {
+			const oldest = set.values().next().value;
+			if (oldest) {
+				set.delete(oldest);
+				try { oldest.close(1008, "Too many concurrent connections"); } catch {}
+			}
+		}
 		set.add(socket);
 		this.sockets.set(userId, set);
+		let lastRevisionCheckAt = 0;
 		socket.on("message", (data) => {
 			const message = data.toString();
 			if (message === "ping") {
 				socket.send("pong");
 				return;
 			}
+			const now = Date.now();
+			if (now - lastRevisionCheckAt < MIN_REVISION_PING_INTERVAL_MS) return;
+			lastRevisionCheckAt = now;
 			void (async () => {
 				let ping: RevisionPing;
 				try { ping = JSON.parse(message) as RevisionPing; } catch { return; }

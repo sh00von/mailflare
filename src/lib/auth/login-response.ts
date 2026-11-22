@@ -26,8 +26,17 @@ export async function completeLogin(
 	try {
 		const url = new URL(request.url);
 		const targetRedirect = url.searchParams.get("redirect") || url.searchParams.get("returnTo");
-		if (targetRedirect && targetRedirect.startsWith("/") && !targetRedirect.startsWith("//")) {
-			redirectUrl = targetRedirect;
+		if (
+			targetRedirect &&
+			targetRedirect.startsWith("/") &&
+			!targetRedirect.startsWith("//") &&
+			!targetRedirect.startsWith("/\\") &&
+			!/[\r\n\t\\]/.test(targetRedirect)
+		) {
+			const resolved = new URL(targetRedirect, "https://app.invalid");
+			if (resolved.origin === "https://app.invalid") {
+				redirectUrl = `${resolved.pathname}${resolved.search}${resolved.hash}`;
+			}
 		}
 	} catch {}
 

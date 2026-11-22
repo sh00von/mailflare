@@ -72,20 +72,26 @@ export async function addDomainForUser(
 
 		const domainId = existing?.id ?? newId("dom");
 		const dkim = (!existing || !existing.dkimPrivateKey) ? generateDkimKeyPair() : null;
+		const requireDnsVerification = process.env.REQUIRE_DOMAIN_DNS_VERIFICATION !== "false";
+		let ownershipVerified = !requireDnsVerification && !skipDns;
+		if (!ownershipVerified && !skipDns) {
+			const check = await checkDomainOwnershipDns(normalizedHostname).catch(() => ({ ok: false }));
+			ownershipVerified = check.ok;
+		}
 		const values = {
 			id: domainId,
 			userId,
 			hostname: normalizedHostname,
 			zoneId: "self-hosted",
-			status: "active" as const,
+			status: (ownershipVerified ? "active" : "pending") as "active" | "pending",
 			receivingProvider,
-			routingStatus: "active",
+			routingStatus: ownershipVerified ? "active" : "pending",
 			sendingSubdomainTag: null,
-			sendingRequested: true,
+			sendingRequested: requestedSending !== "none",
 			sendingProvider: requestedSending !== "none" ? requestedSending : ("postfix" as const),
-			sendingEnabled: true,
-			routingEnabled: true,
-			dnsSkipped: false,
+			sendingEnabled: ownershipVerified && requestedSending !== "none",
+			routingEnabled: ownershipVerified && receivingProvider !== "none",
+			dnsSkipped: skipDns || !ownershipVerified,
 			...(dkim ? { dkimPrivateKey: dkim.privateKey, dkimPublicKey: dkim.publicKey, dkimSelector: dkim.selector } : {}),
 		};
 

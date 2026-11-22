@@ -8,6 +8,12 @@ import { getBranding } from "@/lib/branding/service";
 import { isDisposableEmail } from "@/lib/auth/disposable-emails";
 
 const CODE_EXPIRY_MINUTES = 15;
+const MAX_VERIFICATION_ATTEMPTS = 5;
+const failedVerificationAttempts = new Map<string, { count: number; expiresAt: number }>();
+
+async function hashVerificationCode(email: string, code: string): Promise<string> {
+	return hashSessionToken(`register-otp:${email}:${code}`);
+}
 
 /**
  * Generates a cryptographically random 6-digit numeric OTP code.
@@ -36,7 +42,8 @@ export async function sendVerificationCodeEmail(
 	const db = getDb(env);
 	const ceremonyHash = await hashSessionToken(`${cleanEmail}:${code}:${Date.now()}`);
 
-	// Invalidate any existing unused codes for this email
+	// Invalidate any existing unused codes and reset failed-attempt lockout for this email
+	failedVerificationAttempts.delete(cleanEmail);
 	await db
 		.delete(webauthnChallenges)
 		.where(
@@ -46,11 +53,12 @@ export async function sendVerificationCodeEmail(
 			),
 		);
 
-	// Insert new challenge
+	// Store hashed OTP (never plaintext) in challenge column
+	const hashedCode = await hashVerificationCode(cleanEmail, code);
 	await db.insert(webauthnChallenges).values({
 		id: newId("emv"),
 		ceremonyHash,
-		challenge: code,
+		challenge: hashedCode,
 		purpose: "register",
 		bindingHash: cleanEmail,
 		expiresAt: new Date(Date.now() + CODE_EXPIRY_MINUTES * 60 * 1000),
@@ -127,6 +135,7 @@ export async function verifyRegistrationCode(
 	}
 
 	const db = getDb(env);
+	const hashedCode = await hashVerificationCode(cleanEmail, cleanCode);
 	const [challenge] = await db
 		.select()
 		.from(webauthnChallenges)
@@ -134,7 +143,7 @@ export async function verifyRegistrationCode(
 			and(
 				eq(webauthnChallenges.purpose, "register"),
 				eq(webauthnChallenges.bindingHash, cleanEmail),
-				eq(webauthnChallenges.challenge, cleanCode),
+				eq(webauthnChallenges.challenge, hashedCode),
 				gt(webauthnChallenges.expiresAt, new Date()),
 				isNull(webauthnChallenges.usedAt),
 			),
@@ -142,12 +151,29 @@ export async function verifyRegistrationCode(
 		.limit(1);
 
 	if (!challenge) {
+		const now = Date.now();
+		if (failedVerificationAttempts.size > 2000) failedVerificationAttempts.clear();
+		const current = failedVerificationAttempts.get(cleanEmail);
+		const count = current && current.expiresAt > now ? current.count + 1 : 1;
+		failedVerificationAttempts.set(cleanEmail, { count, expiresAt: now + CODE_EXPIRY_MINUTES * 60 * 1000 });
+		if (count >= MAX_VERIFICATION_ATTEMPTS) {
+			// Burn the active challenge immediately after too many wrong guesses to prevent OTP brute-force.
+			await db
+				.delete(webauthnChallenges)
+				.where(and(eq(webauthnChallenges.purpose, "register"), eq(webauthnChallenges.bindingHash, cleanEmail)));
+			failedVerificationAttempts.delete(cleanEmail);
+			return {
+				ok: false,
+				error: "Too many incorrect verification attempts. Please request a new code.",
+			};
+		}
 		return {
 			ok: false,
 			error: "Invalid or expired verification code. Please check the code or request a new one.",
 		};
 	}
 
+	failedVerificationAttempts.delete(cleanEmail);
 	// Mark challenge as used
 	await db
 		.update(webauthnChallenges)

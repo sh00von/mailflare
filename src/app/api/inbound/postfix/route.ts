@@ -28,10 +28,18 @@ export async function POST(request: Request) {
 
 	const authHeader = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "")?.trim();
 	const tokenHeader = request.headers.get("x-webhook-token")?.trim();
-	const urlToken = new URL(request.url).searchParams.get("token")?.trim();
-	const provided = authHeader || tokenHeader || urlToken;
+	const provided = authHeader || tokenHeader;
 	if (!safeSecretCompare(provided, secret)) {
 		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+	}
+
+	const maxBytes = 35 * 1024 * 1024;
+	const contentLength = request.headers.get("content-length");
+	if (contentLength) {
+		const declared = Number.parseInt(contentLength, 10);
+		if (Number.isFinite(declared) && declared > maxBytes) {
+			return NextResponse.json({ error: "Message exceeds receiving limit (35 MB)" }, { status: 413 });
+		}
 	}
 
 	const raw = await request.arrayBuffer();
@@ -39,7 +47,7 @@ export async function POST(request: Request) {
 		return NextResponse.json({ error: "Empty message payload" }, { status: 400 });
 	}
 
-	if (raw.byteLength > 35 * 1024 * 1024) {
+	if (raw.byteLength > maxBytes) {
 		return NextResponse.json({ error: "Message exceeds receiving limit (35 MB)" }, { status: 413 });
 	}
 

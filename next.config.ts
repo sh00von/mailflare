@@ -56,10 +56,25 @@ const nextConfig: NextConfig = {
 		];
 	},
 	async headers() {
+		const allHeaders = getSecurityHeaders();
+		const headersWithoutCsp = allHeaders.filter((h) => h.key !== "Content-Security-Policy");
 		return [
 			{
-				source: "/(.*)",
-				headers: getSecurityHeaders(),
+				// Preserve strict per-route `default-src 'none'; sandbox` CSP on untrusted file/image routes.
+				source: "/((?!api/remote-images$|api/shared-files/|api/messages/[^/]+/attachments/).*)",
+				headers: allHeaders,
+			},
+			{
+				source: "/api/remote-images",
+				headers: headersWithoutCsp,
+			},
+			{
+				source: "/api/shared-files/:id*",
+				headers: headersWithoutCsp,
+			},
+			{
+				source: "/api/messages/:messageId/attachments/:attachmentId",
+				headers: headersWithoutCsp,
 			},
 		];
 	},

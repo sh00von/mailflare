@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db";
 import { domains } from "@/db/schema";
-import { requireUser } from "@/lib/auth/cookies";
+import { requireSessionUser } from "@/lib/api/auth";
 import { getEnv } from "@/lib/cloudflare";
 import { inspectDomainDnsHealth } from "@/lib/domains/dns-inspector";
 
@@ -11,7 +11,9 @@ type Params = { params: Promise<{ id: string }> };
 export async function POST(request: Request, { params }: Params) {
 	const { id } = await params;
 	const env = getEnv();
-	const user = await requireUser(env, request);
+	const auth = await requireSessionUser(env, request);
+	if (auth.error) return auth.error;
+	const user = auth.user;
 	const db = getDb(env);
 
 	const [domain] = await db
@@ -30,12 +32,18 @@ export async function POST(request: Request, { params }: Params) {
 		dkimPublicKey: domain.dkimPublicKey,
 	});
 
-	// If MX, SPF, and DKIM are valid, activate domain status
+	// If MX, SPF, and DKIM are valid, activate domain status and sending
 	if (report.checks.mx.valid && report.checks.spf.valid && report.checks.dkim.valid) {
-		if (domain.status !== "active") {
+		if (domain.status !== "active" || !domain.sendingEnabled || !domain.routingEnabled || domain.dnsSkipped) {
 			await db
 				.update(domains)
-				.set({ status: "active" })
+				.set({
+					status: "active",
+					sendingEnabled: true,
+					routingEnabled: true,
+					routingStatus: "active",
+					dnsSkipped: false,
+				})
 				.where(eq(domains.id, id));
 		}
 	} else if (!report.checks.mx.valid && domain.status === "active") {

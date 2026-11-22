@@ -112,7 +112,7 @@ async function main() {
 		delete request.headers["x-forwarded-for"];
 		delete request.headers["x-replyot-client-ip"];
 		if (clientIp) request.headers["x-replyot-client-ip"] = clientIp;
-		const host = (request.headers["x-forwarded-host"] ?? request.headers.host ?? "").toString().toLowerCase();
+		const host = ((trustProxy ? request.headers["x-forwarded-host"] : undefined) ?? request.headers.host ?? "").toString().toLowerCase();
 		const parsed = parse(request.url ?? "/", true);
 		const appBase = process.env.APP_URL?.trim().replace(/\/+$/, "");
 		const appHost = appBase ? new URL(appBase).host.toLowerCase() : "";
@@ -204,7 +204,7 @@ async function main() {
 	server.requestTimeout = 120_000;
 	server.maxRequestsPerSocket = 0;
 
-	const wss = new WebSocketServer({ noServer: true });
+	const wss = new WebSocketServer({ noServer: true, maxPayload: 4096 });
 	server.on("upgrade", (request, socket, head) => {
 		const { pathname } = parse(request.url ?? "/");
 		if (pathname !== "/api/realtime") {
@@ -213,10 +213,29 @@ async function main() {
 			else socket.destroy();
 			return;
 		}
+		// Prevent Cross-Site WebSocket Hijacking (CSWSH): require Origin to match this host or APP_URL.
+		const origin = request.headers.origin;
+		if (origin) {
+			const reqHost = ((trustProxy ? request.headers["x-forwarded-host"] : undefined) ?? request.headers.host ?? "").toString().toLowerCase();
+			const appBase = process.env.APP_URL?.trim().replace(/\/+$/, "");
+			const appHost = appBase ? new URL(appBase).host.toLowerCase() : "";
+			let originHost = "";
+			try {
+				originHost = new URL(origin).host.toLowerCase();
+			} catch {
+				originHost = "";
+			}
+			const originMatches = !!originHost && (originHost === reqHost || (!!appHost && originHost === appHost));
+			if (!originMatches) {
+				socket.write("HTTP/1.1 403 Forbidden\r\n\r\n");
+				socket.destroy();
+				return;
+			}
+		}
 		const cookie = request.headers.cookie ?? "";
 		const token = getSessionTokenFromRequest(new Request("http://localhost/", { headers: { cookie } }));
 		void getUserFromSession(env, token).then((user) => {
-			if (!user || user.disabled) {
+			if (!user || user.disabled || user.deletedAt) {
 				socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
 				socket.destroy();
 				return;

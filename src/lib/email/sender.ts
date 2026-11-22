@@ -38,11 +38,11 @@ export async function getAuthorizedSenderAddress(
 		.limit(1);
 
 	if (!mailbox) throw new Error("Mailbox not found");
-	if (mailbox.domainStatus !== "active") {
-		throw new Error("Outbound sending is disabled until your domain status is active.");
+	if (mailbox.domainStatus !== "active" || mailbox.sendingEnabled === false) {
+		throw new Error("Outbound sending is disabled until your domain ownership and DNS records are verified.");
 	}
 	const [actor] = await db.select().from(users).where(eq(users.id, input.userId)).limit(1);
-	if (!actor || actor.disabled) throw new Error("Sender account not found");
+	if (!actor || actor.disabled || actor.deletedAt) throw new Error("Sender account not found");
 
 	const access = await getMailboxAccessLevel(db, actor, mailbox.id);
 	if (!access?.canSendOnBehalf) {

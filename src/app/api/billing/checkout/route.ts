@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/db";
 import { workspaces } from "@/db/schema";
-import { requireUser } from "@/lib/auth/cookies";
+import { requireSessionUser } from "@/lib/api/auth";
 import {
 	createStripeCheckoutSession,
 	createStripeCustomer,
@@ -28,7 +28,9 @@ function resolveAdminBaseUrl(request: Request): string {
 
 export async function POST(request: Request) {
 	const env = getEnv();
-	const user = await requireUser(env, request);
+	const auth = await requireSessionUser(env, request);
+	if (auth.error) return auth.error;
+	const user = auth.user;
 	if (user.role !== "admin" && !user.isPrimaryAdmin) {
 		return NextResponse.json({ error: "Only workspace admins can manage billing" }, { status: 403 });
 	}

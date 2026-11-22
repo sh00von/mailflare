@@ -1,4 +1,25 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { hasValidSessionMutationOrigin } from "@/lib/auth/origin";
+
+const SAFE_HTTP_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
+/** Public, signature-verified, or pre-auth API paths exempt from ambient-cookie CSRF checks. */
+const CSRF_EXEMPT_API_PATHS = new Set([
+	"/api/inbound",
+	"/api/inbound/postfix",
+	"/api/billing/webhook",
+	"/api/auth/login",
+	"/api/auth/register",
+	"/api/auth/register/send-code",
+	"/api/auth/password-reset/request",
+	"/api/auth/password-reset/confirm",
+	"/api/auth/mfa/verify",
+	"/api/setup/prepare",
+	"/api/setup/domain",
+	"/api/setup/domain/mx",
+	"/api/domains/check",
+	"/api/seed",
+]);
 
 // Legacy root paths redirecting to clean canonical URLs
 const LEGACY_REDIRECTS: Record<string, string> = {
@@ -36,6 +57,21 @@ const LEGACY_REDIRECTS: Record<string, string> = {
 
 export function proxy(request: NextRequest) {
 	const { pathname, search } = request.nextUrl;
+
+	// Centralized CSRF origin enforcement for all cookie-authenticated state-changing API requests.
+	if (pathname.startsWith("/api/")) {
+		if (!SAFE_HTTP_METHODS.has(request.method) && !CSRF_EXEMPT_API_PATHS.has(pathname)) {
+			const hasSessionCookie = Boolean(
+				request.cookies.get("ep_session")?.value || request.cookies.get("ep_accounts")?.value,
+			);
+			const hasBearer = request.headers.get("authorization")?.startsWith("Bearer ");
+			if (hasSessionCookie && !hasBearer && !hasValidSessionMutationOrigin(request)) {
+				return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
+			}
+		}
+		return NextResponse.next();
+	}
+
 	const host = (
 		request.headers.get("x-forwarded-host") ??
 		request.headers.get("host") ??
@@ -80,6 +116,6 @@ export function proxy(request: NextRequest) {
 
 export const config = {
 	matcher: [
-		"/((?!api/|_next/|\\.well-known/|favicon\\.ico|manifest\\.webmanifest).*)",
+		"/((?!_next/|\\.well-known/|favicon\\.ico|manifest\\.webmanifest).*)",
 	],
 };

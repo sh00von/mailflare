@@ -4,6 +4,7 @@ import type { AppDatabase } from "@/db";
 import { webhookDeliveries, webhooks } from "@/db/schema";
 import { newId } from "@/lib/ids";
 import { assertResolvesPublic, isPublicHttpsUrl, PUBLIC_HTTPS_URL_MESSAGE } from "@/lib/security/public-url";
+import { publicOnlyFetch } from "@/lib/security/public-fetch";
 
 export type WebhookEventType = "message.inbound" | "message.outbound" | "message.failed";
 
@@ -103,7 +104,7 @@ async function attemptDelivery(
 		if (!isPublicHttpsUrl(hook.url)) throw new Error(PUBLIC_HTTPS_URL_MESSAGE);
 		await assertResolvesPublic(new URL(hook.url).hostname);
 		const signature = await signPayload(hook.secret, delivery.payload);
-		const res = await fetch(hook.url, {
+		const res = await publicOnlyFetch(hook.url, {
 			method: "POST",
 			redirect: "manual",
 			signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
@@ -212,10 +213,33 @@ export async function sendTestDelivery(
 	return { deliveryId: delivery.id, status };
 }
 
+const MAX_SNIPPET_READ_BYTES = 4096;
+
 async function readResponseSnippet(res: Response): Promise<string> {
 	try {
-		const text = await res.text();
-		return text.trim().slice(0, MAX_RESPONSE_SNIPPET);
+		if (!res.body) return "";
+		const reader = res.body.getReader();
+		const chunks: Uint8Array[] = [];
+		let total = 0;
+		try {
+			while (total < MAX_SNIPPET_READ_BYTES) {
+				const { done, value } = await reader.read();
+				if (done) break;
+				if (!value) continue;
+				const remaining = MAX_SNIPPET_READ_BYTES - total;
+				chunks.push(value.byteLength > remaining ? value.subarray(0, remaining) : value);
+				total += Math.min(value.byteLength, remaining);
+			}
+		} finally {
+			await reader.cancel().catch(() => undefined);
+		}
+		const combined = new Uint8Array(total);
+		let offset = 0;
+		for (const chunk of chunks) {
+			combined.set(chunk, offset);
+			offset += chunk.byteLength;
+		}
+		return new TextDecoder().decode(combined).trim().slice(0, MAX_RESPONSE_SNIPPET);
 	} catch {
 		return "";
 	}

@@ -34,6 +34,15 @@ function getDailyKey(targetId: string): string {
 	return `quota:daily_outbound:${targetId}:${dateStr}`;
 }
 
+function effectivePlanForQuota(ws: { plan: string; status: string; trialEndsAt: Date | null }): string {
+	if (ws.status === "suspended") return "free";
+	if (ws.status === "trialing") {
+		if (ws.trialEndsAt && ws.trialEndsAt.getTime() < Date.now()) return "free";
+		return "pro";
+	}
+	return ws.plan;
+}
+
 export async function resolveDailyLimit(
 	db: AppDatabase,
 	target: { userId?: string; workspaceId?: string | null },
@@ -43,11 +52,11 @@ export async function resolveDailyLimit(
 
 	if (target.workspaceId) {
 		const [ws] = await db
-			.select({ plan: workspaces.plan })
+			.select({ plan: workspaces.plan, status: workspaces.status, trialEndsAt: workspaces.trialEndsAt })
 			.from(workspaces)
 			.where(eq(workspaces.id, target.workspaceId))
 			.limit(1);
-		if (ws) plan = ws.plan;
+		if (ws) plan = effectivePlanForQuota(ws);
 	} else if (target.userId) {
 		const [user] = await db
 			.select({ workspaceId: users.workspaceId })
@@ -58,11 +67,11 @@ export async function resolveDailyLimit(
 		if (user?.workspaceId) {
 			targetId = user.workspaceId;
 			const [ws] = await db
-				.select({ plan: workspaces.plan })
+				.select({ plan: workspaces.plan, status: workspaces.status, trialEndsAt: workspaces.trialEndsAt })
 				.from(workspaces)
 				.where(eq(workspaces.id, user.workspaceId))
 				.limit(1);
-			if (ws) plan = ws.plan;
+			if (ws) plan = effectivePlanForQuota(ws);
 		}
 	}
 
