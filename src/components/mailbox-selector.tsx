@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notify } from "@/lib/notify";
 import { usePathname, useRouter } from "next/navigation";
 import { CalendarDays, Check, HardDrive, ChevronDown, Inbox, LogOut, Settings, ShieldCheck, UserPlus, UserRound, UsersRound } from "@/components/icons";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { memo, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useDismissible } from "@/components/use-dismissible";
 import { useSelectedMailbox } from "@/components/mailbox-provider";
 import { ProgressiveAvatarImage } from "@/components/progressive-avatar-image";
@@ -99,7 +99,7 @@ function AccountAvatar({
 	);
 }
 
-function MailboxAccountRow({ mailbox, unread, avatarUrl, onSelect }: MailboxAccountRowProps) {
+const MailboxAccountRow = memo(function MailboxAccountRow({ mailbox, unread, avatarUrl, onSelect }: MailboxAccountRowProps) {
 	const name = getMailboxName(mailbox);
 
 	return (
@@ -134,7 +134,7 @@ function MailboxAccountRow({ mailbox, unread, avatarUrl, onSelect }: MailboxAcco
 			)}
 		</button>
 	);
-}
+});
 
 export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 	const { selectedMailbox, setSelectedMailbox, mailboxes, isLoading } = useSelectedMailbox();

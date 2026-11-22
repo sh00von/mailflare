@@ -76,11 +76,11 @@ export function HomeInboxPreview() {
 						>
 							<item.icon className="h-3.5 w-3.5 shrink-0" />
 							<span className="flex-1">{item.labelKey}</span>
-							{item.count && (
+							{item.count ? (
 								<span className="rounded-full bg-neutral-200/80 px-1.5 py-0.2 font-mono text-[10px] font-medium text-neutral-700">
 									{item.count}
 								</span>
-							)}
+							) : null}
 						</div>
 					))}
 

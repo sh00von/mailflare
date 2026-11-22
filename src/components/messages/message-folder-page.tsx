@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { notify } from "@/lib/notify";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent } from "react";
 import { Archive, ChevronLeft, ChevronRight, Columns2, Inbox, ListFilter, Mail, MailOpen, Paperclip, Search, Star, Trash2 } from "@/components/icons";
 import { MessageListSkeleton } from "@/components/page-skeletons";
@@ -56,7 +56,7 @@ import { DueFollowUps } from "@/components/follow-ups/due-follow-ups";
 
 const pageSize = 25;
 
-function MessageListRow({
+const MessageListRow = memo(function MessageListRow({
 	message,
 	config,
 	selected,
@@ -316,7 +316,7 @@ function MessageListRow({
 			)}
 		</div>
 	);
-}
+});
 
 export function MessageFolderPage({
 	config,
