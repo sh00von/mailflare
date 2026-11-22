@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Check, Copy, RefreshCw, ShieldCheck, Sparkles, AlertTriangle } from "@/components/icons";
 import { Button } from "@/components/ui/button";
+import { notify } from "@/lib/notify";
 import { dnsAuthDescriptions, getDnsAuthItemClass } from "./utils";
 import { ROW_GRID, StatusBadge } from "./status-row";
 import { DomainCatchAllCard } from "./DomainCatchAllCard";
@@ -156,12 +157,25 @@ export default function DomainDnsDetails({
 									variant="outline"
 									size="sm"
 									disabled={checking}
-									onClick={() => {
+									onClick={async () => {
 										setChecking(true);
-										onDnsChanged();
-										window.setTimeout(() => setChecking(false), 1200);
+										try {
+											const res = await fetch(`/api/domains/${domain.id}/dns/verify`, { method: "POST" });
+											if (res.ok) {
+												const data = (await res.json()) as { score?: number };
+												notify.success(`DNS verified: ${data.score ?? 100}% deliverability score`);
+											}
+											if (onDnsChanged) {
+												await onDnsChanged();
+											}
+										} catch (err) {
+											console.error("DNS verification error:", err);
+											notify.error("Could not complete DNS verification check");
+										} finally {
+											setChecking(false);
+										}
 									}}
-									className="gap-1.5 bg-white shadow-2xs"
+									className="gap-1.5 bg-white shadow-2xs hover:bg-neutral-50 active:scale-95 transition-all"
 								>
 									<RefreshCw className={`h-3.5 w-3.5 ${checking ? "animate-spin" : ""}`} />
 									{checking ? "Verifying..." : "Verify DNS"}

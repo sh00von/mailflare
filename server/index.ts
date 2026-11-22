@@ -197,6 +197,12 @@ async function main() {
 		void handle(request, response, parsed);
 	});
 
+	// Concurrency & reverse-proxy keep-alive optimization for high traffic (100+ concurrent users)
+	server.keepAliveTimeout = 65_000;
+	server.headersTimeout = 66_000;
+	server.requestTimeout = 120_000;
+	server.maxRequestsPerSocket = 0;
+
 	const wss = new WebSocketServer({ noServer: true });
 	server.on("upgrade", (request, socket, head) => {
 		const { pathname } = parse(request.url ?? "/");

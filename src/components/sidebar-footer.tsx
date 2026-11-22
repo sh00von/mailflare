@@ -4,7 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "./sidebar-state";
 import { useShortcuts } from "./shortcuts";
-import { Keyboard, Settings } from "@/components/icons";
+import { useSessionInfo } from "@/hooks/use-current-user";
+import { Keyboard, Settings, Sparkles } from "@/components/icons";
 import { Tooltip } from "./ui/tooltip";
 import { isAdminPath } from "@/components/mailbox-selector-utils";
 
@@ -12,12 +13,13 @@ export function SidebarFooter() {
 	const pathname = usePathname();
 	const { minimal } = useSidebar();
 	const { openHelpModal, shortcutsEnabled, shortcutsPreferenceLoading } = useShortcuts();
+	const session = useSessionInfo();
 	const isAdmin = isAdminPath(pathname);
 
 	if (minimal) {
 		if (isAdmin) return null;
 		return (
-			<div className="flex flex-col items-center py-2">
+			<div className="flex flex-col items-center py-2 gap-1">
 				<Tooltip label="Settings" placement="right">
 					<Link
 						href="/settings/security"
@@ -33,6 +35,18 @@ export function SidebarFooter() {
 
 	return (
 		<div className="px-3 pt-3 flex flex-col gap-1.5 border-t border-neutral-200/60 mt-2">
+			{session?.workspace?.plan && (
+				<Link
+					href="/admin/plan"
+					className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-neutral-100/70 hover:bg-neutral-200/70 text-[11px] text-neutral-600 transition-colors group"
+				>
+					<span className="flex items-center gap-1.5 font-medium text-neutral-800 capitalize">
+						<span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+						{session.workspace.plan} Plan
+					</span>
+					<span className="text-[10px] text-neutral-500 group-hover:text-neutral-900 font-medium">Manage &rarr;</span>
+				</Link>
+			)}
 			{!isAdmin && (
 				<Link
 					href="/settings/security"

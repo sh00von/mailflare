@@ -38,7 +38,8 @@ export function openNodePostgres({ url, shared }: OpenOptions): SqlExecutor {
 		const config = { connectionString: url };
 
 		if (shared) {
-			const pool = new Pool({ ...config, max: 10 });
+			const poolMax = Math.max(10, Number(process.env.DB_POOL_MAX || 35));
+			const pool = new Pool({ ...config, max: poolMax });
 			// An idle connection dropped by the server would otherwise crash the process with an unhandled event.
 			pool.on("error", (error: Error) => console.error("Postgres pool error:", error.message));
 			const run = async <T,>(fn: (tx: SqlExecutor) => Promise<T>) => {
@@ -93,9 +94,10 @@ export function openPostgresJs({ url, shared }: OpenOptions): SqlExecutor {
 	return lazyExecutor("postgres", async () => {
 		const imported = await import("postgres");
 		const postgres = (imported as unknown as { default: typeof imported.default }).default;
+		const poolMax = Math.max(10, Number(process.env.DB_POOL_MAX || 35));
 		const make = () =>
 			postgres(url, {
-				max: shared ? 10 : 1,
+				max: shared ? poolMax : 1,
 				prepare: false,
 				onnotice: () => undefined,
 				types: {

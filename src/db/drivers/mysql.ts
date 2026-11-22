@@ -51,7 +51,8 @@ export function openMysql2({ url, shared }: OpenOptions): SqlExecutor {
 			}
 		};
 		if (shared) {
-			const pool = lib.createPool({ ...options, connectionLimit: 10 });
+			const poolMax = Math.max(10, Number(process.env.DB_POOL_MAX || 35));
+			const pool = lib.createPool({ ...options, connectionLimit: poolMax });
 			return {
 				...mysqlExecutor(pool as unknown as Queryable, async (fn) => {
 					const connection = await pool.getConnection();

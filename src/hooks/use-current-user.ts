@@ -126,3 +126,31 @@ export function useCurrentUser(): CurrentUser | null {
 
 	return user;
 }
+
+export function useSessionInfo(): SessionInfo | null {
+	const [session, setSession] = useState<SessionInfo | null>(peekSessionInfo);
+	const [reloadKey, setReloadKey] = useState(0);
+
+	useEffect(() => {
+		let active = true;
+		const requestGeneration = generation;
+		void fetchSessionInfo().then((next) => {
+			if (active && requestGeneration === generation) setSession(next);
+		});
+		return () => {
+			active = false;
+		};
+	}, [reloadKey]);
+
+	useEffect(() => {
+		function onSessionChanged() {
+			clearCurrentUserCache();
+			setSession(null);
+			setReloadKey((key) => key + 1);
+		}
+		window.addEventListener(AUTH_SESSION_CHANGED_EVENT, onSessionChanged);
+		return () => window.removeEventListener(AUTH_SESSION_CHANGED_EVENT, onSessionChanged);
+	}, []);
+
+	return session;
+}
