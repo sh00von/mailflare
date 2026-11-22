@@ -4,7 +4,7 @@ services:
     container_name: replyot-postgres
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-replyot}
       POSTGRES_USER: ${POSTGRES_USER:-replyot}
@@ -33,7 +33,7 @@ services:
     restart: unless-stopped
     command: redis-server --appendonly yes
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis-data:/data
     healthcheck:
@@ -47,7 +47,7 @@ services:
     container_name: replyot-rspamd
     restart: unless-stopped
     ports:
-      - "11333:11333"
+      - "127.0.0.1:11333:11333"
     volumes:
       - rspamd-data:/var/lib/rspamd
 

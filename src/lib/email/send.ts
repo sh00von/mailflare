@@ -105,7 +105,8 @@ export async function sendEmail(
 		totalAttachmentBytes > maxAttachmentBytes) {
 		throw new Error(`Attachments exceed the administrator's ${maxAttachmentMb} MB outgoing limit`);
 	}
-	if (input.subject.length > 998) throw new Error("Subject exceeds Cloudflare's 998-character limit");
+	const sanitizedSubject = input.subject.replace(/[\r\n\0]/g, " ").trim();
+	if (sanitizedSubject.length > 998) throw new Error("Subject exceeds Cloudflare's 998-character limit");
 
 	const to = toRecipientList(input.to);
 	const cc = toRecipientList(input.cc);
@@ -157,7 +158,7 @@ export async function sendEmail(
 		toAddr,
 		ccAddr: cc.length ? joinEmailAddressList(cc) : null,
 		bccAddr: bcc.length ? joinEmailAddressList(bcc) : null,
-		subject: input.subject,
+		subject: sanitizedSubject,
 		snippet,
 		textBody: input.text ?? null,
 		htmlBody: input.html ?? null,
@@ -194,7 +195,7 @@ export async function sendEmail(
 	});
 
 	const delivery: PreparedDelivery = {
-		input: { ...input, attachments: undefined },
+		input: { ...input, subject: sanitizedSubject, attachments: undefined },
 		messageId,
 		jobId,
 		from: sender.fromAddr,
