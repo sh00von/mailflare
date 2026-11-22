@@ -58,6 +58,8 @@ services:
     ports:
       - "4008:4008" # Web app
       - "25:25"     # Inbound SMTP
+      - "587:587"   # SMTP Submission (STARTTLS)
+      - "465:465"   # SMTPS Submission (Implicit TLS)
     environment:
       PORT: 4008
       DATABASE_URL: ${DATABASE_URL}

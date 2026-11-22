@@ -38,6 +38,7 @@ function isImportJobMessage(payload: unknown): payload is ImportJobMessage {
 }
 import { startScheduler } from "./runtime/scheduler";
 import { startSmtpListener } from "./runtime/smtp";
+import { startSmtpSubmissionListener } from "./runtime/smtp-submission";
 
 /**
  * The self-hosted entrypoint: one Node process serving the Next app, the
@@ -249,10 +250,36 @@ async function main() {
 		});
 	}
 
+	const submissionPort = Number(process.env.SMTP_SUBMISSION_PORT ?? 587);
+	let submissionServer: ReturnType<typeof startSmtpSubmissionListener> | undefined;
+	if (submissionPort > 0) {
+		submissionServer = startSmtpSubmissionListener(env, runtime.mailer, {
+			port: submissionPort,
+			host: process.env.SMTP_SUBMISSION_HOST,
+			secure: false,
+			hostname: process.env.MAIL_HOSTNAME,
+			tls: smtpTls,
+		});
+	}
+
+	const submissionTlsPort = Number(process.env.SMTP_SUBMISSION_TLS_PORT ?? 465);
+	let submissionTlsServer: ReturnType<typeof startSmtpSubmissionListener> | undefined;
+	if (submissionTlsPort > 0 && smtpTls) {
+		submissionTlsServer = startSmtpSubmissionListener(env, runtime.mailer, {
+			port: submissionTlsPort,
+			host: process.env.SMTP_SUBMISSION_HOST,
+			secure: true,
+			hostname: process.env.MAIL_HOSTNAME,
+			tls: smtpTls,
+		});
+	}
+
 	const stopScheduler = startScheduler(env);
 
 	const shutdown = () => {
 		stopScheduler();
+		submissionServer?.close();
+		submissionTlsServer?.close();
 		runtime.inboundQueue.stop();
 		runtime.outboundQueue.stop();
 		runtime.agentQueue.stop();

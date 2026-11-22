@@ -6,7 +6,8 @@ import { buildSnippet } from "@/lib/email/parse";
 import { dispatchWebhooks } from "@/lib/email/webhooks";
 import { upsertContactFromAddress } from "@/lib/contacts/service";
 import { getAuthorizedSenderAddress } from "@/lib/email/sender";
-import { getEmailAddressList, joinEmailAddressList, splitEmailAddressList } from "@/lib/email/address";
+import { getEmailAddress, getEmailAddressList, joinEmailAddressList, splitEmailAddressList } from "@/lib/email/address";
+import { checkRecipientsSuppressed } from "@/lib/email/suppression";
 import { formatMessageIdHeader, normalizeMessageId, parseMessageIdList } from "@/lib/email/threading";
 import { createAuditLog } from "@/lib/mailboxes/audit";
 import { loadMessageAttachmentContents, storeMessageAttachments, validateAttachments } from "@/lib/email/attachments";
@@ -108,6 +109,14 @@ export async function sendEmail(
 	if (to.length + cc.length + bcc.length > MAX_RECIPIENTS) {
 		throw new Error(`A message can have at most ${MAX_RECIPIENTS} recipients`);
 	}
+
+	const allRecipients = [...to, ...cc, ...bcc].map((addr) => getEmailAddress(addr) || addr);
+	const blocked = await checkRecipientsSuppressed(db, allRecipients);
+	if (blocked.length > 0) {
+		const blockedList = blocked.map((b) => b.email).join(", ");
+		throw new Error(`Sending blocked: recipient address (${blockedList}) is suppressed due to previous delivery failure.`);
+	}
+
 	for (const address of [...to, ...cc, ...bcc]) {
 		await upsertContactFromAddress(env, { userId: input.userId, address, source: "outbound" });
 	}

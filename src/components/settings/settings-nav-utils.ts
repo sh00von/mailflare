@@ -46,6 +46,10 @@ export const settingsNavSections: SettingsNavSection[] = [
 				labelKey: "Blocked Senders",
 			},
 			{
+				href: "/settings/suppression",
+				labelKey: "Bounces & Suppression",
+			},
+			{
 				href: "/settings/import",
 				labelKey: "Import",
 			},

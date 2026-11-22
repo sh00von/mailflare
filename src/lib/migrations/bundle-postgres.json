@@ -407,6 +407,15 @@
         "ALTER TABLE \"mailboxes\" DROP COLUMN \"auto_reply_subject\";",
         "ALTER TABLE \"mailboxes\" DROP COLUMN \"auto_reply_body\";"
       ]
+    },
+    {
+      "name": "0015_add_suppression_list.sql",
+      "statements": [
+        "CREATE TABLE \"suppression_list\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"workspace_id\" text,\n\t\"email\" text NOT NULL,\n\t\"reason\" text NOT NULL,\n\t\"status\" text DEFAULT 'active' NOT NULL,\n\t\"bounce_code\" text,\n\t\"bounce_count\" bigint DEFAULT 1 NOT NULL,\n\t\"details\" text,\n\t\"created_at\" bigint NOT NULL,\n\t\"updated_at\" bigint NOT NULL\n);",
+        "ALTER TABLE \"suppression_list\" ADD CONSTRAINT \"suppression_list_workspace_id_workspaces_id_fk\" FOREIGN KEY (\"workspace_id\") REFERENCES \"public\".\"workspaces\"(\"id\") ON DELETE cascade ON UPDATE no action;",
+        "CREATE INDEX \"suppression_list_email_idx\" ON \"suppression_list\" USING btree (\"email\",\"status\");",
+        "CREATE INDEX \"suppression_list_workspace_idx\" ON \"suppression_list\" USING btree (\"workspace_id\",\"email\");"
+      ]
     }
   ]
 }

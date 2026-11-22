@@ -1052,6 +1052,22 @@ export const importJobs = sqliteTable("import_jobs", {
 	finishedAt: timestamp("finished_at"),
 }, (t) => [index("import_jobs_user_idx").on(t.userId, t.createdAt), index("import_jobs_status_idx").on(t.status, t.updatedAt)]);
 
+export const suppressionList = sqliteTable("suppression_list", {
+	id: text("id").primaryKey(),
+	workspaceId: text("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }),
+	email: text("email").notNull(),
+	reason: text("reason", { enum: ["hard_bounce", "soft_bounce", "unsubscribe", "complaint", "manual"] }).notNull(),
+	status: text("status", { enum: ["active", "cleared"] }).notNull().default("active"),
+	bounceCode: text("bounce_code"),
+	bounceCount: integer("bounce_count").notNull().default(1),
+	details: text("details"),
+	createdAt: timestamp("created_at").notNull().$defaultFn(() => new Date()),
+	updatedAt: timestamp("updated_at").notNull().$defaultFn(() => new Date()),
+}, (t) => [
+	index("suppression_list_email_idx").on(t.email, t.status),
+	index("suppression_list_workspace_idx").on(t.workspaceId, t.email),
+]);
+
 export const schema = {
 	workspaces,
 	users,
@@ -1080,4 +1096,5 @@ export const schema = {
 	backups,
 	appSettings,
 	importJobs,
+	suppressionList,
 };

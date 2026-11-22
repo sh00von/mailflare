@@ -4,6 +4,8 @@ import { runAccountRetention } from "@/lib/accounts/deletion";
 import { runFollowUpReminders } from "@/lib/follow-ups/service";
 import { sweepImportJobs } from "@/lib/import/jobs";
 import { sweepOrphanedRawMail } from "@/lib/email/raw-sweeper";
+import { pruneExpiredSuppression } from "@/lib/email/suppression";
+import { getDb } from "@/db";
 
 /** Fire the daily 02:00 UTC backup and the recurring maintenance jobs, matching the cron triggers in wrangler.jsonc. */
 export function startScheduler(env: CloudflareEnv) {
@@ -19,6 +21,7 @@ export function startScheduler(env: CloudflareEnv) {
 		runScheduledDatabaseBackup(env, now).catch((error) => console.error("Scheduled backup failed", error));
 		runAccountRetention(env, now).catch((error) => console.error("Account retention failed", error));
 		sweepOrphanedRawMail(env, now).catch((error) => console.error("Raw mail sweep failed", error));
+		pruneExpiredSuppression(getDb(env)).catch((error) => console.error("Suppression prune failed", error));
 	}, 60_000);
 	return () => clearInterval(timer);
 }

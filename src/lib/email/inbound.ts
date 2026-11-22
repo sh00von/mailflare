@@ -27,6 +27,8 @@ import {
 	notifyUsersOfNewMessage,
 } from "@/lib/realtime/utils";
 import { handleInboundVacationResponder } from "@/lib/email/vacation";
+import { parseBounceReport } from "@/lib/email/bounces";
+import { handleBounceEvent } from "@/lib/email/suppression";
 
 export type InboundQueueMessage = {
 	from: string;
@@ -112,6 +114,11 @@ export async function processInboundMessage(
 	}
 	const messageId = await inboundMessageId(payload.rawR2Key);
 	const snippet = buildSnippet(parsed.text, parsed.html);
+
+	const bounceReport = parseBounceReport(parsed);
+	if (bounceReport.isBounce && bounceReport.recipient) {
+		await handleBounceEvent(db, bounceReport).catch((err) => console.error("Bounce processing error:", err));
+	}
 	const deliveredAddress = getEmailAddress(payload.to) || `${decision.mailbox.localPart}@${decision.mailbox.hostname}`;
 	// Keep the whole To header so reply-all can address everyone; rules and
 	// webhooks still see the envelope recipient the message was delivered to.
