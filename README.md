@@ -108,8 +108,8 @@ git clone https://github.com/hieunc229/mailflare.git
 cd mailflare
 
 # 2. Configure environment
-cp .env.docker.example .env.docker
-# Edit .env.docker with your domain and secret keys
+cp .env.example .env
+# Edit .env with your domain and secret keys
 
 # 3. Start Mailflare
 docker compose up -d --build
