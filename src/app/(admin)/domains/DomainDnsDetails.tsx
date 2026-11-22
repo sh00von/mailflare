@@ -17,15 +17,21 @@ function CopyValueButton({ value }: { value: string }) {
 			type="button"
 			variant="outline"
 			size="sm"
-			className="h-8 sm:h-7 min-h-[36px] shrink-0 gap-1.5 bg-white px-3 sm:px-2.5 text-xs active:scale-95 transition-all"
+			className="h-8 sm:h-7 min-h-[36px] shrink-0 gap-1.5 bg-white px-3 sm:px-2.5 text-xs active:scale-95 transition-[background-color,transform]"
 			onClick={() => {
+				if (!navigator.clipboard?.writeText) {
+					notify.error("Clipboard unavailable in this browser context");
+					return;
+				}
 				void navigator.clipboard.writeText(value).then(() => {
 					setCopied(true);
 					window.setTimeout(() => setCopied(false), 1800);
+				}).catch(() => {
+					notify.error("Could not copy to clipboard");
 				});
 			}}
 		>
-			{copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+			{copied ? <Check className="h-3.5 w-3.5 text-emerald-600" aria-hidden="true" /> : <Copy className="h-3.5 w-3.5" aria-hidden="true" />}
 			{copied ? "Copied" : "Copy"}
 		</Button>
 	);
@@ -69,11 +75,12 @@ export default function DomainDnsDetails({
 	};
 
 	const mxReady = audit?.mx.status === "ok";
+	const outboundActive = domain.status === "active" && domain.sendingEnabled !== false;
 	const mailOrigin =
 		(typeof window !== "undefined"
 			? `${window.location.protocol}//${window.location.host}`
 			: "");
-	const mailUrl = `${mailOrigin}/inbox`;
+	const mailUrl = `${mailOrigin}/mail/inbox`;
 
 	const checkList: DnsAuthRecord[] = ["mx", "spf", "dkim", "dmarc"];
 	const passedCount = audit
@@ -87,7 +94,7 @@ export default function DomainDnsDetails({
 				<div className="flex items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-neutral-50/70 px-4 py-3">
 					<div>
 						<p className="text-sm font-medium text-neutral-900">Inbound email</p>
-						<p className="text-xs text-neutral-500">Handled by Mailflare Engine</p>
+						<p className="text-xs text-neutral-500">Handled by Replyot Engine</p>
 					</div>
 					<span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${mxReady ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>
 						{mxReady ? "Active" : "Waiting for MX"}
@@ -96,10 +103,10 @@ export default function DomainDnsDetails({
 				<div className="flex items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-neutral-50/70 px-4 py-3">
 					<div>
 						<p className="text-sm font-medium text-neutral-900">Outbound email</p>
-						<p className="text-xs text-neutral-500">Handled by Mailflare Engine</p>
+						<p className="text-xs text-neutral-500">Handled by Replyot Engine</p>
 					</div>
-					<span className="shrink-0 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800">
-						Active
+					<span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${outboundActive ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>
+						{outboundActive ? "Active" : "Pending DNS"}
 					</span>
 				</div>
 			</div>
@@ -160,10 +167,31 @@ export default function DomainDnsDetails({
 									onClick={async () => {
 										setChecking(true);
 										try {
-											const res = await fetch(`/api/domains/${domain.id}/dns/verify`, { method: "POST" });
+											const res = await fetch(`/api/domains/${domain.id}/dns/verify`, {
+												method: "POST",
+												credentials: "same-origin",
+											});
 											if (res.ok) {
-												const data = (await res.json()) as { score?: number };
-												notify.success(`DNS verified: ${data.score ?? 100}% deliverability score`);
+												const data = (await res.json()) as {
+													report?: {
+														score?: number;
+														checks?: { mx?: { valid?: boolean }; spf?: { valid?: boolean }; dkim?: { valid?: boolean } };
+													};
+												};
+												const score = data.report?.score ?? 0;
+												const allCoreValid = Boolean(
+													data.report?.checks?.mx?.valid &&
+													data.report?.checks?.spf?.valid &&
+													data.report?.checks?.dkim?.valid,
+												);
+												if (allCoreValid) {
+													notify.success(`DNS verified (${score}% score). Domain is now active for sending and receiving.`);
+												} else {
+													notify.info(`DNS check complete (${score}% score). Publish the remaining records below and verify again.`);
+												}
+											} else {
+												const body = (await res.json().catch(() => null)) as { error?: string } | null;
+												notify.error(body?.error || "Could not complete DNS verification check");
 											}
 											if (onDnsChanged) {
 												await onDnsChanged();
@@ -175,10 +203,10 @@ export default function DomainDnsDetails({
 											setChecking(false);
 										}
 									}}
-									className="gap-1.5 bg-white shadow-2xs hover:bg-neutral-50 active:scale-95 transition-all"
+									className="gap-1.5 bg-white shadow-2xs hover:bg-neutral-50 active:scale-95 transition-[background-color,transform]"
 								>
-									<RefreshCw className={`h-3.5 w-3.5 ${checking ? "animate-spin" : ""}`} />
-									{checking ? "Verifying..." : "Verify DNS"}
+									<RefreshCw className={`h-3.5 w-3.5 ${checking ? "animate-spin" : ""}`} aria-hidden="true" />
+									{checking ? "Verifying…" : "Verify DNS"}
 								</Button>
 							)}
 							<Button size="sm" asChild className="rounded-full">

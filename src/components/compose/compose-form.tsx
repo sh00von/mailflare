@@ -166,6 +166,15 @@ export function ComposeForm({
 	}, [selectedFrom, senderAddresses]);
 
 	useEffect(() => {
+		const onBeforeUnload = (event: BeforeUnloadEvent) => {
+			if (!saveTimer.current && !loading) return;
+			event.preventDefault();
+		};
+		window.addEventListener("beforeunload", onBeforeUnload);
+		return () => window.removeEventListener("beforeunload", onBeforeUnload);
+	}, [loading]);
+
+	useEffect(() => {
 		if (!toast) return;
 		const timer = setTimeout(() => setToast(null), 3200);
 		return () => clearTimeout(timer);
@@ -756,7 +765,28 @@ export function ComposeForm({
 					{toast.message}
 				</div>
 			)}
-			<form onSubmit={onSubmit} className={cn(frameClass, closing && "compose-sheet-closing")} style={dragY ? { transform: `translateY(${dragY}px)`, transition: "none" } : undefined} ref={formRef} role={modalMode && !minimized ? "dialog" : mode === "popup" ? "region" : undefined} aria-modal={modalMode && !minimized || undefined} aria-label={mode === "popup" ? "Compose message" : undefined} onKeyDown={(event) => { if (modalMode && !minimized && event.key === "Escape") { event.preventDefault(); setModalMode(false); } }} onDragEnterCapture={minimized ? undefined : onFileDragEnter} onDragOverCapture={minimized ? undefined : onFileDragOver} onDragLeaveCapture={minimized ? undefined : onFileDragLeave} onDropCapture={minimized ? undefined : onFileDrop}>
+			<form
+				onSubmit={onSubmit}
+				className={cn(frameClass, closing && "compose-sheet-closing")}
+				style={dragY ? { transform: `translateY(${dragY}px)`, transition: "none" } : undefined}
+				ref={formRef}
+				role={modalMode && !minimized ? "dialog" : mode === "popup" ? "region" : undefined}
+				aria-modal={modalMode && !minimized || undefined}
+				aria-label={mode === "popup" ? "Compose message" : undefined}
+				onKeyDown={(event) => {
+					if (modalMode && !minimized && event.key === "Escape") {
+						event.preventDefault();
+						setModalMode(false);
+					} else if (!minimized && !loading && (event.metaKey || event.ctrlKey) && event.key === "Enter") {
+						event.preventDefault();
+						formRef.current?.requestSubmit();
+					}
+				}}
+				onDragEnterCapture={minimized ? undefined : onFileDragEnter}
+				onDragOverCapture={minimized ? undefined : onFileDragOver}
+				onDragLeaveCapture={minimized ? undefined : onFileDragLeave}
+				onDropCapture={minimized ? undefined : onFileDrop}
+			>
 				{draggingFiles && !minimized && (
 					<div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center border-2 border-dashed border-blue-400 bg-blue-50/90 text-sm font-medium text-blue-700" aria-hidden="true">
 						Drop files to attach
@@ -767,7 +797,7 @@ export function ComposeForm({
 						{threading?.inReplyTo && <Reply className="h-3.5 w-3.5 text-neutral-300 dark:text-neutral-700" />}
 						{!threading?.inReplyTo && /^fwd?:/i.test(subject) && <Forward className="h-3.5 w-3.5 text-neutral-300 dark:text-neutral-700" />}
 						{loadingDraft
-							? "Loading draft"
+							? "Loading draft…"
 							: threading?.inReplyTo
 								? "Reply"
 								: /^fwd?:/i.test(subject)

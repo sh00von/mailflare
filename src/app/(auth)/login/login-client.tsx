@@ -138,7 +138,7 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
               Back to sign in
             </button>
             <Button type="submit" className={AUTH_PRIMARY_BUTTON_CLASS} disabled={loading}>
-              {loading ? "Verifying..." : "Verify"}
+              {loading ? "Verifying…" : "Verify"}
             </Button>
           </div>
         </form>
@@ -164,6 +164,7 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
             name="email"
             type="email"
             autoComplete="username"
+            spellCheck={false}
             placeholder="you@yourcompany.com"
             className={AUTH_INPUT_CLASS}
             aria-invalid={error ? true : undefined}
@@ -202,7 +203,7 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
             </Link>
           )}
           <Button type="submit" className={AUTH_PRIMARY_BUTTON_CLASS} disabled={loading}>
-            {loading ? "Signing in..." : "Sign in"}
+            {loading ? "Signing in…" : "Sign in"}
           </Button>
         </div>
       </form>

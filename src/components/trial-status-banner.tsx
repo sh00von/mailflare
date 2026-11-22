@@ -30,7 +30,7 @@ export function TrialStatusBanner() {
 
 	if (isExpired) {
 		return (
-			<aside aria-label="Subscription status" className="w-full bg-neutral-900 text-white px-4 py-2 text-xs shadow-xs transition-all">
+			<aside aria-label="Subscription status" className="w-full bg-neutral-900 text-white px-4 py-2 text-xs shadow-xs transition-colors">
 				<div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2.5">
 					<div className="flex flex-wrap items-center gap-2">
 						<span className="inline-flex h-2 w-2 rounded-full bg-amber-400 shrink-0" />
@@ -54,7 +54,7 @@ export function TrialStatusBanner() {
 	}
 
 	return (
-		<aside aria-label="Trial status" className="w-full bg-blue-50/90 border-b border-blue-100 px-4 py-1.5 text-xs text-blue-900 transition-all">
+		<aside aria-label="Trial status" className="w-full bg-blue-50/90 border-b border-blue-100 px-4 py-1.5 text-xs text-blue-900 transition-colors">
 			<div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2">
 				<div className="flex flex-wrap items-center gap-2">
 					<span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600/10 text-blue-700">

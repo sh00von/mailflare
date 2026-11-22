@@ -325,7 +325,7 @@ export function MessageFolderPage({
 }: MessageFolderPageProps) {
 	const title = config.titleKey ? config.titleKey : config.title;
 	const { selectedMailbox, isLoading: mailboxesLoading } = useSelectedMailbox();
-	const { query } = useMailSearch();
+	const { query, setQuery } = useMailSearch();
 	const isMobile = useIsMobile();
 	const listState = useMessageListState();
 	const usesSharedListState = listState !== null;
@@ -335,12 +335,15 @@ export function MessageFolderPage({
 	>([]);
 	const [internalUnreadOnly, setInternalUnreadOnly] = useState(false);
 	const [filterTag, setFilterTag] = useState<"all" | "unread" | "starred" | "attachments">("all");
-	const [density, setDensity] = useState<"comfortable" | "compact">(() => {
-		if (typeof window !== "undefined") {
-			return (localStorage.getItem("mailflare-density") as "comfortable" | "compact") || "comfortable";
+	// Start with "comfortable" on SSR to avoid hydration mismatch, then sync from localStorage.
+	const [density, setDensity] = useState<"comfortable" | "compact">("comfortable");
+
+	useEffect(() => {
+		const saved = localStorage.getItem("mailflare-density");
+		if (saved === "compact" || saved === "comfortable") {
+			setDensity(saved);
 		}
-		return "comfortable";
-	});
+	}, []);
 
 	function toggleDensity() {
 		setDensity((prev) => {
@@ -388,7 +391,7 @@ export function MessageFolderPage({
 	const { counts } = useMessageCounts(selectedMailbox?.id, !mailboxesLoading);
 	usePageLoading(mailboxesLoading || isLoading, true);
 	const headerIcons = config.headerIcons ?? [];
-	const hasActiveFilters = !!query.trim();
+	const hasActiveFilters = Boolean(query.trim() || unreadOnly || filterTag !== "all");
 	const folderCount = config.folderId
 		? counts.customFolders[config.folderId]
 		: counts.folders[config.folder];
@@ -402,7 +405,7 @@ export function MessageFolderPage({
 		[selectedMessages],
 	);
 	const hasUnreadSelection = selectedMessages.some((message) => !message.read);
-	const allVisibleSelected = messages.length > 0 && messages.every((message) => selectedIds.includes(message.id));
+	const allVisibleSelected = displayMessages.length > 0 && displayMessages.every((message) => selectedIds.includes(message.id));
 	// In conversation view a row stands for every message of its thread in this
 	// folder, so actions and drags carry all of them.
 	const rowMessageIds = (message: Message) => message.threadMessageIds ?? [message.id];
@@ -467,19 +470,40 @@ export function MessageFolderPage({
 	}
 
 	function toggleAllVisible(selected: boolean) {
-		const visibleIds = new Set(messages.map((message) => message.id));
+		const visibleIds = new Set(displayMessages.map((message) => message.id));
 		setSelectedMessages((current) => {
 			if (!selected) {
 				return current.filter((message) => !visibleIds.has(message.id));
 			}
 
 			const next = new Map(current.map((message) => [message.id, message]));
-			for (const message of messages) {
+			for (const message of displayMessages) {
 				next.set(message.id, { id: message.id, read: message.read && !(message.threadUnread ?? 0) });
 			}
 			return Array.from(next.values());
 		});
 	}
+
+	function clearAllFilters() {
+		setUnreadOnly(false);
+		setFilterTag("all");
+		if (query) setQuery("");
+	}
+
+	const emptyFolderHint = (() => {
+		if (config.folderId) return "Move or filter messages into this folder to organize your inbox.";
+		switch (config.folder) {
+			case "drafts": return "Start composing a message and your drafts will save here automatically.";
+			case "sent": return "Messages you send will appear here.";
+			case "starred": return "Star important conversations so you can find them quickly.";
+			case "snoozed": return "Snoozed messages return to your inbox when you are ready for them.";
+			case "scheduled": return "Messages scheduled to send later will appear here.";
+			case "archived": return "Archived conversations stay searchable here without cluttering your inbox.";
+			case "spam": return "Suspicious messages filtered out by Rspamd appear here.";
+			case "trash": return "Deleted messages stay here until emptied or removed by retention rules.";
+			default: return "New mail will show up here.";
+		}
+	})();
 
 	const permanentDeleteFolder = !config.folderId && supportsPermanentDelete(config.folder) ? config.folder : null;
 	async function emptyFolder() {
@@ -491,7 +515,7 @@ export function MessageFolderPage({
 			setOffset(0);
 		} catch (error) {
 			console.error(error);
-			window.alert(`Could not empty ${getPermanentDeleteFolderLabel(permanentDeleteFolder)}. Please try again.`);
+			notify.error(error, `Could not empty ${getPermanentDeleteFolderLabel(permanentDeleteFolder)}. Please try again.`);
 		} finally {
 			setEmptyingFolder(false);
 		}
@@ -553,7 +577,7 @@ export function MessageFolderPage({
 					<Tooltip label={"Select all visible messages"}>
 						<Checkbox
 							checked={allVisibleSelected}
-							disabled={messages.length === 0}
+							disabled={displayMessages.length === 0}
 							onChange={(event) => toggleAllVisible(event.target.checked)}
 							className="h-4 w-4 rounded border-neutral-300"
 							aria-label={"Select all visible messages"}
@@ -579,7 +603,7 @@ export function MessageFolderPage({
 						{isLoading && messages.length === 0 ? (
 							<Skeleton className="h-3 w-16" />
 						) : (
-							<span className="text-xs text-neutral-500 whitespace-nowrap">
+							<span className="text-xs text-neutral-500 whitespace-nowrap tabular-nums">
 								{`${pageRange.start} - ${pageRange.end} of ${pageRange.total}`}
 							</span>
 						)}
@@ -613,7 +637,11 @@ export function MessageFolderPage({
 									size="sm"
 									aria-label={"Show unread emails only"}
 									aria-pressed={unreadOnly}
-									onClick={() => setUnreadOnly((current) => !current)}
+									onClick={() => {
+										const next = !unreadOnly;
+										setUnreadOnly(next);
+										setFilterTag(next ? "unread" : "all");
+									}}
 									className={unreadOnly ? "bg-blue-100 text-blue-700 hover:bg-blue-100" : undefined}
 								>
 									<ListFilter className="h-4 w-4" />
@@ -739,17 +767,28 @@ export function MessageFolderPage({
 					))}
 				</div>
 				{isLoading && messages.length === 0 && <MessageListSkeleton compact={compact || isMobile} />}
-				{!isLoading && messages.length === 0 && (
+				{!isLoading && displayMessages.length === 0 && (
 					<div className="flex flex-col items-center justify-center px-6 py-20 text-center">
 						<span className="flex h-16 w-16 items-center justify-center rounded-full bg-neutral-100 text-neutral-400">
-							{hasActiveFilters ? <Search className="h-7 w-7" /> : <Inbox className="h-7 w-7" />}
+							{hasActiveFilters ? <Search className="h-7 w-7" aria-hidden="true" /> : <Inbox className="h-7 w-7" aria-hidden="true" />}
 						</span>
 						<p className="mt-4 text-base font-medium text-neutral-800">
 							{hasActiveFilters ? "No messages match these filters" : config.emptyTextKey ? config.emptyTextKey : config.emptyText}
 						</p>
-						<p className="mt-1 text-sm text-neutral-500">
-							{hasActiveFilters ? "Try different words or clear the filters." : "New mail will show up here."}
+						<p className="mt-1 max-w-sm text-sm text-neutral-500">
+							{hasActiveFilters ? "Try different search terms or clear your active filters." : emptyFolderHint}
 						</p>
+						{hasActiveFilters && (
+							<Button
+								type="button"
+								variant="outline"
+								size="sm"
+								onClick={clearAllFilters}
+								className="mt-4 rounded-full"
+							>
+								Clear filters
+							</Button>
+						)}
 					</div>
 				)}
 			</div>

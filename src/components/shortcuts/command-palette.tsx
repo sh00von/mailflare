@@ -77,13 +77,13 @@ function CommandPaletteDialog({
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
-        aria-label={"Type a command or search actions..."}
+        aria-label="Command palette"
         className="relative w-full max-w-xl bg-white border border-neutral-200 rounded-2xl shadow-2xl overflow-hidden flex flex-col z-10"
         onKeyDown={handleKeyDown}
       >
         {/* Search header */}
         <div className="flex items-center px-4 py-3.5 border-b border-neutral-100 gap-3">
-          <Search className="w-5 h-5 text-neutral-400" />
+          <Search className="w-5 h-5 text-neutral-400" aria-hidden="true" />
           <input
             ref={inputRef}
             type="text"
@@ -92,13 +92,13 @@ function CommandPaletteDialog({
               setQuery(e.target.value);
               setSelectedIndex(0);
             }}
-            placeholder={"Type a command or search actions..."}
+            placeholder="Type a command or search actions…"
             role="combobox"
             aria-expanded="true"
             aria-controls={listboxId}
             aria-autocomplete="list"
             aria-activedescendant={filteredCommands.length ? optionId(activeIndex) : undefined}
-            aria-label={"Type a command or search actions..."}
+            aria-label="Type a command or search actions"
             className="w-full bg-transparent text-neutral-900 placeholder-neutral-400 text-[15px] focus:outline-none"
           />
           <kbd className="px-2 py-0.5 text-xs font-semibold text-neutral-500 bg-neutral-100 border border-neutral-200 rounded-md shadow-2xs">
@@ -107,7 +107,7 @@ function CommandPaletteDialog({
         </div>
 
         {/* Results */}
-        <div id={listboxId} role="listbox" aria-label={"Type a command or search actions..."} className="max-h-80 overflow-y-auto p-2">
+        <div id={listboxId} role="listbox" aria-label="Command results" className="max-h-80 overflow-y-auto overscroll-contain p-2">
           {filteredCommands.length === 0 ? (
             <div role="status" className="p-8 text-center text-sm text-neutral-500">
               {`No matching commands found for “${query}”`}

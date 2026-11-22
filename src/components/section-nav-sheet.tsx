@@ -62,9 +62,14 @@ export function SectionNavSheet({ label, title, children, className }: SectionNa
 					className,
 				)}
 			>
-				<div className="flex justify-center pt-3 md:hidden" onClick={() => setOpen(false)}>
-					<span className="h-1.5 w-10 rounded-full bg-neutral-300" />
-				</div>
+				<button
+					type="button"
+					aria-label="Close navigation menu"
+					className="flex w-full justify-center pt-3 pb-1 md:hidden"
+					onClick={() => setOpen(false)}
+				>
+					<span className="h-1.5 w-10 rounded-full bg-neutral-300" aria-hidden="true" />
+				</button>
 				{children}
 			</aside>
 		</>

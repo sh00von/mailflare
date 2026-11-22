@@ -36,6 +36,7 @@ import { useMessageCounts } from "@/hooks/use-message-counts";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { AUTH_SESSION_CHANGED_EVENT, authFetch } from "@/lib/auth/client";
 import { getMailboxFolders, invalidateFolderCache } from "@/lib/folders/client";
+import { notify } from "@/lib/notify";
 import {
   DEFAULT_FOLDER_COLOR,
   FOLDER_COLOR_OPTIONS,
@@ -91,7 +92,7 @@ function NavToggle({ expanded, onClick, collapsedLabel, expandedLabel }: { expan
       aria-expanded={expanded}
       className="flex h-9 w-full items-center rounded-r-full pl-[52px] text-left text-sm text-neutral-700 transition-colors hover:bg-stone-200/60 max-md:min-h-11 max-md:pl-14 max-md:text-base"
     >
-      {expanded ? (expandedLabel ?? "Show less...") : (collapsedLabel ?? "More...")}
+      {expanded ? (expandedLabel ?? "Show less…") : (collapsedLabel ?? "More…")}
     </button>
   );
 }
@@ -113,52 +114,56 @@ export function DashboardNav({ className }: { className?: string }) {
     useState<FolderColor>(DEFAULT_FOLDER_COLOR);
   const [addingFolder, setAddingFolder] = useState(false);
   const [folderDialogOpen, setFolderDialogOpen] = useState(false);
-  const linksWithCounts: NavLink[] = links.filter((link) => link.href !== "/scheduled" || counts.folders.scheduled.total > 0).map(({ labelKey, ...rest }): NavLink => {
-    const link = { ...rest, label: labelKey };
-    if (link.href === "/inbox") {
-      return { ...link, count: getFolderNavCount("inbox", counts.folders) };
-    }
-    if (link.href === "/starred") {
-      return { ...link, count: getFolderNavCount("starred", counts.folders) };
-    }
-    if (link.href === "/snoozed") {
-      return { ...link, count: getFolderNavCount("snoozed", counts.folders) };
-    }
-    if (link.href === "/sent") {
-      return { ...link, count: getFolderNavCount("sent", counts.folders) };
-    }
-    if (link.href === "/scheduled") {
-      return { ...link, count: counts.folders.scheduled.total };
-    }
-    if (link.href === "/drafts") {
-      return { ...link, count: getFolderNavCount("drafts", counts.folders) };
-    }
-    if (link.href === "/archived") {
-      return {
-        ...link,
-        count: getFolderNavCount("archived", counts.folders),
-        onMessageDrop: (messageIds: string[]) =>
-          void moveMessagesToSystemFolder(messageIds, "archive"),
-      };
-    }
-    if (link.href === "/spam") {
-      return {
-        ...link,
-        count: getFolderNavCount("spam", counts.folders),
-        onMessageDrop: (messageIds: string[]) =>
-          void moveMessagesToSystemFolder(messageIds, "spam"),
-      };
-    }
-    if (link.href === "/trash") {
-      return {
-        ...link,
-        count: getFolderNavCount("trash", counts.folders),
-        onMessageDrop: (messageIds: string[]) =>
-          void moveMessagesToSystemFolder(messageIds, "trash"),
-      };
-    }
-    return link;
-  });
+  const normHref = (href?: string) => (href ? href.replace(/^\/mail/, "") || "/inbox" : "");
+  const linksWithCounts: NavLink[] = links
+    .filter((link) => normHref(link.href) !== "/scheduled" || counts.folders.scheduled.total > 0)
+    .map(({ labelKey, ...rest }): NavLink => {
+      const link = { ...rest, label: labelKey };
+      const target = normHref(link.href);
+      if (target === "/inbox") {
+        return { ...link, count: getFolderNavCount("inbox", counts.folders) };
+      }
+      if (target === "/starred") {
+        return { ...link, count: getFolderNavCount("starred", counts.folders) };
+      }
+      if (target === "/snoozed") {
+        return { ...link, count: getFolderNavCount("snoozed", counts.folders) };
+      }
+      if (target === "/sent") {
+        return { ...link, count: getFolderNavCount("sent", counts.folders) };
+      }
+      if (target === "/scheduled") {
+        return { ...link, count: counts.folders.scheduled.total };
+      }
+      if (target === "/drafts") {
+        return { ...link, count: getFolderNavCount("drafts", counts.folders) };
+      }
+      if (target === "/archived") {
+        return {
+          ...link,
+          count: getFolderNavCount("archived", counts.folders),
+          onMessageDrop: (messageIds: string[]) =>
+            void moveMessagesToSystemFolder(messageIds, "archive"),
+        };
+      }
+      if (target === "/spam") {
+        return {
+          ...link,
+          count: getFolderNavCount("spam", counts.folders),
+          onMessageDrop: (messageIds: string[]) =>
+            void moveMessagesToSystemFolder(messageIds, "spam"),
+        };
+      }
+      if (target === "/trash") {
+        return {
+          ...link,
+          count: getFolderNavCount("trash", counts.folders),
+          onMessageDrop: (messageIds: string[]) =>
+            void moveMessagesToSystemFolder(messageIds, "trash"),
+        };
+      }
+      return link;
+    });
 
   useEffect(() => {
     setMoreOpen(readStorage(MORE_OPEN_KEY, false));
@@ -186,8 +191,8 @@ export function DashboardNav({ className }: { className?: string }) {
     const normH = href.replace(/^\/mail/, "") || "/inbox";
     return pathname === href || pathname.startsWith(`${href}/`) || normP === normH || (normH !== "/" && normP.startsWith(`${normH}/`));
   };
-  const composeLink = linksWithCounts.find((link) => link.href === "/compose");
-  const mainLinks = linksWithCounts.filter((link) => link.href !== "/compose" && !MORE_LINK_HREFS.includes(link.href!));
+  const composeLink = linksWithCounts.find((link) => normHref(link.href) === "/compose");
+  const mainLinks = linksWithCounts.filter((link) => normHref(link.href) !== "/compose" && !MORE_LINK_HREFS.includes(link.href!));
   const moreLinks = linksWithCounts.filter((link) => MORE_LINK_HREFS.includes(link.href!));
   // The icon rail has no room for text toggles. When collapsed, the page you are on stays listed on its own.
   const showAllMoreLinks = minimal || moreOpen;
@@ -228,7 +233,11 @@ export function DashboardNav({ className }: { className?: string }) {
           color: newFolderColor,
         }),
       });
-      if (!response.ok) return;
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        notify.error(body?.error || "Could not create folder. Please try again.");
+        return;
+      }
       const folder = (await response.json()) as CustomFolder;
       invalidateFolderCache();
       setFolders((items) =>
@@ -341,7 +350,7 @@ export function DashboardNav({ className }: { className?: string }) {
                     type="submit"
                     disabled={addingFolder || !newFolderName.trim()}
                   >
-                    {addingFolder ? "Creating..." : "Create folder"}
+                    {addingFolder ? "Creating…" : "Create folder"}
                   </Button>
                 </form>
               </DialogContent>

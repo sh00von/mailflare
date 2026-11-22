@@ -84,7 +84,7 @@ export function CaptchaField({
 					{loading ? (
 						<div className="flex items-center gap-1.5 text-xs text-neutral-400">
 							<RefreshCw className="h-3.5 w-3.5 animate-spin" />
-							<span>Loading...</span>
+							<span>Loading…</span>
 						</div>
 					) : (
 						<div
