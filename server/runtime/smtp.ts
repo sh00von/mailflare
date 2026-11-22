@@ -7,6 +7,7 @@ import { isPublicIpv4 } from "@/lib/spam/domain-utils";
 import { getDb } from "@/db";
 import { domains } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { spoolIncomingStream } from "./spooler";
 import { verifySmtpAuthentication } from "./smtp-auth";
 import type { Mailer } from "./mailer";
 
@@ -98,70 +99,76 @@ export function startSmtpListener(
 		size: options.maxSize,
 		banner: "Replyot",
 		onData(stream, session: SMTPServerSession, callback) {
-			const chunks: Buffer[] = [];
-			let received = 0;
-			stream.on("data", (chunk: Buffer) => {
-				// Stop buffering once over the limit; the 552 is sent when the stream ends.
-				received += chunk.length;
-				if (received <= options.maxSize) chunks.push(chunk);
-				else chunks.length = 0;
-			});
-			stream.on("end", async () => {
-				if (stream.sizeExceeded) {
-					const error = Object.assign(new Error("Message exceeds size limit"), { responseCode: 552 });
-					callback(error);
-					return;
-				}
-				const raw = Buffer.concat(chunks);
-				let attachmentLimitReason: string | null;
-				try {
-					attachmentLimitReason = await inboundAttachmentLimitReasonFromRaw(toArrayBuffer(raw));
-				} catch (error) {
-					console.error("SMTP attachment inspection failed", error);
-					callback(Object.assign(new Error("Temporary failure, try again later"), { responseCode: 451 }));
-					return;
-				}
-				if (attachmentLimitReason) {
-					callback(Object.assign(new Error(attachmentLimitReason), { responseCode: 552 }));
-					return;
-				}
-				const from = session.envelope.mailFrom ? session.envelope.mailFrom.address : "";
-				const headers = parseHeaders(raw);
-				// No SPF/DKIM/DMARC verification happens here, so anything the sender wrote is untrusted.
-				for (const name of UNTRUSTED_HEADERS) delete headers[name];
-				const senderIp = isPublicIpv4(session.remoteAddress) ? session.remoteAddress : undefined;
-				const verdicts = await verifySmtpAuthentication(raw, {
-					ip: session.remoteAddress,
-					helo: session.hostNameAppearsAs,
-					sender: from,
-					mta: options.hostname,
-				});
-				let rejectReason: string | null = null;
-				for (const recipient of session.envelope.rcptTo) {
-					const result = await intakeIncomingMail(
-						env,
-						{ from, to: recipient.address, raw: toArrayBuffer(raw), headers, senderIp, verdicts },
-						{
-							reject: (reason) => {
-								rejectReason = reason;
-							},
-							forward: async (destination) => mailer.sendRaw(from, destination, raw),
-						},
-					).catch((error) => {
-						console.error(`SMTP intake failed for ${recipient.address}`, error);
-						return null;
-					});
-					if (!result) {
-						callback(Object.assign(new Error("Temporary failure, try again later"), { responseCode: 451 }));
+			if (stream.sizeExceeded) {
+				const error = Object.assign(new Error("Message exceeds size limit"), { responseCode: 552 });
+				callback(error);
+				return;
+			}
+			spoolIncomingStream(stream)
+				.then(async (spooled) => {
+					if (stream.sizeExceeded || spooled.size > options.maxSize) {
+						await spooled.cleanup();
+						callback(Object.assign(new Error("Message exceeds size limit"), { responseCode: 552 }));
 						return;
 					}
-				}
-				if (rejectReason) {
-					callback(Object.assign(new Error(rejectReason), { responseCode: 550 }));
-					return;
-				}
-				callback();
-			});
+					try {
+						const raw = spooled.buffer;
+						let attachmentLimitReason: string | null;
+						try {
+							attachmentLimitReason = await inboundAttachmentLimitReasonFromRaw(toArrayBuffer(raw));
+						} catch (error) {
+							console.error("SMTP attachment inspection failed", error);
+							callback(Object.assign(new Error("Temporary failure, try again later"), { responseCode: 451 }));
+							return;
+						}
+						if (attachmentLimitReason) {
+							callback(Object.assign(new Error(attachmentLimitReason), { responseCode: 552 }));
+							return;
+						}
+						const from = session.envelope.mailFrom ? session.envelope.mailFrom.address : "";
+						const headers = parseHeaders(raw);
+						// No SPF/DKIM/DMARC verification happens here, so anything the sender wrote is untrusted.
+						for (const name of UNTRUSTED_HEADERS) delete headers[name];
+						const senderIp = isPublicIpv4(session.remoteAddress) ? session.remoteAddress : undefined;
+						const verdicts = await verifySmtpAuthentication(raw, {
+							ip: session.remoteAddress,
+							helo: session.hostNameAppearsAs,
+							sender: from,
+							mta: options.hostname,
+						});
+						let rejectReason: string | null = null;
+						for (const recipient of session.envelope.rcptTo) {
+							const result = await intakeIncomingMail(
+								env,
+								{ from, to: recipient.address, raw: toArrayBuffer(raw), headers, senderIp, verdicts },
+								{
+									reject: (reason) => {
+										rejectReason = reason;
+									},
+									forward: async (destination) => mailer.sendRaw(from, destination, raw),
+								},
+							).catch((error) => {
+								console.error(`SMTP intake failed for ${recipient.address}`, error);
+								return null;
+							});
+							if (!result) {
+								callback(Object.assign(new Error("Temporary failure, try again later"), { responseCode: 451 }));
+								return;
+							}
+						}
+						if (rejectReason) {
+							callback(Object.assign(new Error(rejectReason), { responseCode: 550 }));
+							return;
+						}
+						callback();
+					} finally {
+						await spooled.cleanup();
+					}
+				})
+				.catch((error) => {
+					console.error("SMTP intake stream error", error);
+					callback(Object.assign(new Error("Temporary failure, try again later"), { responseCode: 451 }));
+				});
 		},
 	});
 	server.on("error", (error) => console.error("SMTP listener error", error));

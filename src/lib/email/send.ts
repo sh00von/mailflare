@@ -8,6 +8,7 @@ import { upsertContactFromAddress } from "@/lib/contacts/service";
 import { getAuthorizedSenderAddress } from "@/lib/email/sender";
 import { getEmailAddress, getEmailAddressList, joinEmailAddressList, splitEmailAddressList } from "@/lib/email/address";
 import { checkRecipientsSuppressed } from "@/lib/email/suppression";
+import { checkDailyOutboundQuota, incrementDailyOutboundQuota } from "@/lib/email/quota-limiter";
 import { formatMessageIdHeader, normalizeMessageId, parseMessageIdList } from "@/lib/email/threading";
 import { createAuditLog } from "@/lib/mailboxes/audit";
 import { loadMessageAttachmentContents, storeMessageAttachments, validateAttachments } from "@/lib/email/attachments";
@@ -93,6 +94,10 @@ export async function sendEmail(
 	const quota = await checkCanSendEmail(env, { id: input.userId, name: "" }, totalAttachmentBytes);
 	if (!quota.ok) {
 		throw new Error(quota.error);
+	}
+	const dailyTierQuota = await checkDailyOutboundQuota(db, env, { userId: input.userId }, 1);
+	if (!dailyTierQuota.allowed) {
+		throw new Error(dailyTierQuota.reason || "Daily sending quota exceeded for your tier.");
 	}
 	const maxAttachmentMb = await getOutboundAttachmentMaxMb(env);
 	const maxAttachmentBytes = maxAttachmentMb * 1_000_000;
@@ -263,6 +268,7 @@ async function deliverEmail(env: CloudflareEnv, delivery: PreparedDelivery): Pro
 			})
 			.where(eq(messages.id, messageId));
 		await db.update(outboundJobs).set({ status: "sent", updatedAt: new Date() }).where(eq(outboundJobs.id, jobId));
+		await incrementDailyOutboundQuota(db, env, { userId: input.userId }, 1);
 		if (input.followUpDays) {
 			// The message is already out; a reminder that cannot be stored must not fail the send.
 			await setFollowUp(env, { messageId, userId: input.userId, days: input.followUpDays }).catch((error) => console.error("Follow-up reminder skipped", error));

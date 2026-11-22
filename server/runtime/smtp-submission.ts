@@ -7,6 +7,8 @@ import { verifyPassword } from "@/lib/auth/password";
 import { getEmailAddress } from "@/lib/email/address";
 import { buildSnippet, parseRawMime } from "@/lib/email/parse";
 import { checkRecipientsSuppressed } from "@/lib/email/suppression";
+import { checkDailyOutboundQuota, incrementDailyOutboundQuota } from "@/lib/email/quota-limiter";
+import { spoolIncomingStream } from "./spooler";
 import { newId } from "@/lib/ids";
 import type { Mailer } from "./mailer";
 
@@ -106,9 +108,20 @@ export function startSmtpSubmissionListener(
 			}
 		},
 
-		onMailFrom(address, session, callback) {
+		async onMailFrom(address, session, callback) {
 			if (!session.user) {
 				return callback(new Error("530 5.7.0 Authentication required"));
+			}
+			const authUser = sessionUsers.get(session.id);
+			if (authUser) {
+				try {
+					const quota = await checkDailyOutboundQuota(db, env, { userId: authUser.userId }, 1);
+					if (!quota.allowed) {
+						return callback(new Error(`452 4.5.3 ${quota.reason || "Daily sending quota exceeded"}`));
+					}
+				} catch (err) {
+					console.warn("Quota check error in onMailFrom:", err);
+				}
 			}
 			return callback();
 		},
@@ -135,71 +148,81 @@ export function startSmtpSubmissionListener(
 		},
 
 		onData(stream, session, callback) {
-			const chunks: Buffer[] = [];
-			stream.on("data", (chunk: Buffer) => chunks.push(chunk));
-			stream.on("end", async () => {
-				const authUser = sessionUsers.get(session.id);
-				if (!authUser) {
-					return callback(new Error("530 5.7.0 Authentication required"));
-				}
+			const authUser = sessionUsers.get(session.id);
+			if (!authUser) {
+				return callback(new Error("530 5.7.0 Authentication required"));
+			}
 
-				const rawBuffer = Buffer.concat(chunks);
-				try {
-					const parsed = await parseRawMime(rawBuffer);
-					const envelopeFrom = (session.envelope?.mailFrom && typeof session.envelope.mailFrom === "object" ? session.envelope.mailFrom.address : undefined) || authUser.email;
-					const envelopeRecipients = (session.envelope?.rcptTo || []).map((r) => r.address);
-
-					if (envelopeRecipients.length === 0) {
-						return callback(new Error("503 5.5.1 No recipients specified"));
-					}
-
-					// Forward through Mailer to Postfix outbound MTA for each recipient
-					for (const recipient of envelopeRecipients) {
-						await mailer.sendRaw(envelopeFrom, recipient, rawBuffer);
-					}
-
-					// Store sent message record in Sent folder
+			spoolIncomingStream(stream)
+				.then(async (spooled) => {
 					try {
-						const resolvedMailboxId = authUser.mailboxId || (
-							await db
-								.select({ id: mailboxes.id })
-								.from(mailboxes)
-								.where(eq(mailboxes.userId, authUser.userId))
-								.limit(1)
-								.then((rows) => rows[0]?.id)
-						);
+						const rawBuffer = spooled.buffer;
+						const parsed = await parseRawMime(toArrayBuffer(rawBuffer));
+						const envelopeFrom =
+							(session.envelope?.mailFrom && typeof session.envelope.mailFrom === "object"
+								? session.envelope.mailFrom.address
+								: undefined) || authUser.email;
+						const envelopeRecipients = (session.envelope?.rcptTo || []).map((r) => r.address);
 
-						const snippet = buildSnippet(parsed.text, parsed.html);
-						await db.insert(messages).values({
-							id: newId(),
-							userId: authUser.userId,
-							mailboxId: resolvedMailboxId ?? null,
-							direction: "outbound",
-							fromAddr: envelopeFrom,
-							toAddr: envelopeRecipients.join(", "),
-							subject: parsed.subject || "(No Subject)",
-							snippet,
-							textBody: parsed.text || "",
-							htmlBody: parsed.html || null,
-							status: "sent",
-							read: true,
-							createdAt: new Date(),
-						});
-					} catch (saveError) {
-						console.warn("Failed to record SMTP sent message in DB:", saveError);
+						if (envelopeRecipients.length === 0) {
+							return callback(new Error("503 5.5.1 No recipients specified"));
+						}
+
+						// Forward through Mailer to Postfix outbound MTA for each recipient
+						for (const recipient of envelopeRecipients) {
+							await mailer.sendRaw(envelopeFrom, recipient, rawBuffer);
+						}
+
+						// Store sent message record in Sent folder
+						try {
+							const resolvedMailboxId =
+								authUser.mailboxId ||
+								(await db
+									.select({ id: mailboxes.id })
+									.from(mailboxes)
+									.where(eq(mailboxes.userId, authUser.userId))
+									.limit(1)
+									.then((rows) => rows[0]?.id));
+
+							const snippet = buildSnippet(parsed.text, parsed.html);
+							await db.insert(messages).values({
+								id: newId(),
+								userId: authUser.userId,
+								mailboxId: resolvedMailboxId ?? null,
+								direction: "outbound",
+								fromAddr: envelopeFrom,
+								toAddr: envelopeRecipients.join(", "),
+								subject: parsed.subject || "(No Subject)",
+								snippet,
+								textBody: parsed.text || "",
+								htmlBody: parsed.html || null,
+								status: "sent",
+								read: true,
+								createdAt: new Date(),
+							});
+						} catch (saveError) {
+							console.warn("Failed to record SMTP sent message in DB:", saveError);
+						}
+
+						await incrementDailyOutboundQuota(
+							db,
+							env,
+							{ userId: authUser.userId },
+							envelopeRecipients.length,
+						).catch(() => null);
+
+						return callback(null, "250 2.0.0 OK: message queued for delivery");
+					} catch (sendError) {
+						console.error("SMTP Submission dispatch error:", sendError);
+						return callback(new Error("451 4.3.0 Delivery failed, please try again later"));
+					} finally {
+						await spooled.cleanup();
 					}
-
-					return callback(null, "250 2.0.0 OK: message queued for delivery");
-				} catch (sendError) {
-					console.error("SMTP Submission dispatch error:", sendError);
-					return callback(new Error("451 4.3.0 Delivery failed, please try again later"));
-				}
-			});
-
-			stream.on("error", (err) => {
-				console.error("SMTP Submission stream error:", err);
-				callback(new Error("451 4.3.0 Transmission failed"));
-			});
+				})
+				.catch((err) => {
+					console.error("SMTP Submission stream spooling error:", err);
+					callback(new Error("451 4.3.0 Transmission failed"));
+				});
 		},
 
 		onClose(session) {
@@ -214,4 +237,8 @@ export function startSmtpSubmissionListener(
 	});
 
 	return server;
+}
+
+function toArrayBuffer(buffer: Buffer): ArrayBuffer {
+	return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer;
 }
