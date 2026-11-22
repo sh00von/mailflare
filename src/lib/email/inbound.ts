@@ -17,7 +17,7 @@ import { resolveThreadId } from "@/lib/email/threading";
 import { normalizeMessageId } from "@/lib/email/thread-lookup";
 import type { SessionUser } from "@/lib/auth/types";
 import { analyzeSpam } from "@/lib/spam/engine";
-import { ExternalSpamIntelligenceProvider } from "@/lib/spam/providers/external";
+import { RspamdIntelligenceProvider } from "@/lib/spam/providers/rspamd";
 import { getSpamIntelligenceConfig } from "@/lib/spam/settings";
 import type { ProviderVerdicts } from "@/lib/spam/types";
 import { getReputationKeys } from "@/lib/spam/analyzers/reputation";
@@ -134,12 +134,17 @@ export async function processInboundMessage(
 				mailboxId: decision.mailbox.mailboxId,
 				userId: decision.mailbox.userId,
 				envelopeFrom: payload.from,
+				envelopeTo: payload.to,
 				headers: payload.headers,
 				verdicts: payload.verdicts,
 				senderIp: payload.senderIp,
 				brands: intelligence.brands,
 				message: parsed,
-				intelligenceProvider: new ExternalSpamIntelligenceProvider(intelligence, env.BUCKET),
+				rawMime: buffer,
+				intelligenceProvider: new RspamdIntelligenceProvider({
+					rspamdUrl: intelligence.rspamdUrl,
+					enabled: intelligence.rspamdEnabled,
+				}),
 			});
 		} catch (error) {
 			spamAnalysisError = error instanceof Error ? error.message.slice(0, 300) : "Spam analysis failed";

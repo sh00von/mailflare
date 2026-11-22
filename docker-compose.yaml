@@ -27,6 +27,30 @@ services:
     volumes:
       - postfix-spool:/var/spool/postfix
 
+  redis:
+    image: redis:7-alpine
+    container_name: replyot-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  rspamd:
+    image: rspamd/rspamd:latest
+    container_name: replyot-rspamd
+    restart: unless-stopped
+    ports:
+      - "11333:11333"
+    volumes:
+      - rspamd-data:/var/lib/rspamd
+
   replyot:
     image: ghcr.io/sh00von/replyot:latest
     pull_policy: always
@@ -47,6 +71,8 @@ services:
       MAIL_HOSTNAME: ${MAIL_HOSTNAME}
       SMTP_INBOUND_PORT: ${SMTP_INBOUND_PORT:-25}
       OUTBOUND_PROVIDER: ${OUTBOUND_PROVIDER:-postfix}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      RSPAMD_URL: ${RSPAMD_URL:-http://rspamd:11333}
       SYSTEM_FROM_EMAIL: ${SYSTEM_FROM_EMAIL:-}
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
@@ -65,8 +91,12 @@ services:
     depends_on:
       - postgres
       - postfix
+      - redis
+      - rspamd
 
 volumes:
   postgres-data:
   replyot-data:
   postfix-spool:
+  redis-data:
+  rspamd-data:

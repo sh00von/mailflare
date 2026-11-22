@@ -5,7 +5,7 @@ import { withStorage } from "@/lib/storage";
 import { openFileBucket } from "./file-bucket";
 import { openMailer, type Mailer, type MailerConfig } from "./mailer";
 import { openAssets, openRateLimiter } from "./misc";
-import { openQueue, type InProcessQueue } from "./queue";
+import { openQueue, type MailflareQueue } from "./queue";
 import { RealtimeHubRegistry } from "./realtime";
 import type { NodeRuntime } from "./types";
 
@@ -39,9 +39,10 @@ export function createNodeRuntime(): NodeRuntime {
 	const database = undefined;
 	const bucket = openFileBucket(join(dataDir, "blobs"));
 	const mailer = openMailer(mailerConfig());
-	const inboundQueue = openQueue("replyot-inbound");
-	const outboundQueue = openQueue("replyot-outbound");
-	const agentQueue = openQueue("replyot-agent");
+	const redisUrl = optional("REDIS_URL");
+	const inboundQueue = openQueue("replyot-inbound", { redisUrl, concurrency: 10 });
+	const outboundQueue = openQueue("replyot-outbound", { redisUrl, concurrency: 10 });
+	const agentQueue = openQueue("replyot-agent", { redisUrl, concurrency: 5 });
 	const realtime = new RealtimeHubRegistry();
 	const publicDir = resolve(optional("PUBLIC_DIR") ?? "./public");
 
@@ -52,6 +53,9 @@ export function createNodeRuntime(): NodeRuntime {
 		INBOUND_QUEUE: inboundQueue,
 		OUTBOUND_QUEUE: outboundQueue,
 		AGENT_QUEUE: agentQueue,
+		REDIS_URL: redisUrl,
+		RSPAMD_URL: optional("RSPAMD_URL"),
+		RSPAMD_ENABLED: optional("RSPAMD_ENABLED"),
 		AI_MODEL: optional("AI_MODEL"),
 		AI_BASE_URL: optional("AI_BASE_URL"),
 		AI_API_KEY: optional("AI_API_KEY"),
@@ -106,9 +110,9 @@ export function createNodeRuntime(): NodeRuntime {
 		dataDir,
 		database: undefined,
 		mailer: mailer as unknown as Mailer,
-		inboundQueue: inboundQueue as unknown as InProcessQueue,
-		outboundQueue: outboundQueue as unknown as InProcessQueue,
-		agentQueue: agentQueue as unknown as InProcessQueue,
+		inboundQueue: inboundQueue as unknown as MailflareQueue,
+		outboundQueue: outboundQueue as unknown as MailflareQueue,
+		agentQueue: agentQueue as unknown as MailflareQueue,
 		realtime,
 	};
 }

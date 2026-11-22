@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getDb } from "@/db";
 import { appSettings } from "@/db/schema";
 import { queryDns } from "@/lib/dns-query";
+import { checkRspamdHealth } from "./providers/rspamd";
 import type { SpamBrand, SpamIntelligenceConfig, SpamIntelligenceStatus } from "./types";
 
 export const SPAM_SETTINGS_ID = "default";
@@ -13,7 +14,12 @@ export const spamBrandSchema = z.object({
 	domains: z.array(z.string().trim().toLowerCase().regex(/^(?=.{3,253}$)[a-z0-9-]+(\.[a-z0-9-]+)+$/)).min(1).max(20),
 });
 
-type StoredSettings = { spamhausDqsKey: string | null; abusechAuthKey: string | null; spamDomainAgeCheck: boolean; spamBrands: string | null };
+type StoredSettings = {
+	spamhausDqsKey: string | null;
+	abusechAuthKey: string | null;
+	spamDomainAgeCheck: boolean;
+	spamBrands: string | null;
+};
 
 /** Null until migration 0070 adds the columns, so spam analysis keeps running on env vars alone. */
 async function readStoredSettings(env: CloudflareEnv): Promise<StoredSettings | null> {
@@ -46,7 +52,12 @@ function envFlagOff(value: string | undefined) {
 
 export async function getSpamIntelligenceConfig(env: CloudflareEnv): Promise<SpamIntelligenceConfig> {
 	const stored = await readStoredSettings(env);
+	const rspamdUrl = env.RSPAMD_URL?.trim() || process.env.RSPAMD_URL?.trim() || "http://rspamd:11333";
+	const rspamdEnabled = env.RSPAMD_ENABLED?.trim() !== "false" && process.env.RSPAMD_ENABLED !== "false";
+
 	return {
+		rspamdUrl,
+		rspamdEnabled,
 		spamhausDqsKey: stored?.spamhausDqsKey || env.SPAMHAUS_DQS_KEY?.trim() || undefined,
 		abuseChAuthKey: stored?.abusechAuthKey || env.ABUSECH_AUTH_KEY?.trim() || undefined,
 		domainAge: (stored?.spamDomainAgeCheck ?? true) && !envFlagOff(env.SPAM_DOMAIN_AGE_CHECK),
@@ -56,9 +67,19 @@ export async function getSpamIntelligenceConfig(env: CloudflareEnv): Promise<Spa
 
 export async function getSpamIntelligenceStatus(env: CloudflareEnv): Promise<SpamIntelligenceStatus> {
 	const stored = await readStoredSettings(env);
-	const source = (saved: string | null | undefined, fromEnv: string | undefined) => saved ? "settings" as const : fromEnv?.trim() ? "env" as const : null;
+	const source = (saved: string | null | undefined, fromEnv: string | undefined) =>
+		saved ? ("settings" as const) : fromEnv?.trim() ? ("env" as const) : null;
+
+	const rspamdUrl = env.RSPAMD_URL?.trim() || process.env.RSPAMD_URL?.trim() || "http://rspamd:11333";
+	const health = await checkRspamdHealth(rspamdUrl);
+
 	return {
 		available: stored !== null,
+		rspamd: {
+			url: rspamdUrl,
+			online: health.ok,
+			latencyMs: health.latencyMs,
+		},
 		spamhaus: { source: source(stored?.spamhausDqsKey, env.SPAMHAUS_DQS_KEY) },
 		abusech: { source: source(stored?.abusechAuthKey, env.ABUSECH_AUTH_KEY) },
 		domainAge: stored?.spamDomainAgeCheck ?? true,
@@ -67,7 +88,10 @@ export async function getSpamIntelligenceStatus(env: CloudflareEnv): Promise<Spa
 	};
 }
 
-export async function saveSpamIntelligenceSettings(env: CloudflareEnv, values: Partial<Omit<StoredSettings, "spamBrands">> & { spamBrands?: SpamBrand[] }) {
+export async function saveSpamIntelligenceSettings(
+	env: CloudflareEnv,
+	values: Partial<Omit<StoredSettings, "spamBrands">> & { spamBrands?: SpamBrand[] },
+) {
 	const set: Partial<typeof appSettings.$inferInsert> = { updatedAt: new Date() };
 	if (values.spamhausDqsKey !== undefined) set.spamhausDqsKey = values.spamhausDqsKey;
 	if (values.abusechAuthKey !== undefined) set.abusechAuthKey = values.abusechAuthKey;
@@ -76,16 +100,13 @@ export async function saveSpamIntelligenceSettings(env: CloudflareEnv, values: P
 	await getDb(env).insert(appSettings).values({ id: SPAM_SETTINGS_ID, ...set }).onConflictDoUpdate({ target: appSettings.id, set });
 }
 
-/**
- * Spamhaus answers its permanent test entry 127.0.0.2 with a listing for any working key; an unknown key gets
- * no answer and a blocked one an error code in 127.255.255.0/24.
- */
+/** Legacy key check kept for backwards compatibility. */
 export async function checkSpamhausKey(key: string): Promise<boolean> {
 	const answers = await queryDns(`2.0.0.127.${key}.zen.dq.spamhaus.net`, "A");
 	return answers.some((answer) => answer.startsWith("127.0.0.") && answer !== "127.0.0.1");
 }
 
-/** abuse.ch rejects an unknown Auth-Key with 401; any other answer means the key was accepted. */
+/** Legacy key check kept for backwards compatibility. */
 export async function checkAbuseChKey(key: string): Promise<boolean> {
 	const response = await fetch("https://urlhaus-api.abuse.ch/v1/host/", {
 		method: "POST",

@@ -23,6 +23,7 @@ export type SpamAnalysisInput = {
 	mailboxId: string;
 	userId: string;
 	envelopeFrom: string;
+	envelopeTo?: string;
 	headers?: Record<string, string>;
 	verdicts?: ProviderVerdicts;
 	/** Connecting IP recorded by the provider; otherwise read from the topmost Received header. */
@@ -30,6 +31,7 @@ export type SpamAnalysisInput = {
 	/** Brands added in the admin spam filter settings, checked alongside the built-in list. */
 	brands?: SpamBrand[];
 	message: ParsedEmail;
+	rawMime?: ArrayBuffer | Buffer;
 	intelligenceProvider?: SpamIntelligenceProvider;
 };
 
@@ -54,6 +56,9 @@ export type SpamIntelligenceInput = {
 	fingerprint: string;
 	/** IPv4 of the server that delivered the message to our MX, when known. */
 	senderIp?: string | null;
+	rawMime?: ArrayBuffer | Buffer;
+	envelopeFrom?: string;
+	envelopeTo?: string;
 };
 
 export interface SpamIntelligenceProvider {
@@ -61,6 +66,10 @@ export interface SpamIntelligenceProvider {
 }
 
 export type SpamIntelligenceConfig = {
+	/** Rspamd HTTP API endpoint URL (e.g. http://rspamd:11333). */
+	rspamdUrl?: string;
+	/** Whether Rspamd filtering is active. */
+	rspamdEnabled?: boolean;
 	/** Spamhaus Data Query Service key; public Spamhaus mirrors refuse queries from public resolvers like ours. */
 	spamhausDqsKey?: string;
 	/** abuse.ch Auth-Key for URLhaus host lookups. */
@@ -79,6 +88,7 @@ export type SpamKeySource = "settings" | "env" | null;
 export type SpamIntelligenceStatus = {
 	/** False until the database migration adding these settings has run. */
 	available: boolean;
+	rspamd: { url: string; online: boolean; latencyMs?: number };
 	spamhaus: { source: SpamKeySource };
 	abusech: { source: SpamKeySource };
 	domainAge: boolean;

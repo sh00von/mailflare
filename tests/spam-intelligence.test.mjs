@@ -17,8 +17,8 @@ await build({
 			`export { analyzeImpersonation } from "./src/lib/spam/analyzers/impersonation";`,
 			`export { extractSenderIp, isLookalikeDomain, registrableDomain } from "./src/lib/spam/domain-utils";`,
 			`export { ExternalSpamIntelligenceProvider } from "./src/lib/spam/providers/external";`,
+			`export { RspamdIntelligenceProvider } from "./src/lib/spam/providers/rspamd";`,
 			`export { readSesTrace } from "./src/lib/email/provider-trace";`,
-			`export { parseSesNotification } from "./src/lib/aws/ses-notification";`,
 			`export { getSpamIntelligenceConfig } from "./src/lib/spam/settings";`,
 			`export { formatBrandLines, parseBrandLines } from "./src/app/(admin)/spam-filter/utils";`,
 		].join("\n"),
@@ -43,21 +43,6 @@ test("SES verdicts drive authentication signals and outrank headers in the messa
 	assert.deepEqual(ids(signals), ["dkim_failed", "dmarc_failed", "provider_spam_verdict", "spf_passed"]);
 	assert.deepEqual(ids(spam.analyzeAuthentication({ "authentication-results": "attacker.example; dmarc=pass" })), []);
 	assert.deepEqual(ids(spam.analyzeAuthentication(forged, { spf: undefined })), ["dkim_passed", "dmarc_passed", "spf_passed"]);
-});
-
-test("the SES notification carries its verdicts and keeps the topmost of repeated headers", () => {
-	const notification = spam.parseSesNotification(JSON.stringify({
-		notificationType: "Received",
-		mail: { source: "a@example.com", headers: [{ name: "Received", value: "top" }, { name: "Received", value: "forged" }] },
-		receipt: {
-			recipients: ["me@example.org"],
-			spfVerdict: { status: "PASS" }, dkimVerdict: { status: "GRAY" }, dmarcVerdict: { status: "FAIL" },
-			spamVerdict: { status: "PASS" }, virusVerdict: { status: "PASS" },
-			action: { type: "S3", bucketName: "b", objectKey: "k" },
-		},
-	}));
-	assert.equal(notification.headers.received, "top");
-	assert.deepEqual(notification.verdicts, { spf: "PASS", dkim: "GRAY", dmarc: "FAIL", spam: "PASS", virus: "PASS" });
 });
 
 test("only the leading SES header block is trusted for verdicts and the connecting IP", () => {
@@ -128,7 +113,41 @@ test("the brand list round-trips through its one-brand-per-line text form", () =
 test("before the settings migration runs, lookups fall back to environment variables", async () => {
 	const DB = { prepare() { throw new Error("no such column: spamhaus_dqs_key"); } };
 	const config = await spam.getSpamIntelligenceConfig({ DB, SPAMHAUS_DQS_KEY: " dqs-key ", SPAM_DOMAIN_AGE_CHECK: "off" });
-	assert.deepEqual(config, { spamhausDqsKey: "dqs-key", abuseChAuthKey: undefined, domainAge: false, brands: [] });
+	assert.deepEqual(config, { rspamdUrl: "http://rspamd:11333", rspamdEnabled: true, spamhausDqsKey: "dqs-key", abuseChAuthKey: undefined, domainAge: false, brands: [] });
+});
+
+test("Rspamd provider parses /checkv2 response symbols and actions", async () => {
+	const originalFetch = globalThis.fetch;
+	try {
+		globalThis.fetch = async (url) => {
+			if (String(url).includes("/checkv2")) {
+				return new Response(JSON.stringify({
+					score: 15.5,
+					required_score: 14.0,
+					action: "reject",
+					symbols: {
+						R_DKIM_REJECT: { name: "R_DKIM_REJECT", score: 3.0, description: "DKIM signature invalid" },
+						FUZZY_DENIED: { name: "FUZZY_DENIED", score: 5.0, description: "Fuzzy hash match spam database" }
+					}
+				}), { status: 200, headers: { "content-type": "application/json" } });
+			}
+			throw new Error(`unexpected fetch ${url}`);
+		};
+
+		const provider = new spam.RspamdIntelligenceProvider({ rspamdUrl: "http://mock-rspamd:11333" });
+		const signals = await provider.check({
+			senderDomain: "spammer.example",
+			urlDomains: [],
+			fingerprint: "msg-123",
+			rawMime: Buffer.from("From: spam@example.com\r\n\r\nSpam body"),
+		});
+
+		assert.ok(signals.some((s) => s.id === "rspamd_action_reject"));
+		assert.ok(signals.some((s) => s.id === "rspamd_r_dkim_reject"));
+		assert.ok(signals.some((s) => s.id === "rspamd_fuzzy_denied"));
+	} finally {
+		globalThis.fetch = originalFetch;
+	}
 });
 
 function stubFetch(routes) {

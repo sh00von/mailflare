@@ -45,6 +45,9 @@ export async function analyzeSpam(db: AppDatabase, input: SpamAnalysisInput): Pr
 		urlDomains: prepared.urlDomains,
 		fingerprint,
 		senderIp: input.senderIp ?? extractSenderIp(input.headers),
+		rawMime: input.rawMime,
+		envelopeFrom: input.envelopeFrom,
+		envelopeTo: input.envelopeTo,
 	}).catch(() => []));
 
 	// Relationship trust must not offset a failed authentication: a spoofed known contact is the attack.

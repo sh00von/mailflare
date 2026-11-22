@@ -10,5 +10,3 @@ export type SpamFilterUpdate = {
 };
 
 export type BrandLinesResult = { brands: SpamBrand[]; invalidLines: number[] };
-
-export type SpamKeyField = "spamhausDqsKey" | "abuseChAuthKey";

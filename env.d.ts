@@ -93,6 +93,12 @@ interface CloudflareEnv {
 	APNS_PRIVATE_KEY?: string;
 	/** Origin of a Mailflare push relay (mailflare-relay); lets this server push without APNS_* keys. */
 	APNS_RELAY_URL?: string;
+	/** Redis connection string for persistent BullMQ queue. */
+	REDIS_URL?: string;
+	/** Rspamd HTTP API endpoint (e.g. http://rspamd:11333). */
+	RSPAMD_URL?: string;
+	/** Whether Rspamd inspection is enabled ("false" to disable). */
+	RSPAMD_ENABLED?: string;
 	/** Spamhaus Data Query Service key; enables ZEN (sending IP) and DBL (domain) checks in spam analysis. */
 	SPAMHAUS_DQS_KEY?: string;
 	/** abuse.ch Auth-Key; enables URLhaus malware-host checks for links in incoming mail. */
