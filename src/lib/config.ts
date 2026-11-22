@@ -113,6 +113,7 @@ export const config = {
 	auth: {
 		sessionSecret: optional("SESSION_SECRET"),
 		captchaSecret: optional("CAPTCHA_SECRET"),
+		captchaEnabled: parseBool(optional("ENABLE_CAPTCHA"), true),
 		allowDemoSeed: parseBool(optional("ALLOW_DEMO_SEED"), false),
 	},
 

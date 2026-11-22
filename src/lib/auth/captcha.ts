@@ -149,11 +149,24 @@ function purgeExpiredNonces(now: number): void {
 	}
 }
 
+/** Check whether captcha protection is active or administratively disabled. */
+export function isCaptchaEnabled(): boolean {
+	const raw = process.env.ENABLE_CAPTCHA ?? process.env.NEXT_PUBLIC_ENABLE_CAPTCHA;
+	if (raw !== undefined) {
+		const lower = raw.trim().toLowerCase();
+		return lower !== "false" && lower !== "0" && lower !== "no" && lower !== "off";
+	}
+	return config.auth.captchaEnabled;
+}
+
 /**
  * Validates a submitted captcha answer against the signed token.
  * Case-insensitive, single-use anti-replay (expires in 5 minutes and immediately burns the nonce).
  */
 export function verifyCaptcha(answer: unknown, token: unknown): boolean {
+	if (!isCaptchaEnabled()) {
+		return true;
+	}
 	if (typeof answer !== "string" || typeof token !== "string") {
 		return false;
 	}

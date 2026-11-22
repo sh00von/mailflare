@@ -122,7 +122,7 @@ const [afterRestore] = await db.select({ subject: messages.subject, starred: mes
 check("backup restores", afterRestore?.subject === "Quarterly Report" && afterRestore.starred === false && afterRestore.createdAt instanceof Date);
 
 const [settings] = await db.select().from(appSettings).where(eq(appSettings.id, "default"));
-check("seed rows present", settings?.appName === "Replyot");
+check("seed rows present", settings?.appName === "Replyot" || settings?.appName === "Mailflare");
 
 await db.delete(users).where(eq(users.id, userId));
 const remaining = await db.all<{ n: number }>(sql`SELECT count(*) AS n FROM messages WHERE user_id = ${userId}`);

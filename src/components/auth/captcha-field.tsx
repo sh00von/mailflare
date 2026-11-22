@@ -17,6 +17,7 @@ export function CaptchaField({
 	required = true,
 	disabled = false,
 }: CaptchaFieldProps) {
+	const [enabled, setEnabled] = useState<boolean>(true);
 	const [svg, setSvg] = useState<string>("");
 	const [token, setToken] = useState<string>("");
 	const [answer, setAnswer] = useState<string>("");
@@ -29,7 +30,12 @@ export function CaptchaField({
 			setRefreshing(true);
 			const res = await fetch("/api/auth/captcha", { credentials: "same-origin" });
 			if (res.ok) {
-				const data = (await res.json()) as { svg: string; token: string };
+				const data = (await res.json()) as { enabled?: boolean; svg: string; token: string };
+				if (data.enabled === false) {
+					setEnabled(false);
+					return;
+				}
+				setEnabled(true);
 				setSvg(data.svg);
 				setToken(data.token);
 				setAnswer("");
@@ -45,6 +51,10 @@ export function CaptchaField({
 	useEffect(() => {
 		void loadCaptcha();
 	}, [loadCaptcha, resetSignal]);
+
+	if (!enabled) {
+		return null;
+	}
 
 	return (
 		<div className={cn("space-y-1.5", className)}>

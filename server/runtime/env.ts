@@ -80,6 +80,8 @@ export function createNodeRuntime(): NodeRuntime {
 		STRIPE_PRICE_PRO: config.stripe.pricePro,
 		STRIPE_PRICE_BUSINESS: config.stripe.priceBusiness,
 		CAPTCHA_SECRET: config.auth.captchaSecret,
+		ENABLE_CAPTCHA: String(config.auth.captchaEnabled),
+		NEXT_PUBLIC_ENABLE_CAPTCHA: String(config.auth.captchaEnabled),
 		GITHUB_UPDATE_TOKEN: config.deploy.githubUpdateToken,
 		GITHUB_UPDATE_REF: config.deploy.githubUpdateRef,
 		GITHUB_UPDATE_REPO: config.deploy.githubUpdateRepo,

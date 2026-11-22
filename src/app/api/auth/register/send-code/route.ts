@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getEnv } from "@/lib/cloudflare";
 import { allowLoginAttempt } from "@/lib/auth/rate-limit";
-import { verifyCaptcha } from "@/lib/auth/captcha";
+import { isCaptchaEnabled, verifyCaptcha } from "@/lib/auth/captcha";
 import { readJsonBody } from "@/lib/http/request";
 import { RequestBodyTooLargeError } from "@/lib/http/errors";
 import { isDisposableEmail } from "@/lib/auth/disposable-emails";
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
 	const { email, captchaAnswer, captchaToken } = parsed.data;
 
 	const isResend = await hasActiveVerificationChallenge(env, email);
-	if (!isResend && (!captchaAnswer || !captchaToken || !verifyCaptcha(captchaAnswer, captchaToken))) {
+	if (isCaptchaEnabled() && !isResend && (!captchaAnswer || !captchaToken || !verifyCaptcha(captchaAnswer, captchaToken))) {
 		return NextResponse.json({ error: "Invalid security code. Please solve the captcha and try again." }, { status: 400 });
 	}
 
