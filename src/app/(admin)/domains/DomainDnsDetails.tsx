@@ -5,6 +5,7 @@ import { Check, Copy, RefreshCw, ShieldCheck, Sparkles, AlertTriangle } from "@/
 import { Button } from "@/components/ui/button";
 import { dnsAuthDescriptions, getDnsAuthItemClass } from "./utils";
 import { ROW_GRID, StatusBadge } from "./status-row";
+import { DomainCatchAllCard } from "./DomainCatchAllCard";
 import type { DnsAuthRecord, DomainDnsDetailsProps } from "./types";
 
 function CopyValueButton({ value }: { value: string }) {
@@ -101,6 +102,8 @@ export default function DomainDnsDetails({
 					</span>
 				</div>
 			</div>
+
+			<DomainCatchAllCard domainId={domain.id} hostname={domain.hostname} />
 
 			{audit && (
 				<section className="space-y-4">

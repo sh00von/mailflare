@@ -26,6 +26,14 @@ export const settingsNavSections: SettingsNavSection[] = [
 				labelKey: "Aliases",
 			},
 			{
+				href: "/settings/rules",
+				labelKey: "Rules & Filters",
+			},
+			{
+				href: "/settings/vacation",
+				labelKey: "Vacation Responder",
+			},
+			{
 				href: "/settings/forwarding",
 				labelKey: "Forwarding",
 			},

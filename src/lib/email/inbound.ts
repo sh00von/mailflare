@@ -26,6 +26,7 @@ import {
 	getMailboxNotificationUserIds,
 	notifyUsersOfNewMessage,
 } from "@/lib/realtime/utils";
+import { handleInboundVacationResponder } from "@/lib/email/vacation";
 
 export type InboundQueueMessage = {
 	from: string;
@@ -266,6 +267,11 @@ export async function processInboundMessage(
 			threadId,
 			spamScore: spamAnalysis?.score,
 			spamVerdict: spamAnalysis?.verdict,
+		});
+
+		// Vacation Auto-Responder execution
+		await handleInboundVacationResponder(env, decision.mailbox, parsed, payload.headers).catch((err) => {
+			console.error("[inbound] Vacation responder error:", err);
 		});
 	}
 	try {
