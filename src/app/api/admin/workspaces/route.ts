@@ -25,8 +25,10 @@ export async function GET(request: Request) {
 	}
 
 	const db = getDb(env);
-	const rows = await db.select().from(workspaces).orderBy(desc(workspaces.createdAt));
-	const owners = await db.select({ id: users.id, email: users.email, name: users.name }).from(users);
+	const [rows, owners] = await Promise.all([
+		db.select().from(workspaces).orderBy(desc(workspaces.createdAt)),
+		db.select({ id: users.id, email: users.email, name: users.name }).from(users),
+	]);
 	const ownerMap = new Map(owners.map((owner) => [owner.id, owner]));
 
 	// Deduplicate multiple workspaces created for the same owner (e.g. from prior backfills)

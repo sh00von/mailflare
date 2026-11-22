@@ -77,11 +77,13 @@ export async function POST(request: Request) {
 	const password = firstRunParsed.data.password;
 	const name = username;
 
-	const [existing] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+	const [[existing], [existingDomain]] = await Promise.all([
+		db.select().from(users).where(eq(users.email, email)).limit(1),
+		db.select({ id: domains.id }).from(domains).where(eq(domains.hostname, domainName)).limit(1),
+	]);
 	if (existing) {
 		return NextResponse.json({ error: "Email already registered" }, { status: 409 });
 	}
-	const [existingDomain] = await db.select({ id: domains.id }).from(domains).where(eq(domains.hostname, domainName)).limit(1);
 	if (existingDomain) {
 		return NextResponse.json({ error: "This domain is already in use. Ask the person who set it up to add you." }, { status: 409 });
 	}

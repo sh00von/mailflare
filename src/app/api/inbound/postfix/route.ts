@@ -22,15 +22,16 @@ export async function POST(request: Request) {
 	const env = getEnv();
 	const secret = (process.env.INBOUND_WEBHOOK_SECRET ?? env.INBOUND_WEBHOOK_SECRET)?.trim();
 
-	// If secret is set, verify authorization with constant-time equality
-	if (secret) {
-		const authHeader = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "")?.trim();
-		const tokenHeader = request.headers.get("x-webhook-token")?.trim();
-		const urlToken = new URL(request.url).searchParams.get("token")?.trim();
-		const provided = authHeader || tokenHeader || urlToken;
-		if (!safeSecretCompare(provided, secret)) {
-			return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-		}
+	if (!secret) {
+		return NextResponse.json({ error: "INBOUND_WEBHOOK_SECRET is not configured" }, { status: 503 });
+	}
+
+	const authHeader = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "")?.trim();
+	const tokenHeader = request.headers.get("x-webhook-token")?.trim();
+	const urlToken = new URL(request.url).searchParams.get("token")?.trim();
+	const provided = authHeader || tokenHeader || urlToken;
+	if (!safeSecretCompare(provided, secret)) {
+		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	}
 
 	const raw = await request.arrayBuffer();

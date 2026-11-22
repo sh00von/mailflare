@@ -18,11 +18,8 @@ const nextConfig: NextConfig = {
 	},
   allowedDevOrigins: ['mail.dev'],
 	typescript: {
-    // !! WARN !!
-    // Dangerously allow production builds to successfully complete
-    // even if your project has type errors.
-    ignoreBuildErrors: true,
-	  },
+		ignoreBuildErrors: false,
+	},
 	// Native and server-only packages used by the self-hosted runtime; never bundle them.
 	serverExternalPackages: ["nodemailer", "smtp-server", "ws", "undici"],
 	async rewrites() {
