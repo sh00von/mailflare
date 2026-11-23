@@ -30,8 +30,10 @@ const { buildPasswordResetEmail } = await import(pathToFileURL(join(outDir, "pas
 const {
 	PLANS,
 	PLAN_LIST,
+	ADDON_LIST,
 	TRIAL_DAYS,
 	calculatePlanPricing,
+	calculateAddonPricing,
 	resolvePlanId,
 	resolveBillingCycle,
 } = await import(pathToFileURL(join(outDir, "plansCatalog.mjs")).href);
@@ -68,15 +70,15 @@ test("subscription catalog defines 4 tiers with 14-day trial", () => {
 	assert.equal(PLANS.free.maxMailboxes, 1);
 	assert.equal(PLANS.free.maxDomains, 1);
 
-	// Starter tier ($1.99/mo or $19/yr)
-	assert.equal(PLANS.starter.priceMonthlyUsd, 1.99);
-	assert.equal(PLANS.starter.priceAnnualUsd, 19.0);
+	// Starter tier ($2.99/mo or $29/yr)
+	assert.equal(PLANS.starter.priceMonthlyUsd, 2.99);
+	assert.equal(PLANS.starter.priceAnnualUsd, 29.0);
 	assert.equal(PLANS.starter.maxMailboxes, 2);
 	assert.equal(PLANS.starter.maxDomains, 1);
 
-	// Pro tier ($4.99/mo or $49/yr)
-	assert.equal(PLANS.pro.priceMonthlyUsd, 4.99);
-	assert.equal(PLANS.pro.priceAnnualUsd, 49.0);
+	// Pro tier ($6.99/mo or $69/yr)
+	assert.equal(PLANS.pro.priceMonthlyUsd, 6.99);
+	assert.equal(PLANS.pro.priceAnnualUsd, 69.0);
 	assert.equal(PLANS.pro.maxMailboxes, 5);
 	assert.equal(PLANS.pro.maxDomains, 3);
 	assert.equal(PLANS.pro.highlighted, true);
@@ -86,6 +88,17 @@ test("subscription catalog defines 4 tiers with 14-day trial", () => {
 	assert.equal(PLANS.business.priceAnnualUsd, 99.0);
 	assert.equal(PLANS.business.maxMailboxes, 15);
 	assert.equal(PLANS.business.maxDomains, 10);
+
+	// Addons Catalog
+	assert.equal(ADDON_LIST.length, 2);
+	const mbAddon = ADDON_LIST.find((a) => a.id === "addon_mailboxes");
+	const stAddon = ADDON_LIST.find((a) => a.id === "addon_storage");
+	assert.ok(mbAddon);
+	assert.ok(stAddon);
+	assert.equal(mbAddon.priceMonthlyUsd, 3.0);
+	assert.equal(mbAddon.priceAnnualUsd, 30.0);
+	assert.equal(stAddon.priceMonthlyUsd, 2.5);
+	assert.equal(stAddon.priceAnnualUsd, 25.0);
 });
 
 test("calculatePlanPricing applies monthly and annual calculations with discounts", () => {
@@ -93,16 +106,23 @@ test("calculatePlanPricing applies monthly and annual calculations with discount
 	assert.equal(freeMonthly.totalCharged, 0);
 
 	const starterMonthly = calculatePlanPricing("starter", "monthly");
-	assert.equal(starterMonthly.totalCharged, 1.99);
-	assert.equal(starterMonthly.monthlyEquivalent, 1.99);
+	assert.equal(starterMonthly.totalCharged, 2.99);
+	assert.equal(starterMonthly.monthlyEquivalent, 2.99);
 
 	const starterYearly = calculatePlanPricing("starter", "yearly");
-	assert.equal(starterYearly.totalCharged, 19.0);
+	assert.equal(starterYearly.totalCharged, 29.0);
 	assert.equal(starterYearly.discountPct >= 15, true);
 
 	const proYearly = calculatePlanPricing("pro", "yearly");
-	assert.equal(proYearly.totalCharged, 49.0);
-	assert.equal(proYearly.monthlyEquivalent, 4.08);
+	assert.equal(proYearly.totalCharged, 69.0);
+	assert.equal(proYearly.monthlyEquivalent, 5.75);
+
+	const mbAddonYearly = calculateAddonPricing("addon_mailboxes", "yearly");
+	assert.equal(mbAddonYearly.totalCharged, 30.0);
+	assert.equal(mbAddonYearly.monthlyEquivalent, 2.5);
+
+	const stAddonMonthly = calculateAddonPricing("addon_storage", "monthly");
+	assert.equal(stAddonMonthly.totalCharged, 2.5);
 
 	assert.equal(resolvePlanId("starter"), "starter");
 	assert.equal(resolvePlanId("free"), "free");

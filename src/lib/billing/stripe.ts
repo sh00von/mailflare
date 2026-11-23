@@ -1,4 +1,14 @@
-import { calculatePlanPricing, getPlanDefinition, resolvePlanId, type BillingCycle, type PlanId, type WorkspaceStatus } from "@/lib/plans/catalog";
+import {
+	calculateAddonPricing,
+	calculatePlanPricing,
+	getAddonDefinition,
+	getPlanDefinition,
+	resolvePlanId,
+	type AddonId,
+	type BillingCycle,
+	type PlanId,
+	type WorkspaceStatus,
+} from "@/lib/plans/catalog";
 
 const STRIPE_API = "https://api.stripe.com/v1";
 
@@ -73,7 +83,8 @@ export async function createStripeCheckoutSession(
 	input: {
 		customerId: string;
 		workspaceId: string;
-		plan: PlanId;
+		plan?: PlanId;
+		addonId?: AddonId;
 		cycle?: BillingCycle;
 		successUrl: string;
 		cancelUrl: string;
@@ -81,8 +92,39 @@ export async function createStripeCheckoutSession(
 ): Promise<{ id: string; url: string }> {
 	const config = getStripeConfig(env);
 	if (!config) throw new Error("Stripe is not configured");
-	const planDef = getPlanDefinition(input.plan);
 	const cycle: BillingCycle = input.cycle ?? "monthly";
+	const interval = cycle === "yearly" ? "year" : "month";
+	const cycleLabel = cycle === "yearly" ? "Annual" : "Monthly";
+
+	if (input.addonId) {
+		const addon = getAddonDefinition(input.addonId);
+		if (!addon) throw new Error("Invalid addon requested");
+		const pricing = calculateAddonPricing(addon.id, cycle);
+		const unitAmount = Math.round(pricing.totalCharged * 100);
+
+		const params: Record<string, string> = {
+			mode: "subscription",
+			customer: input.customerId,
+			success_url: input.successUrl,
+			cancel_url: input.cancelUrl,
+			allow_promotion_codes: "true",
+			"metadata[workspaceId]": input.workspaceId,
+			"metadata[addonId]": addon.id,
+			"metadata[cycle]": cycle,
+			"subscription_data[metadata][workspaceId]": input.workspaceId,
+			"subscription_data[metadata][addonId]": addon.id,
+			"subscription_data[metadata][cycle]": cycle,
+			"line_items[0][quantity]": "1",
+			"line_items[0][price_data][currency]": "usd",
+			"line_items[0][price_data][unit_amount]": String(unitAmount),
+			"line_items[0][price_data][recurring][interval]": interval,
+			"line_items[0][price_data][product_data][name]": `Replyot Add-on: ${addon.name} (${cycleLabel})`,
+			"line_items[0][price_data][product_data][description]": addon.description,
+		};
+		return stripeFormRequest<{ id: string; url: string }>(config.secretKey, "/checkout/sessions", params);
+	}
+
+	const planDef = getPlanDefinition(input.plan ?? "pro");
 	const pricing = calculatePlanPricing(planDef.id, cycle);
 
 	const params: Record<string, string> = {
@@ -101,8 +143,6 @@ export async function createStripeCheckoutSession(
 	};
 
 	const unitAmount = Math.round(pricing.totalCharged * 100);
-	const interval = cycle === "yearly" ? "year" : "month";
-	const cycleLabel = cycle === "yearly" ? "Annual" : "Monthly";
 
 	params["line_items[0][price_data][currency]"] = "usd";
 	params["line_items[0][price_data][unit_amount]"] = String(unitAmount);

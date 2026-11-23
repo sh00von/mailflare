@@ -17,73 +17,103 @@ await build({
 	platform: "node",
 	format: "esm",
 	target: "node22",
+	alias: { "@": join(root, "src") },
 	logLevel: "silent",
 });
 
-const { PLANS, PLAN_LIST, ADDONS_CATALOG, WORKSPACE_PLAN, resolvePlanId, calculateWorkspacePricing, MIN_MAILBOXES } = await import(pathToFileURL(outfile).href);
+const {
+	PLANS,
+	PLAN_LIST,
+	PAID_PLAN_LIST,
+	ADDONS_CATALOG,
+	ADDON_LIST,
+	resolvePlanId,
+	resolveAddonId,
+	getPlanDefinition,
+	getAddonDefinition,
+	calculatePlanPricing,
+	calculateAddonPricing,
+} = await import(pathToFileURL(outfile).href);
 
-test("unified workspace plan offers 5 mailboxes, 5 domains, and 1 GB per mailbox", () => {
-	assert.ok(PLAN_LIST.length >= 1);
-	const plan = WORKSPACE_PLAN;
-	assert.equal(plan.name, "Replyot Workspace");
-	assert.equal(plan.maxMailboxes, 5);
-	assert.equal(plan.maxDomains, 5);
-	assert.equal(plan.dailySendLimit, 500); // Gmail matched
-	assert.equal(plan.hourlySendLimit, 100);
-	assert.equal(plan.storagePerMailboxBytes, 1024 ** 3); // 1 GB per mailbox
-	assert.equal(plan.storageLimitBytes, 5 * 1024 ** 3); // 5 GB workspace
-	assert.equal(plan.priceQuarterlyUsd, 9.0);
-	assert.equal(plan.priceSemiAnnualUsd, 16.5);
-	assert.equal(plan.priceAnnualUsd, 30.0);
+test("subscription catalog defines 4 tiers with Option B pricing", () => {
+	assert.equal(PLAN_LIST.length, 4);
+	assert.equal(PAID_PLAN_LIST.length, 3);
+
+	// Starter: $2.99/mo, $29.00/yr, 2 mailboxes, 1 domain
+	assert.equal(PLANS.starter.priceMonthlyUsd, 2.99);
+	assert.equal(PLANS.starter.priceAnnualUsd, 29.0);
+	assert.equal(PLANS.starter.maxMailboxes, 2);
+	assert.equal(PLANS.starter.maxDomains, 1);
+
+	// Pro: $6.99/mo, $69.00/yr, 5 mailboxes, 3 domains
+	assert.equal(PLANS.pro.priceMonthlyUsd, 6.99);
+	assert.equal(PLANS.pro.priceAnnualUsd, 69.0);
+	assert.equal(PLANS.pro.maxMailboxes, 5);
+	assert.equal(PLANS.pro.maxDomains, 3);
+	assert.equal(PLANS.pro.highlighted, true);
+
+	// Business: $9.99/mo, $99.00/yr, 15 mailboxes, 10 domains
+	assert.equal(PLANS.business.priceMonthlyUsd, 9.99);
+	assert.equal(PLANS.business.priceAnnualUsd, 99.0);
+	assert.equal(PLANS.business.maxMailboxes, 15);
+	assert.equal(PLANS.business.maxDomains, 10);
 });
 
-test("calculateWorkspacePricing enforces minimum 5 mailboxes and calculates dynamic pricing correctly", () => {
-	assert.equal(MIN_MAILBOXES, 5);
+test("calculatePlanPricing applies monthly and annual calculations with discounts", () => {
+	const starterMonthly = calculatePlanPricing("starter", "monthly");
+	assert.equal(starterMonthly.totalCharged, 2.99);
+	assert.equal(starterMonthly.monthlyEquivalent, 2.99);
+	assert.equal(starterMonthly.discountPct, 0);
 
-	// Enforces minimum 5 mailboxes when < 5 requested
-	const minCalc = calculateWorkspacePricing(2, "12m");
-	assert.equal(minCalc.mailboxes, 5);
-	assert.equal(minCalc.pricePerMailboxMonthly, 0.5);
-	assert.equal(minCalc.totalMonthlyEquivalent, 2.5);
-	assert.equal(minCalc.totalCharged, 30.0);
-	assert.equal(minCalc.storageGb, 5);
+	const starterYearly = calculatePlanPricing("starter", "yearly");
+	assert.equal(starterYearly.totalCharged, 29.0);
+	assert.equal(starterYearly.monthlyEquivalent, 2.42);
+	assert.ok(starterYearly.discountPct >= 15);
 
-	// 10 mailboxes on 12m ($0.50/mailbox/mo = $5/mo = $60/yr)
-	const annual10 = calculateWorkspacePricing(10, "12m");
-	assert.equal(annual10.mailboxes, 10);
-	assert.equal(annual10.totalMonthlyEquivalent, 5.0);
-	assert.equal(annual10.totalCharged, 60.0);
-	assert.equal(annual10.storageGb, 10);
-
-	// 5 mailboxes on 6m ($0.55/mailbox/mo = $2.75/mo = $16.50/6mo)
-	const semi5 = calculateWorkspacePricing(5, "6m");
-	assert.equal(semi5.totalMonthlyEquivalent, 2.75);
-	assert.equal(semi5.totalCharged, 16.5);
-
-	// 8 mailboxes on 3m ($0.60/mailbox/mo = $4.80/mo = $14.40/3mo)
-	const q8 = calculateWorkspacePricing(8, "3m");
-	assert.equal(q8.mailboxes, 8);
-	assert.equal(q8.pricePerMailboxMonthly, 0.6);
-	assert.equal(q8.totalMonthlyEquivalent, 4.8);
-	assert.equal(q8.totalCharged, 14.4);
-	assert.equal(q8.storageGb, 8);
+	const proYearly = calculatePlanPricing("pro", "yearly");
+	assert.equal(proYearly.totalCharged, 69.0);
+	assert.equal(proYearly.monthlyEquivalent, 5.75);
+	assert.ok(proYearly.discountPct >= 15);
 });
 
-test("add-on catalog provides extra storage and team mailboxes", () => {
-	assert.ok(Array.isArray(ADDONS_CATALOG) && ADDONS_CATALOG.length >= 2);
-	const storageAddon = ADDONS_CATALOG.find((a) => a.id === "addon_mailbox_storage_1gb");
-	const mailboxAddon = ADDONS_CATALOG.find((a) => a.id === "addon_mailbox_1gb");
-	assert.ok(storageAddon);
+test("add-on catalog provides modular mailbox and storage upgrades", () => {
+	assert.ok(Array.isArray(ADDONS_CATALOG) && ADDONS_CATALOG.length === 2);
+	assert.equal(ADDONS_CATALOG, ADDON_LIST);
+
+	const mailboxAddon = getAddonDefinition("addon_mailboxes");
 	assert.ok(mailboxAddon);
-	assert.equal(storageAddon.priceQuarterlyUsd, 1.0);
-	assert.equal(mailboxAddon.priceQuarterlyUsd, 1.5);
+	assert.equal(mailboxAddon.name, "+5 Team Mailboxes");
+	assert.equal(mailboxAddon.priceMonthlyUsd, 3.0);
+	assert.equal(mailboxAddon.priceAnnualUsd, 30.0);
+	assert.equal(mailboxAddon.extraMailboxes, 5);
+
+	const storageAddon = getAddonDefinition("addon_storage");
+	assert.ok(storageAddon);
+	assert.equal(storageAddon.name, "+20 GB Storage");
+	assert.equal(storageAddon.priceMonthlyUsd, 2.5);
+	assert.equal(storageAddon.priceAnnualUsd, 25.0);
+	assert.equal(storageAddon.extraStorageGb, 20);
+
+	// Addon pricing calculations
+	const mbCalc = calculateAddonPricing("addon_mailboxes", "yearly");
+	assert.equal(mbCalc.totalCharged, 30.0);
+	assert.equal(mbCalc.monthlyEquivalent, 2.5);
+
+	const stCalc = calculateAddonPricing("addon_storage", "monthly");
+	assert.equal(stCalc.totalCharged, 2.5);
+	assert.equal(stCalc.monthlyEquivalent, 2.5);
+
+	assert.equal(resolveAddonId("addon_mailboxes"), "addon_mailboxes");
+	assert.equal(resolveAddonId("addon_storage"), "addon_storage");
+	assert.equal(resolveAddonId("unknown"), null);
 });
 
-test("resolvePlanId falls back to pro workspace for unknown or empty values", () => {
+test("resolvePlanId handles valid plans and falls back to pro workspace", () => {
 	assert.equal(resolvePlanId("starter"), "starter");
 	assert.equal(resolvePlanId("pro"), "pro");
 	assert.equal(resolvePlanId("business"), "business");
-	assert.equal(resolvePlanId("free"), "pro");
+	assert.equal(resolvePlanId("free"), "free");
 	assert.equal(resolvePlanId(undefined), "pro");
+	assert.equal(resolvePlanId("invalid"), "pro");
 	rmSync(outDir, { recursive: true, force: true });
 });

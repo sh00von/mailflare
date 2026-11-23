@@ -15,8 +15,11 @@ import { RequestBodyTooLargeError } from "@/lib/http/errors";
 import { getOrEnsureWorkspaceForUser } from "@/lib/plans/usage";
 
 const checkoutSchema = z.object({
-	plan: z.enum(["starter", "pro", "business"]),
+	plan: z.enum(["starter", "pro", "business"]).optional(),
+	addonId: z.enum(["addon_mailboxes", "addon_storage"]).optional(),
 	cycle: z.enum(["monthly", "yearly", "6m", "12m"]).optional(),
+}).refine((data) => data.plan || data.addonId, {
+	message: "Choose a valid plan or add-on",
 });
 
 function resolveAdminBaseUrl(request: Request): string {
@@ -78,6 +81,7 @@ export async function POST(request: Request) {
 		customerId,
 		workspaceId: workspace.id,
 		plan: parsed.data.plan,
+		addonId: parsed.data.addonId,
 		cycle: parsed.data.cycle === "yearly" || parsed.data.cycle === "12m" ? "yearly" : "monthly",
 		successUrl: `${baseUrl}/admin/plan?billing=success&session_id={CHECKOUT_SESSION_ID}`,
 		cancelUrl: `${baseUrl}/admin/plan?billing=canceled`,

@@ -19,9 +19,12 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { authFetch } from "@/lib/auth/client";
 import {
+  ADDON_LIST,
   PLAN_LIST,
+  calculateAddonPricing,
   calculatePlanPricing,
   getPlanDefinition,
+  type AddonId,
   type BillingCycle,
   type PlanDefinition,
   type PlanId,
@@ -106,7 +109,7 @@ function QuotaCard({
 export default function PlanAndUsagePage() {
   const [data, setData] = useState<PlanResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [busyPlan, setBusyPlan] = useState<PlanId | "portal" | null>(null);
+  const [busyPlan, setBusyPlan] = useState<PlanId | AddonId | "portal" | null>(null);
   const [billingNotice, setBillingNotice] = useState<string | null>(null);
   const [cycle, setCycle] = useState<BillingCycle>("yearly");
 
@@ -184,6 +187,30 @@ export default function PlanAndUsagePage() {
       window.location.assign(payload.url);
     } catch (err) {
       notify.error(err, "Could not start checkout");
+    } finally {
+      setBusyPlan(null);
+    }
+  }
+
+  async function startAddonCheckout(addonId: AddonId) {
+    setBusyPlan(addonId);
+    try {
+      const res = await authFetch("/api/billing/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          addonId,
+          cycle,
+        }),
+      });
+      const payload = (await res.json()) as { url?: string; error?: string };
+      if (!res.ok || !payload.url) {
+        notify.error(payload, "Could not start add-on checkout");
+        return;
+      }
+      window.location.assign(payload.url);
+    } catch (err) {
+      notify.error(err, "Could not start add-on checkout");
     } finally {
       setBusyPlan(null);
     }
@@ -441,6 +468,110 @@ export default function PlanAndUsagePage() {
                           ? "Current Plan"
                           : `Choose ${p.name}`}
                       {!isCurrent && <ArrowRight className="ml-1.5 h-3.5 w-3.5" />}
+                    </Button>
+                  ) : (
+                    <p className="text-[11px] text-center text-neutral-400">
+                      Stripe setup required
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Modular Expansion Add-Ons */}
+      <div>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-bold text-neutral-900">Modular Expansion Add-Ons</h2>
+              <span className="rounded-full bg-blue-50 border border-blue-200 px-2 py-0.5 text-[10px] font-bold text-blue-700">
+                Stackable Upgrades
+              </span>
+            </div>
+            <p className="text-xs text-neutral-500">Need extra inboxes or storage without jumping to a higher tier? Add modular capacity directly.</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {ADDON_LIST.map((addon) => {
+            const pricing = calculateAddonPricing(addon.id, cycle);
+            const isStorageActive = addon.id === "addon_storage" && workspace?.hasStorageAddon;
+            const extraMailboxes = workspace?.extraMailboxesCount ?? 0;
+            const isMailboxActive = addon.id === "addon_mailboxes" && extraMailboxes > 0;
+            const isAddonActive = Boolean(isStorageActive || isMailboxActive);
+
+            return (
+              <div
+                key={addon.id}
+                className="relative flex flex-col justify-between rounded-3xl border border-neutral-200/90 bg-white p-6 shadow-2xs hover:border-neutral-300 transition"
+              >
+                {addon.badge && (
+                  <span className="absolute top-4 right-4 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700">
+                    {addon.badge}
+                  </span>
+                )}
+
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+                      {addon.id === "addon_storage" ? (
+                        <HardDrive className="h-5 w-5" />
+                      ) : (
+                        <Mail className="h-5 w-5" />
+                      )}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-base font-bold text-neutral-900">{addon.name}</h3>
+                        {isAddonActive && (
+                          <span className="rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-semibold px-2 py-0.5">
+                            {addon.id === "addon_mailboxes" ? `Active (+${extraMailboxes})` : "Active (+20 GB)"}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-neutral-500">{addon.tagline}</p>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-neutral-600 leading-relaxed">
+                    {addon.description}
+                  </p>
+
+                  <div className="border-t border-neutral-100 pt-3">
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-black text-neutral-900">
+                        ${pricing.monthlyEquivalent.toFixed(2)}
+                      </span>
+                      <span className="text-xs font-medium text-neutral-500">/ month</span>
+                    </div>
+                    <p className="text-[11px] text-neutral-400 mt-0.5 font-medium">
+                      {pricing.billingText}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="pt-5">
+                  {stripeReady ? (
+                    <Button
+                      type="button"
+                      variant={isAddonActive ? "outline" : "default"}
+                      disabled={busyPlan !== null}
+                      onClick={() => void startAddonCheckout(addon.id)}
+                      className={`w-full rounded-xl text-xs font-semibold cursor-pointer ${
+                        isAddonActive
+                          ? "border-neutral-300 text-neutral-700 hover:bg-neutral-50"
+                          : "bg-neutral-900 hover:bg-neutral-800 text-white"
+                      }`}
+                    >
+                      {busyPlan === addon.id
+                        ? "Redirecting..."
+                        : isAddonActive
+                          ? `Add Another (+${addon.unitLabel})`
+                          : `Add to Workspace (+${addon.unitLabel})`}
+                      <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
                     </Button>
                   ) : (
                     <p className="text-[11px] text-center text-neutral-400">

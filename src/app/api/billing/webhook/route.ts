@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db";
 import { workspaces } from "@/db/schema";
@@ -51,11 +51,35 @@ export async function POST(request: Request) {
 		const workspaceId = typeof metadata.workspaceId === "string" ? metadata.workspaceId : null;
 		const customerId = typeof obj.customer === "string" ? obj.customer : null;
 		const subscriptionId = typeof obj.subscription === "string" ? obj.subscription : null;
-		const plan = resolvePlanFromStripePriceOrMetadata(env, metadata.plan, null);
-		const dbPlan = (plan && plan !== "free" ? plan : "starter") as "starter" | "pro" | "business";
-		const planDef = plan ? getPlanDefinition(plan) : undefined;
-		const billingCycle = metadata.cycle === "yearly" ? "yearly" : "monthly";
-		if (workspaceId) {
+		const addonId = typeof metadata.addonId === "string" ? metadata.addonId : null;
+
+		if (workspaceId && addonId === "addon_mailboxes") {
+			await db
+				.update(workspaces)
+				.set({
+					maxMailboxes: sql`${workspaces.maxMailboxes} + 5`,
+					status: "active",
+					...(customerId ? { stripeCustomerId: customerId } : {}),
+					...(subscriptionId ? { stripeSubscriptionId: subscriptionId } : {}),
+					updatedAt: now,
+				})
+				.where(eq(workspaces.id, workspaceId));
+		} else if (workspaceId && addonId === "addon_storage") {
+			await db
+				.update(workspaces)
+				.set({
+					stripePriceId: sql`coalesce(${workspaces.stripePriceId}, '') || ',addon_storage_20gb'`,
+					status: "active",
+					...(customerId ? { stripeCustomerId: customerId } : {}),
+					...(subscriptionId ? { stripeSubscriptionId: subscriptionId } : {}),
+					updatedAt: now,
+				})
+				.where(eq(workspaces.id, workspaceId));
+		} else if (workspaceId) {
+			const plan = resolvePlanFromStripePriceOrMetadata(env, metadata.plan, null);
+			const dbPlan = (plan && plan !== "free" ? plan : "starter") as "starter" | "pro" | "business";
+			const planDef = plan ? getPlanDefinition(plan) : undefined;
+			const billingCycle = metadata.cycle === "yearly" ? "yearly" : "monthly";
 			await db
 				.update(workspaces)
 				.set({

@@ -16,6 +16,8 @@ export type WorkspaceSummary = {
 	daysLeftInTrial: number | null;
 	maxMailboxes: number;
 	billingCycle: BillingCycle;
+	hasStorageAddon?: boolean;
+	extraMailboxesCount?: number;
 };
 
 export type WorkspaceUsage = {
@@ -46,12 +48,26 @@ function toSummary(row: typeof workspaces.$inferSelect): WorkspaceSummary {
 	const plan: PlanId = trialExpired ? "free" : isTrial ? "pro" : rawPlan;
 	const basePlan = getPlanDefinition(plan);
 
-	const planDetails: PlanDefinition = isTrial && !trialExpired
-		? {
-				...getPlanDefinition("pro"),
-				tagline: "14-Day Free Pro Trial (All team features included)",
-		  }
-		: basePlan;
+	const hasStorageAddon = Boolean(row.stripePriceId?.includes("addon_storage_20gb"));
+	const extraStorageBytes = hasStorageAddon ? 20 * 1024 * 1024 * 1024 : 0;
+	const totalStorageLimitBytes = basePlan.storageLimitBytes + extraStorageBytes;
+	const storageLabel = hasStorageAddon
+		? `${Math.round(totalStorageLimitBytes / (1024 * 1024 * 1024))} GB (+20 GB Add-on)`
+		: basePlan.storageLabel;
+
+	const effectiveMaxMailboxes = Math.max(row.maxMailboxes ?? 0, basePlan.maxMailboxes);
+
+	const planDetails: PlanDefinition = {
+		...(isTrial && !trialExpired
+			? {
+					...getPlanDefinition("pro"),
+					tagline: "14-Day Free Pro Trial (All team features included)",
+			  }
+			: basePlan),
+		maxMailboxes: effectiveMaxMailboxes,
+		storageLimitBytes: totalStorageLimitBytes,
+		storageLabel,
+	};
 
 	const billingCycle = resolveBillingCycle(row.billingCycle);
 
@@ -65,8 +81,10 @@ function toSummary(row: typeof workspaces.$inferSelect): WorkspaceSummary {
 		trialEndsAt: row.trialEndsAt ? row.trialEndsAt.toISOString() : null,
 		trialExpired,
 		daysLeftInTrial,
-		maxMailboxes: planDetails.maxMailboxes,
+		maxMailboxes: effectiveMaxMailboxes,
 		billingCycle,
+		hasStorageAddon,
+		extraMailboxesCount: Math.max(0, (row.maxMailboxes ?? 0) - basePlan.maxMailboxes),
 	};
 }
 

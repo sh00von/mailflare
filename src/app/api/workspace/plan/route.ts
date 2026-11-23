@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db";
 import { workspaces } from "@/db/schema";
@@ -33,24 +33,48 @@ export async function GET(request: Request) {
 		try {
 			const session = await retrieveStripeCheckoutSession(env, sessionId);
 			if (session.payment_status === "paid" || session.status === "complete") {
-				const rawPlan = resolvePlanId(session.metadata?.plan);
-				const plan = (rawPlan === "free" ? "starter" : rawPlan) as "starter" | "pro" | "business";
+				const addonId = session.metadata?.addonId;
 				const customerId = session.customer;
 				const subscriptionId = session.subscription;
-				const billingCycle = session.metadata?.cycle === "yearly" ? "yearly" : "monthly";
-				const planDef = getPlanDefinition(plan);
-				await db
-					.update(workspaces)
-					.set({
-						plan,
-						status: "active",
-						maxMailboxes: planDef.maxMailboxes,
-						billingCycle,
-						...(customerId ? { stripeCustomerId: customerId } : {}),
-						...(subscriptionId ? { stripeSubscriptionId: subscriptionId } : {}),
-						updatedAt: new Date(),
-					})
-					.where(eq(workspaces.id, initialWs.id));
+
+				if (addonId === "addon_mailboxes") {
+					await db
+						.update(workspaces)
+						.set({
+							maxMailboxes: sql`${workspaces.maxMailboxes} + 5`,
+							status: "active",
+							...(customerId ? { stripeCustomerId: customerId } : {}),
+							updatedAt: new Date(),
+						})
+						.where(eq(workspaces.id, initialWs.id));
+				} else if (addonId === "addon_storage") {
+					await db
+						.update(workspaces)
+						.set({
+							stripePriceId: sql`coalesce(${workspaces.stripePriceId}, '') || ',addon_storage_20gb'`,
+							status: "active",
+							...(customerId ? { stripeCustomerId: customerId } : {}),
+							updatedAt: new Date(),
+						})
+						.where(eq(workspaces.id, initialWs.id));
+				} else {
+					const rawPlan = resolvePlanId(session.metadata?.plan);
+					const plan = (rawPlan === "free" ? "starter" : rawPlan) as "starter" | "pro" | "business";
+					const billingCycle = session.metadata?.cycle === "yearly" ? "yearly" : "monthly";
+					const planDef = getPlanDefinition(plan);
+					await db
+						.update(workspaces)
+						.set({
+							plan,
+							status: "active",
+							maxMailboxes: planDef.maxMailboxes,
+							billingCycle,
+							...(customerId ? { stripeCustomerId: customerId } : {}),
+							...(subscriptionId ? { stripeSubscriptionId: subscriptionId } : {}),
+							updatedAt: new Date(),
+						})
+						.where(eq(workspaces.id, initialWs.id));
+				}
 			}
 		} catch (err) {
 			console.error("Failed to sync checkout session:", err);

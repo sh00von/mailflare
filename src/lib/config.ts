@@ -147,8 +147,8 @@ export const config = {
 			dailySendLimit: parseNum(optional("PLAN_STARTER_DAILY_SEND"), 250),
 			hourlySendLimit: parseNum(optional("PLAN_STARTER_HOURLY_SEND"), 50),
 			maxAttachmentMb: parseNum(optional("PLAN_STARTER_MAX_ATTACHMENT_MB"), 25),
-			priceMonthlyUsd: 1.99,
-			priceAnnualUsd: 19.0,
+			priceMonthlyUsd: 2.99,
+			priceAnnualUsd: 29.0,
 			features: [
 				"1 Custom Domain",
 				"Up to 2 Team Mailboxes",
@@ -170,8 +170,8 @@ export const config = {
 			dailySendLimit: parseNum(optional("PLAN_PRO_DAILY_SEND"), 1000),
 			hourlySendLimit: parseNum(optional("PLAN_PRO_HOURLY_SEND"), 100),
 			maxAttachmentMb: parseNum(optional("PLAN_PRO_MAX_ATTACHMENT_MB"), 25),
-			priceMonthlyUsd: 4.99,
-			priceAnnualUsd: 49.0,
+			priceMonthlyUsd: 6.99,
+			priceAnnualUsd: 69.0,
 			highlighted: true,
 			features: [
 				"Up to 3 Custom Domains",
